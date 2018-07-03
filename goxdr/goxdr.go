@@ -77,7 +77,7 @@ func (e *emitter) chase_typedef(d *rpc_decl, inner bool) *rpc_decl {
 
 func (e *emitter) decltype(parent rpc_sym, d *rpc_decl) string {
 	out := &strings.Builder{}
-	switch (d.qual) {
+	switch d.qual {
 	case PTR:
 		fmt.Fprintf(out, "*");
 	case ARRAY:
@@ -213,6 +213,42 @@ func (r *rpc_union) emit(e *emitter) {
 		fmt.Fprintf(out, "\t}\n");
 		fmt.Fprintf(out, "}\n")
 	}
+	fmt.Fprintf(out, "func (u *%s) XdrUnionTag() interface{} {\n" +
+		"\treturn &u.%s\n}\n", r.id, r.tagid)
+	fmt.Fprintf(out, "func (u *%s) XdrUnionValid() bool {\n", r.id)
+	if r.hasdefault {
+		fmt.Fprintf(out, "\treturn true\n")
+	} else {
+		fmt.Fprintf(out, "\tswitch u.%s {\n" + "\tcase ", r.tagid);
+		needcomma := false
+		for _, u1 := range r.fields {
+			if needcomma {
+				fmt.Fprintf(out, ",")
+			} else {
+				needcomma = true
+			}
+			fmt.Fprintf(out, "%s", strings.Join(u1.cases, ","))
+		}
+		fmt.Fprintf(out, ":\n\t\treturn true\n\t}\n\treturn false\n")
+	}
+	fmt.Fprintf(out, "}\n")
+	fmt.Fprintf(out, "func (u *%s) XdrUnionBody() interface{} {\n" +
+		"\tswitch u.%s {\n", r.id, r.tagid)
+	for _, u := range r.fields {
+		if u.hasdefault {
+			fmt.Fprintf(out, "\tdefault:\n")
+		} else {
+			fmt.Fprintf(out, "\tcase %s:\n", strings.Join(u.cases, ","))
+		}
+		if u.decl.id == "" || u.decl.typ == "void" {
+			fmt.Fprintf(out, "\t\treturn nil\n")
+		} else {
+			fmt.Fprintf(out, "\t\treturn u.%s()\n", u.decl.id)
+		}
+	}
+	fmt.Fprintf(out, "\t}\n" +
+		"\treturn nil\n" +
+		"}\n")
 	e.append(out)
 }
 

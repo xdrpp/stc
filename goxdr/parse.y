@@ -189,6 +189,7 @@ union_case_spec_list: union_case_spec
 		$$ = $1
 		if !$$.hasdefault {
 			$$.fields = append($$.fields, $2)
+			$$.hasdefault = $2.hasdefault
 		} else if !$2.hasdefault {
 			n := len($$.fields)
 			$$.fields = append($$.fields, $$.fields[n])
