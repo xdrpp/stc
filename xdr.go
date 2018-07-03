@@ -1,6 +1,8 @@
 package main
 
+import "fmt"
 import "math"
+import "io"
 
 type XdrBadValue string
 func (v XdrBadValue) Error() string { return string(v) }
@@ -89,11 +91,35 @@ type XdrEnum interface {
 	EnumNames() map[int32]string
 	EnumVal() *int32
 	String() string
+	Value() interface{}
 }
 
 type XDR interface {
 	num32(v XdrNum32, name string)
 	num64(v XdrNum64, name string)
 	enum(v XdrEnum, name string)
+	bytes(v *[]byte, maxSize uint32, name string)
+	str(v *string, maxSize uint32, name string)
 	size(v *uint32, maxSize uint32, name string)
 }
+
+type XdrPrint struct {
+	Out io.Writer
+}
+
+func (x *XdrPrint) num32(v XdrNum32, name string) {
+	fmt.Fprintf(x.Out, "%s: %v\n", name, v.Value())
+}
+func (x *XdrPrint) num64(v XdrNum64, name string) {
+	fmt.Fprintf(x.Out, "%s: %v\n", name, v.Value())
+}
+func (x *XdrPrint) enum(v XdrEnum, name string) {
+	fmt.Fprintf(x.Out, "%s: %v\n", name, v.Value())
+}
+func (x *XdrPrint) bytes(v *[]byte, maxSize uint32, name string) {
+	fmt.Fprintf(x.Out, "%s: %v\n", name, *v)
+}
+func (x *XdrPrint) str(v *string, maxSize uint32, name string) {
+	fmt.Fprintf(x.Out, "%s: %%v\n", name, *v)
+}
+func (x *XdrPrint) size(v *uint32, maxSize uint32, name string) {}

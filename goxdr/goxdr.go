@@ -40,9 +40,27 @@ func parseXDR(out *rpc_syms, file string) {
 	yyParse(l)
 }
 
+
 type emitter struct {
 	syms *rpc_syms
 	declarations []string
+}
+
+func (e *emitter) append(out interface{}) {
+	var s string
+	switch t := out.(type) {
+	case string:
+		s = t
+	case fmt.Stringer:
+		s = t.String()
+	default:
+		panic("emitter append non-String")
+	}
+	e.declarations = append(e.declarations, s)
+}
+
+func (e *emitter) printf(str string, args ...interface{}) {
+	e.append(fmt.Sprintf(str, args...))
 }
 
 func (e *emitter) chase_typedef(d *rpc_decl, inner bool) *rpc_decl {
@@ -90,103 +108,119 @@ func (e *emitter) decltype(parent rpc_sym, d *rpc_decl) string {
 }
 
 func (e *emitter) emit(sym rpc_sym) {
+	sym.(Emittable).emit(e)
+}
+
+
+type Emittable interface {
+	emit(e *emitter)
+}
+
+func (r *rpc_const) emit(e *emitter) {
+	e.printf("const %s = %s\n", r.id, r.val)
+}
+
+func (r *rpc_typedef) emit(e *emitter) {
+	e.printf("type %s = %s\n", r.id, e.decltype(r, (*rpc_decl)(r)))
+}
+
+func (r *rpc_enum) emit(e *emitter) {
 	out := &strings.Builder{}
-	switch r := sym.(type) {
-	case *rpc_const:
-		fmt.Fprintf(out, "const %s = %s\n", r.id, r.val)
-	case *rpc_enum:
-		fmt.Fprintf(out, "type %s int32\nconst (\n", r.id);
-		for _, tag := range r.tags {
-			fmt.Fprintf(out, "\t%s = %s(%s)\n", tag.id, r.id, tag.val)
-		}
-		fmt.Fprintf(out, ")\n");
-		fmt.Fprintf(out, "var _%s_names = map[int32]string{\n", r.id);
-		for _, tag := range r.tags {
-			fmt.Fprintf(out, "\tint32(%s): \"%s\",\n", tag.id, tag.id);
-		}
-		fmt.Fprintf(out, "}\n");
-		fmt.Fprintf(out, "func (*%s) EnumNames() map[int32]string {\n" +
-			"\treturn _%s_names\n}\n", r.id, r.id)
-		fmt.Fprintf(out, "func (v *%s) EnumVal() *int32 {\n" +
-			"\treturn (*int32)(v)\n" +
-			"}\n", r.id)
-		fmt.Fprintf(out, "func (v *%s) String() string {\n" +
-			"\tif s, ok := _%s_names[int32(*v)]; ok {\n" +
-			"\t\treturn s\n\t}\n" +
-			"\treturn \"unknown_%s\"\n}\n",
-			r.id, r.id, r.id)
-	case *rpc_decl:
-		panic("rpc_decl shouldn't happen here")
-	case *rpc_typedef:
-		fmt.Fprintf(out, "type %s = %s\n", r.id,
-			e.decltype(sym, (*rpc_decl)(r)))
-	case *rpc_struct:
-		fmt.Fprintf(out, "type %s struct {\n", r.id);
-		for _, decl := range r.decls {
-			fmt.Fprintf(out, "\t%s %s\n", decl.id, e.decltype(sym, &decl))
-		}
-		fmt.Fprintf(out, "}\n")
-	case *rpc_union:
-		fmt.Fprintf(out, "type %s struct {\n", r.id);
-		fmt.Fprintf(out, "\t%s %s\n", r.tagid, r.tagtype);
-		fmt.Fprintf(out, "\t_u interface{}\n");
-		fmt.Fprintf(out, "}\n");
-		for _, u := range r.fields {
-			if u.decl.id == "" || u.decl.typ == "void" {
-				continue
-			}
-			ret := e.decltype(sym, &u.decl)
-			fmt.Fprintf(out, "func (u *%s) %s() *%s {\n", r.id, u.decl.id, ret)
-			goodcase := fmt.Sprintf("\t\tif v, ok := u._u.(*%s); ok {\n" +
-				"\t\t\treturn v\n" +
-				"\t\t} else {\n" +
-				"\t\t\tvar zero %s\n" +
-				"\t\t\tu._u = &zero\n" +
-				"\t\t\treturn &zero\n" +
-				"\t\t}\n", ret, ret)
-			badcase := fmt.Sprintf(
-				"\t\tpanic(\"%s accessed when not selected\")\n", u.decl.id)
-			fmt.Fprintf(out, "\tswitch u.%s {\n", r.tagid);
-			if u.hasdefault && len(r.fields) > 1 {
-				needcomma := false
-				fmt.Fprintf(out, "\tcase ");
-				for _, u1 := range r.fields {
-					if r.hasdefault {
-						continue
-					}
-					if needcomma {
-						fmt.Fprintf(out, ",")
-					} else {
-						needcomma = true
-					}
-					fmt.Fprintf(out, "%s", strings.Join(u1.cases, ","))
-				}
-				fmt.Fprintf(out, ":\n%s\tdefault:\n%s", badcase, goodcase)
-			} else {
-				if u.hasdefault {
-					fmt.Fprintf(out, "default:\n")
-				} else {
-					fmt.Fprintf(out, "\tcase %s:\n", strings.Join(u.cases, ","))
-				}
-				fmt.Fprintf(out, "%s", goodcase)
-				if !u.hasdefault {
-					fmt.Fprintf(out, "\tdefault:\n%s", badcase)
-				}
-			}
-			fmt.Fprintf(out, "\t}\n");
-		    fmt.Fprintf(out, "}\n")
-		}
-	default:
-		fmt.Fprintf(out, "%T%v\n", r, r);
+	fmt.Fprintf(out, "type %s int32\nconst (\n", r.id);
+	for _, tag := range r.tags {
+		fmt.Fprintf(out, "\t%s = %s(%s)\n", tag.id, r.id, tag.val)
 	}
-	e.declarations = append(e.declarations, out.String())
+	fmt.Fprintf(out, ")\n");
+	fmt.Fprintf(out, "var _%s_names = map[int32]string{\n", r.id);
+	for _, tag := range r.tags {
+		fmt.Fprintf(out, "\tint32(%s): \"%s\",\n", tag.id, tag.id);
+	}
+	fmt.Fprintf(out, "}\n");
+	fmt.Fprintf(out, "func (*%s) EnumNames() map[int32]string {\n" +
+		"\treturn _%s_names\n}\n", r.id, r.id)
+	fmt.Fprintf(out, "func (v *%s) EnumVal() *int32 {\n" +
+		"\treturn (*int32)(v)\n" +
+		"}\n", r.id)
+	fmt.Fprintf(out, "func (v *%s) String() string {\n" +
+		"\tif s, ok := _%s_names[int32(*v)]; ok {\n" +
+		"\t\treturn s\n\t}\n" +
+		"\treturn \"unknown_%s\"\n}\n",
+		r.id, r.id, r.id)
+	fmt.Fprintf(out, "func (v *%s) Value() interface{} {\n" +
+		"\treturn *v\n" +
+		"}\n", r.id)
+	e.append(out)
+}
+
+func (r *rpc_struct) emit(e *emitter) {
+	out := &strings.Builder{}
+	fmt.Fprintf(out, "type %s struct {\n", r.id);
+	for _, decl := range r.decls {
+		fmt.Fprintf(out, "\t%s %s\n", decl.id, e.decltype(r, &decl))
+	}
+	fmt.Fprintf(out, "}\n")
+	e.append(out)
+}
+
+func (r *rpc_union) emit(e *emitter) {
+	out := &strings.Builder{}
+	fmt.Fprintf(out, "type %s struct {\n", r.id);
+	fmt.Fprintf(out, "\t%s %s\n", r.tagid, r.tagtype);
+	fmt.Fprintf(out, "\t_u interface{}\n");
+	fmt.Fprintf(out, "}\n");
+	for _, u := range r.fields {
+		if u.decl.id == "" || u.decl.typ == "void" {
+			continue
+		}
+		ret := e.decltype(r, &u.decl)
+		fmt.Fprintf(out, "func (u *%s) %s() *%s {\n", r.id, u.decl.id, ret)
+		goodcase := fmt.Sprintf("\t\tif v, ok := u._u.(*%s); ok {\n" +
+			"\t\t\treturn v\n" +
+			"\t\t} else {\n" +
+			"\t\t\tvar zero %s\n" +
+			"\t\t\tu._u = &zero\n" +
+			"\t\t\treturn &zero\n" +
+			"\t\t}\n", ret, ret)
+		badcase := fmt.Sprintf(
+			"\t\tpanic(\"%s accessed when not selected\")\n", u.decl.id)
+		fmt.Fprintf(out, "\tswitch u.%s {\n", r.tagid);
+		if u.hasdefault && len(r.fields) > 1 {
+			needcomma := false
+			fmt.Fprintf(out, "\tcase ");
+			for _, u1 := range r.fields {
+				if r.hasdefault {
+					continue
+				}
+				if needcomma {
+					fmt.Fprintf(out, ",")
+				} else {
+					needcomma = true
+				}
+				fmt.Fprintf(out, "%s", strings.Join(u1.cases, ","))
+			}
+			fmt.Fprintf(out, ":\n%s\tdefault:\n%s", badcase, goodcase)
+		} else {
+			if u.hasdefault {
+				fmt.Fprintf(out, "default:\n")
+			} else {
+				fmt.Fprintf(out, "\tcase %s:\n", strings.Join(u.cases, ","))
+			}
+			fmt.Fprintf(out, "%s", goodcase)
+			if !u.hasdefault {
+				fmt.Fprintf(out, "\tdefault:\n%s", badcase)
+			}
+		}
+		fmt.Fprintf(out, "\t}\n");
+		fmt.Fprintf(out, "}\n")
+	}
+	e.append(out)
+}
+
+func (r *rpc_program) emit(e *emitter) {
+	// Do something?
 }
 
 /*
-func (e *emitter) traverse_field(out io.Writer, name string, sym rpc_sym) {
-}
-*/
-
 func (e *emitter) traverse(sym rpc_sym) {
 	out := &strings.Builder{}
 	switch r := sym.(type) {
@@ -199,6 +233,7 @@ func (e *emitter) traverse(sym rpc_sym) {
 	}
 	e.declarations = append(e.declarations, out.String())
 }
+*/
 
 func emit(syms *rpc_syms) {
 	e := emitter{
@@ -210,7 +245,6 @@ func emit(syms *rpc_syms) {
 	for _, s := range syms.Symbols  {
 		e.declarations = append(e.declarations, "\n")
 		e.emit(s)
-		e.traverse(s)
 	}
 	for _, d := range e.declarations {
 		io.WriteString(os.Stdout, d)
