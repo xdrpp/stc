@@ -100,18 +100,21 @@ func (e *emitter) emit(sym rpc_sym) {
 			fmt.Fprintf(out, "\t%s = %s(%s)\n", tag.id, r.id, tag.val)
 		}
 		fmt.Fprintf(out, ")\n");
-		fmt.Fprintf(out, "var _%s_names = map[%s]string{\n", r.id, r.id);
+		fmt.Fprintf(out, "var _%s_names = map[int32]string{\n", r.id);
 		for _, tag := range r.tags {
-			fmt.Fprintf(out, "\t%s: \"%s\",\n", tag.id, tag.id);
+			fmt.Fprintf(out, "\tint32(%s): \"%s\",\n", tag.id, tag.id);
 		}
 		fmt.Fprintf(out, "}\n");
-		fmt.Fprintf(out, "func (*%s) EnumNames() map[%s]string {\n" +
-			"\treturn _%s_names\n}\n" +
-			"func (v *%s) String() string {\n" +
-			"\tif s, ok := _%s_names[*v]; ok {\n" +
+		fmt.Fprintf(out, "func (*%s) EnumNames() map[int32]string {\n" +
+			"\treturn _%s_names\n}\n", r.id, r.id)
+		fmt.Fprintf(out, "func (v *%s) EnumVal() *int32 {\n" +
+			"\treturn (*int32)(v)\n" +
+			"}\n", r.id)
+		fmt.Fprintf(out, "func (v *%s) String() string {\n" +
+			"\tif s, ok := _%s_names[int32(*v)]; ok {\n" +
 			"\t\treturn s\n\t}\n" +
 			"\treturn \"unknown_%s\"\n}\n",
-			r.id, r.id, r.id, r.id, r.id, r.id)
+			r.id, r.id, r.id)
 	case *rpc_decl:
 		panic("rpc_decl shouldn't happen here")
 	case *rpc_typedef:
@@ -191,8 +194,8 @@ func (e *emitter) traverse(sym rpc_sym) {
 		return
 	case *rpc_enum:
 		fmt.Fprintf(out, "func (v *%s) XdrTraverse(x XDR, name string) {\n" +
-			"\tx.i32((*int32)(v), name)\n" +
-			"}\n", r.id);
+			"\tx.enum(v, name)\n" +
+			"}\n", r.id)
 	}
 	e.declarations = append(e.declarations, out.String())
 }
