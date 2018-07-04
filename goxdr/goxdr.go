@@ -175,22 +175,22 @@ func (r *rpc_enum) emit(e *emitter) {
 		fmt.Fprintf(out, "\t%s = %s(%s)\n", tag.id, r.id, tag.val)
 	}
 	fmt.Fprintf(out, ")\n")
-	fmt.Fprintf(out, "var _%s_names = map[int32]string{\n", r.id)
+	fmt.Fprintf(out, "var _Xdr%sNames = map[int32]string{\n", r.id)
 	for _, tag := range r.tags {
 		fmt.Fprintf(out, "\tint32(%s): \"%s\",\n", tag.id, tag.id)
 	}
 	fmt.Fprintf(out, "}\n")
-	fmt.Fprintf(out, "func (*%s) EnumNames() map[int32]string {\n" +
-		"\treturn _%s_names\n}\n", r.id, r.id)
-	fmt.Fprintf(out, "func (v *%s) EnumVal() *int32 {\n" +
+	fmt.Fprintf(out, "func (v *%s) XdrEnumInt() *int32 {\n" +
 		"\treturn (*int32)(v)\n" +
 		"}\n", r.id)
+	fmt.Fprintf(out, "func (*%s) XdrEnumNames() map[int32]string {\n" +
+		"\treturn _Xdr%sNames\n}\n", r.id, r.id)
 	fmt.Fprintf(out, "func (v *%s) String() string {\n" +
-		"\tif s, ok := _%s_names[int32(*v)]; ok {\n" +
+		"\tif s, ok := _Xdr%sNames[int32(*v)]; ok {\n" +
 		"\t\treturn s\n\t}\n" +
 		"\treturn \"unknown_%s\"\n}\n",
 		r.id, r.id, r.id)
-	fmt.Fprintf(out, "func (v *%s) Value() interface{} {\n" +
+	fmt.Fprintf(out, "func (v *%s) XdrEnumValue() interface{} {\n" +
 		"\treturn *v\n" +
 		"}\n", r.id)
 	e.append(out)
@@ -257,8 +257,7 @@ func (r *rpc_union) emit(e *emitter) {
 		fmt.Fprintf(out, "\t}\n")
 		fmt.Fprintf(out, "}\n")
 	}
-	fmt.Fprintf(out, "func (u *%s) XdrUnionTag() interface{} {\n" +
-		"\treturn &u.%s\n}\n", r.id, r.tagid)
+
 	fmt.Fprintf(out, "func (u *%s) XdrUnionValid() bool {\n", r.id)
 	if r.hasdefault {
 		fmt.Fprintf(out, "\treturn true\n")
@@ -276,6 +275,12 @@ func (r *rpc_union) emit(e *emitter) {
 		fmt.Fprintf(out, ":\n\t\treturn true\n\t}\n\treturn false\n")
 	}
 	fmt.Fprintf(out, "}\n")
+
+	fmt.Fprintf(out, "func (u *%s) XdrUnionTag() interface{} {\n" +
+		"\treturn &u.%s\n}\n", r.id, r.tagid)
+	fmt.Fprintf(out, "func (u *%s) XdrUnionTagName() string {\n" +
+		"\treturn \"%s\"\n}\n", r.id, r.tagid)
+
 	fmt.Fprintf(out, "func (u *%s) XdrUnionBody() interface{} {\n" +
 		"\tswitch u.%s {\n", r.id, r.tagid)
 	for _, u := range r.fields {
@@ -290,9 +295,32 @@ func (r *rpc_union) emit(e *emitter) {
 			fmt.Fprintf(out, "\t\treturn u.%s()\n", u.decl.id)
 		}
 	}
-	fmt.Fprintf(out, "\t}\n" +
-		"\treturn nil\n" +
-		"}\n")
+	fmt.Fprintf(out, "\t}\n")
+	if !r.hasdefault {
+		fmt.Fprintf(out, "\treturn nil\n")
+	}
+	fmt.Fprintf(out, "}\n")
+
+	fmt.Fprintf(out, "func (u *%s) XdrUnionBodyName() string {\n" +
+		"\tswitch u.%s {\n", r.id, r.tagid)
+	for _, u := range r.fields {
+		if u.hasdefault {
+			fmt.Fprintf(out, "\tdefault:\n")
+		} else {
+			fmt.Fprintf(out, "\tcase %s:\n", strings.Join(u.cases, ","))
+		}
+		if u.decl.id == "" || u.decl.typ == "void" {
+			fmt.Fprintf(out, "\t\treturn \"\"\n")
+		} else {
+			fmt.Fprintf(out, "\t\treturn \"%s\"\n", u.decl.id)
+		}
+	}
+	fmt.Fprintf(out, "\t}\n")
+	if !r.hasdefault {
+		fmt.Fprintf(out, "\treturn \"\"\n")
+	}
+	fmt.Fprintf(out, "}\n")
+
 	e.append(out)
 }
 
