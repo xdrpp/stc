@@ -5,6 +5,7 @@ import "io"
 import "io/ioutil"
 import "os"
 import "strings"
+import "strconv"
 
 //go:generate goyacc -o parse.go parse.y
 
@@ -44,6 +45,7 @@ func parseXDR(out *rpc_syms, file string) {
 type emitter struct {
 	syms *rpc_syms
 	declarations []string
+	emitted map[string]struct{}
 }
 
 func (e *emitter) append(out interface{}) {
@@ -63,27 +65,54 @@ func (e *emitter) printf(str string, args ...interface{}) {
 	e.append(fmt.Sprintf(str, args...))
 }
 
-func (e *emitter) chase_typedef(d *rpc_decl, inner bool) *rpc_decl {
-	if d1, ok := e.syms.SymbolMap[d.typ]; (inner || d.qual == SCALAR) && ok {
-		if d2, ok := d1.(*rpc_typedef); ok {
-			if d2.qual == SCALAR {
-				return e.chase_typedef((*rpc_decl)(d2), false)
-			}
-			return (*rpc_decl)(d2)
+func (e *emitter) chase_typedef(id string) string {
+	if d, ok := e.syms.SymbolMap[id]; ok {
+		if td, ok := d.(*rpc_typedef);
+		ok && td.qual == SCALAR && td.inline_decl == nil {
+			return e.chase_typedef(td.typ)
 		}
 	}
-	return d
+	return id
+}
+
+func (e *emitter) chase_bound(d *rpc_decl) string {
+	b := d.bound
+	for {
+		if s, ok := e.syms.SymbolMap[b]; !ok {
+			break
+		} else if d2, ok := s.(*rpc_const); !ok {
+			break
+		} else {
+			b = d2.val
+		}
+	}
+	if b != "" {
+		i32, err := strconv.ParseInt(b, 0, 32)
+		if err != nil {
+			return b
+		} else if i32 != 0xffffffff {
+			return fmt.Sprintf("%d", i32)
+		}
+	}
+	return ""
 }
 
 func (e *emitter) decltype(parent rpc_sym, d *rpc_decl) string {
 	out := &strings.Builder{}
+	var bound string
 	switch d.qual {
+	case SCALAR:
+		if d.typ == "string" {
+			bound = e.chase_bound(d)
+		}
 	case PTR:
 		fmt.Fprintf(out, "*");
 	case ARRAY:
 		fmt.Fprintf(out, "[%s]", d.bound)
 	case VEC:
-		fmt.Fprintf(out, "[]")
+		if bound = e.chase_bound(d); bound == "" {
+			fmt.Fprintf(out, "[]")
+		}
 	}
 	if d.typ == "" {
 		if _, isTypedef := parent.(*rpc_typedef); isTypedef {
@@ -94,17 +123,22 @@ func (e *emitter) decltype(parent rpc_sym, d *rpc_decl) string {
 		*d.inline_decl.symid() = d.typ
 		e.emit(d.inline_decl)
 	}
-	fmt.Fprintf(out, "%s", d.typ)
-	d1 := e.chase_typedef(d, false)
-	if _, isStruct := parent.(*rpc_struct); isStruct &&
-		(d1.qual == VEC || d1.typ == "string") {
-		bound := d1.bound
-		if (bound == "") {
-			bound = "0xffffffff"
-		}
-		fmt.Fprintf(out, " `xdrbound:\"%s\"`", bound)
+	if (bound == "") {
+		fmt.Fprintf(out, "%s", d.typ)
+		return out.String()
 	}
-	return out.String()
+	typ := underscore(e.chase_typedef(d.typ)) + "_" + bound
+	if _, ok := e.emitted[typ]; !ok {
+		d1 := *d
+		d1.id = typ
+		d1.bound = ""
+		e.emit(&d1)
+		e.printf("func (*%s) XdrBound() uint32 {\n" +
+			"\treturn %s\n" +
+			"}\n", typ, bound)
+		e.emitted[typ] = struct{}{}
+	}
+	return typ
 }
 
 func (e *emitter) emit(sym rpc_sym) {
@@ -118,6 +152,10 @@ type Emittable interface {
 
 func (r *rpc_const) emit(e *emitter) {
 	e.printf("const %s = %s\n", r.id, r.val)
+}
+
+func (r *rpc_decl) emit(e *emitter) {
+	e.printf("type %s %s\n", r.id, e.decltype(r, r))
 }
 
 func (r *rpc_typedef) emit(e *emitter) {
@@ -256,25 +294,11 @@ func (r *rpc_program) emit(e *emitter) {
 	// Do something?
 }
 
-/*
-func (e *emitter) traverse(sym rpc_sym) {
-	out := &strings.Builder{}
-	switch r := sym.(type) {
-	case *rpc_const:
-		return
-	case *rpc_enum:
-		fmt.Fprintf(out, "func (v *%s) XdrTraverse(x XDR, name string) {\n" +
-			"\tx.enum(v, name)\n" +
-			"}\n", r.id)
-	}
-	e.declarations = append(e.declarations, out.String())
-}
-*/
-
 func emit(syms *rpc_syms) {
 	e := emitter{
 		declarations: []string{},
 		syms: syms,
+		emitted: map[string]struct{}{},
 	}
 
 	e.declarations = append(e.declarations, fmt.Sprintf("package main\n"))
