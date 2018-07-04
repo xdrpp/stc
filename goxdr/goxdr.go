@@ -112,7 +112,7 @@ func (e *emitter) decltype(parent rpc_sym, d *rpc_decl) string {
 			bound = e.chase_bound(d)
 		}
 	case PTR:
-		fmt.Fprintf(out, "*");
+		fmt.Fprintf(out, "*")
 	case ARRAY:
 		fmt.Fprintf(out, "[%s]", d.bound)
 	case VEC:
@@ -129,7 +129,7 @@ func (e *emitter) decltype(parent rpc_sym, d *rpc_decl) string {
 		*d.inline_decl.symid() = d.typ
 		e.emit(d.inline_decl)
 	}
-	if (bound == "") {
+	if bound == "" {
 		fmt.Fprintf(out, "%s", d.typ)
 		return out.String()
 	}
@@ -170,16 +170,16 @@ func (r *rpc_typedef) emit(e *emitter) {
 
 func (r *rpc_enum) emit(e *emitter) {
 	out := &strings.Builder{}
-	fmt.Fprintf(out, "type %s int32\nconst (\n", r.id);
+	fmt.Fprintf(out, "type %s int32\nconst (\n", r.id)
 	for _, tag := range r.tags {
 		fmt.Fprintf(out, "\t%s = %s(%s)\n", tag.id, r.id, tag.val)
 	}
-	fmt.Fprintf(out, ")\n");
-	fmt.Fprintf(out, "var _%s_names = map[int32]string{\n", r.id);
+	fmt.Fprintf(out, ")\n")
+	fmt.Fprintf(out, "var _%s_names = map[int32]string{\n", r.id)
 	for _, tag := range r.tags {
-		fmt.Fprintf(out, "\tint32(%s): \"%s\",\n", tag.id, tag.id);
+		fmt.Fprintf(out, "\tint32(%s): \"%s\",\n", tag.id, tag.id)
 	}
-	fmt.Fprintf(out, "}\n");
+	fmt.Fprintf(out, "}\n")
 	fmt.Fprintf(out, "func (*%s) EnumNames() map[int32]string {\n" +
 		"\treturn _%s_names\n}\n", r.id, r.id)
 	fmt.Fprintf(out, "func (v *%s) EnumVal() *int32 {\n" +
@@ -198,7 +198,7 @@ func (r *rpc_enum) emit(e *emitter) {
 
 func (r *rpc_struct) emit(e *emitter) {
 	out := &strings.Builder{}
-	fmt.Fprintf(out, "type %s struct {\n", r.id);
+	fmt.Fprintf(out, "type %s struct {\n", r.id)
 	for _, decl := range r.decls {
 		fmt.Fprintf(out, "\t%s %s\n", decl.id, e.decltype(r, &decl))
 	}
@@ -208,10 +208,10 @@ func (r *rpc_struct) emit(e *emitter) {
 
 func (r *rpc_union) emit(e *emitter) {
 	out := &strings.Builder{}
-	fmt.Fprintf(out, "type %s struct {\n", r.id);
-	fmt.Fprintf(out, "\t%s %s\n", r.tagid, r.tagtype);
-	fmt.Fprintf(out, "\t_u interface{}\n");
-	fmt.Fprintf(out, "}\n");
+	fmt.Fprintf(out, "type %s struct {\n", r.id)
+	fmt.Fprintf(out, "\t%s %s\n", r.tagid, r.tagtype)
+	fmt.Fprintf(out, "\t_u interface{}\n")
+	fmt.Fprintf(out, "}\n")
 	for _, u := range r.fields {
 		if u.decl.id == "" || u.decl.typ == "void" {
 			continue
@@ -227,10 +227,10 @@ func (r *rpc_union) emit(e *emitter) {
 			"\t\t}\n", ret, ret)
 		badcase := fmt.Sprintf(
 			"\t\tpanic(\"%s accessed when not selected\")\n", u.decl.id)
-		fmt.Fprintf(out, "\tswitch u.%s {\n", r.tagid);
+		fmt.Fprintf(out, "\tswitch u.%s {\n", r.tagid)
 		if u.hasdefault && len(r.fields) > 1 {
 			needcomma := false
-			fmt.Fprintf(out, "\tcase ");
+			fmt.Fprintf(out, "\tcase ")
 			for _, u1 := range r.fields {
 				if r.hasdefault {
 					continue
@@ -254,7 +254,7 @@ func (r *rpc_union) emit(e *emitter) {
 				fmt.Fprintf(out, "\tdefault:\n%s", badcase)
 			}
 		}
-		fmt.Fprintf(out, "\t}\n");
+		fmt.Fprintf(out, "\t}\n")
 		fmt.Fprintf(out, "}\n")
 	}
 	fmt.Fprintf(out, "func (u *%s) XdrUnionTag() interface{} {\n" +
@@ -263,7 +263,7 @@ func (r *rpc_union) emit(e *emitter) {
 	if r.hasdefault {
 		fmt.Fprintf(out, "\treturn true\n")
 	} else {
-		fmt.Fprintf(out, "\tswitch u.%s {\n" + "\tcase ", r.tagid);
+		fmt.Fprintf(out, "\tswitch u.%s {\n" + "\tcase ", r.tagid)
 		needcomma := false
 		for _, u1 := range r.fields {
 			if needcomma {
