@@ -66,18 +66,24 @@ func (e *emitter) printf(str string, args ...interface{}) {
 }
 
 func (e *emitter) chase_typedef(id string) string {
-	if d, ok := e.syms.SymbolMap[id]; ok {
-		if td, ok := d.(*rpc_typedef);
-		ok && td.qual == SCALAR && td.inline_decl == nil {
-			return e.chase_typedef(td.typ)
+	for loop := map[string]bool{}; !loop[id]; {
+		loop[id] = true
+		if d, ok := e.syms.SymbolMap[id]; ok {
+			if td, ok := d.(*rpc_typedef);
+			ok && td.qual == SCALAR && td.inline_decl == nil {
+				id = e.chase_typedef(td.typ)
+				continue
+			}
 		}
+		break
 	}
 	return id
 }
 
 func (e *emitter) chase_bound(d *rpc_decl) string {
 	b := d.bound
-	for {
+	for loop := map[string]bool{}; !loop[b]; {
+		loop[b] = true
 		if s, ok := e.syms.SymbolMap[b]; !ok {
 			break
 		} else if d2, ok := s.(*rpc_const); !ok {
@@ -134,7 +140,7 @@ func (e *emitter) decltype(parent rpc_sym, d *rpc_decl) string {
 		d1.bound = ""
 		e.emit(&d1)
 		e.printf("func (*%s) XdrBound() uint32 {\n" +
-			"\treturn %s\n" +
+			"\treturn uint32(%s)\n" +
 			"}\n", typ, bound)
 		e.emitted[typ] = struct{}{}
 	}

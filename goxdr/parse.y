@@ -129,7 +129,9 @@ enum_tag_list: enum_tag
 
 enum_tag: newid '=' value
 	{
-		$$ = rpc_const{$1, $3}
+		tag := rpc_const{$1, $3}
+		yylex.(*Lexer).output.SymbolMap[$1] = &tag
+		$$ = tag
 	}
 | newid
 	{
