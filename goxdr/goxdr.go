@@ -142,6 +142,11 @@ func (e *emitter) decltype(parent rpc_sym, d *rpc_decl) string {
 		e.printf("func (*%s) XdrBound() uint32 {\n" +
 			"\treturn uint32(%s)\n" +
 			"}\n", typ, bound)
+		if d1.typ == "string" {
+			e.printf("func (v *%s) String() string {\n" +
+				"\treturn string(*v)\n" +
+				"}\n", typ)
+		}
 		e.emitted[typ] = struct{}{}
 	}
 	return typ
