@@ -139,8 +139,10 @@ func (e *emitter) decltype(parent rpc_sym, d *rpc_decl) string {
 		return out.String()
 	}
 	typ := underscore(e.chase_typedef(d.typ)) + "_" + bound
+	altbound := bound
 	if bound == maxbound {
 		bound = "0xffffffff"
+		altbound = ""
 	}
 	if _, ok := e.emitted[typ]; !ok {
 		d1 := *d
@@ -155,19 +157,35 @@ func (e *emitter) decltype(parent rpc_sym, d *rpc_decl) string {
 			"}\n", typ, bound, typ, bound)
 		if d1.typ == "string" {
 			e.printf("func (v *%s) String() string {\n" +
+				"\treturn fmt.Sprintf(\"%%q\", *v)\n" +
+				"}\n" +
+				"func (v *%s) GetString() string {\n" +
 				"\treturn string(*v)\n" +
 				"}\n" +
-				"func (v *%s) Set(s string) {\n" +
+				"func (v *%s) SetString(s string) {\n" +
+				"\tif len(s) > %s {\n" +
+				"\t\txdrPanic(\"Can't store %%d bytes in string<%s>\"," +
+				" len(s))\n" +
+				"\t}\n" +
 				"\t*v = %s(s)\n" +
-				"}\n" +
-				"func (v *%s) XdrString() *string {\n" +
-				"\treturn (*string)(v)\n" +
 				"}\n",
-				typ, typ, typ, typ)
-		} else if d1.typ == "byte" {
-			e.printf("func (v *%s) XdrOpaque() *[]byte {\n" +
-				"\treturn (*[]byte)(v)\n" +
-				"}\n", typ)
+				typ, typ, typ, bound, altbound, typ)
+		}
+		if d1.typ == "byte" || d1.typ == "string" {
+			xdrtype := "opaque"
+			if (d1.typ == "string") {
+				xdrtype = "string"
+			}
+			e.printf("func (v *%s) GetByteSlice() []byte {\n" +
+				"\treturn ([]byte)(*v)\n" +
+				"}\n" +
+				"func (v *%s) SetByteSlice(nv []byte) {\n" +
+				"\tif len(*v) > %s {\n" +
+				"\t\txdrPanic(\"Can't store %%d bytes in" +
+				" %s<%s>\", len(*v))" +
+				"\t}\n" +
+				"\t*v = %s(nv)\n" +
+				"}\n", typ, typ, bound, xdrtype, altbound, typ)
 		}
 		e.emitted[typ] = struct{}{}
 	}
@@ -217,7 +235,16 @@ func (r *rpc_enum) emit(e *emitter) {
 		"\t\treturn s\n\t}\n" +
 		"\treturn \"unknown_%s\"\n}\n",
 		r.id, r.id, r.id)
-	fmt.Fprintf(out, "func (v *%s) XdrEnumValue() interface{} {\n" +
+	fmt.Fprintf(out, "func (v *%s) GetU32() uint32 {\n" +
+		"\treturn uint32(*v)\n" +
+		"}\n", r.id)
+	fmt.Fprintf(out, "func (v *%s) SetU32(n uint32) {\n" +
+		"\t*v = %s(n)\n" +
+		"}\n", r.id, r.id)
+	fmt.Fprintf(out, "func (v *%s) XdrPointer() interface{} {\n" +
+		"\treturn v\n" +
+		"}\n", r.id)
+	fmt.Fprintf(out, "func (v *%s) XdrValue() interface{} {\n" +
 		"\treturn *v\n" +
 		"}\n", r.id)
 	e.append(out)
@@ -362,7 +389,8 @@ func emit(syms *rpc_syms) {
 		emitted: map[string]struct{}{},
 	}
 
-	e.declarations = append(e.declarations, fmt.Sprintf("package main\n"))
+	e.printf("package main\n")
+	e.append(header)
 	for _, s := range syms.Symbols  {
 		e.declarations = append(e.declarations, "\n")
 		e.emit(s)
