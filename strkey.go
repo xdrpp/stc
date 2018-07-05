@@ -1,11 +1,11 @@
 package main
 
 import "bytes"
-import "fmt"
-import "os"
-import "crypto/rand"
+// import "fmt"
+// import "os"
+// import "crypto/rand"
 import "encoding/base32"
-import "golang.org/x/crypto/ed25519"
+// import "golang.org/x/crypto/ed25519"
 
 type StrKeyVersionByte byte
 
@@ -72,6 +72,7 @@ func MustFromStrKey(want StrKeyVersionByte, in string) []byte {
 	return bin
 }
 
+/*
 func main() {
 	pk, sk, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -92,3 +93,4 @@ func main() {
 		fmt.Println("sk borked", sk.Seed(), sk1)
 	}
 }
+*/
