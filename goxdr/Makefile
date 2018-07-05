@@ -1,10 +1,10 @@
-BUILT_SOURCES = parse.go qual_t_string.go
+BUILT_SOURCES = header.go parse.go qual_t_string.go
 EXTRA_CLEAN = y.output
 
 all: $(BUILT_SOURCES)
 	go build
 
-$(BUILT_SOURCES): parse.y syms.go
+$(BUILT_SOURCES): header.go.in parse.y syms.go
 	go generate
 
 clean:

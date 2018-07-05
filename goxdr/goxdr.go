@@ -8,6 +8,7 @@ import "strings"
 import "strconv"
 
 //go:generate goyacc -o parse.go parse.y
+//go:generate sh -c "sed -e 's!^//UNCOMMENT:!!' header.go.in > header.go"
 
 func capitalize(s string) string {
 	if len(s) > 0 && s[0] >= 'a' && s[0] <= 'z' {
