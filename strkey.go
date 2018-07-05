@@ -8,12 +8,13 @@ import "encoding/base32"
 import "golang.org/x/crypto/ed25519"
 
 type StrKeyVersionByte byte
+
 const (
-	STRKEY_PUBKEY_ED25519 StrKeyVersionByte = 6	// 'G'
-    STRKEY_SEED_ED25519 StrKeyVersionByte = 18	// 'S'
-    STRKEY_PRE_AUTH_TX StrKeyVersionByte = 19	// 'T',
-    STRKEY_HASH_X StrKeyVersionByte = 23		// 'X'
-	STRKEY_ERROR StrKeyVersionByte = 255
+	STRKEY_PUBKEY_ED25519 StrKeyVersionByte = 6  // 'G'
+	STRKEY_SEED_ED25519   StrKeyVersionByte = 18 // 'S'
+	STRKEY_PRE_AUTH_TX    StrKeyVersionByte = 19 // 'T',
+	STRKEY_HASH_X         StrKeyVersionByte = 23 // 'X'
+	STRKEY_ERROR          StrKeyVersionByte = 255
 )
 
 var crc16table [256]uint16
@@ -21,10 +22,10 @@ var crc16table [256]uint16
 func init() {
 	const poly = 0x1021
 	for i := 0; i < 256; i++ {
-		crc := uint16(i)<<8
+		crc := uint16(i) << 8
 		for j := 0; j < 8; j++ {
-			if crc & 0x8000 != 0 {
-				crc = crc << 1 ^ poly
+			if crc&0x8000 != 0 {
+				crc = crc<<1 ^ poly
 			} else {
 				crc <<= 1
 			}
@@ -35,7 +36,7 @@ func init() {
 
 func crc16(data []byte) (crc uint16) {
 	for _, b := range data {
-		temp := b ^ byte(crc >> 8)
+		temp := b ^ byte(crc>>8)
 		crc = crc16table[temp] ^ (crc << 8)
 	}
 	return
@@ -43,7 +44,7 @@ func crc16(data []byte) (crc uint16) {
 
 func ToStrKey(ver StrKeyVersionByte, bin []byte) string {
 	var out bytes.Buffer
-	out.WriteByte(byte(ver)<<3)
+	out.WriteByte(byte(ver) << 3)
 	out.Write(bin)
 	sum := crc16(out.Bytes())
 	out.WriteByte(byte(sum))
@@ -53,15 +54,14 @@ func ToStrKey(ver StrKeyVersionByte, bin []byte) string {
 
 func FromStrKey(in string) ([]byte, StrKeyVersionByte) {
 	bin, err := base32.StdEncoding.DecodeString(in)
-	if err != nil || len(bin) < 3 || bin[0] & 7 != 0 {
+	if err != nil || len(bin) < 3 || bin[0]&7 != 0 {
 		return nil, STRKEY_ERROR
 	}
-	want := uint16(bin[len(bin)-2]) | uint16(bin[len(bin)-1]) << 8;
+	want := uint16(bin[len(bin)-2]) | uint16(bin[len(bin)-1])<<8
 	if want != crc16(bin[:len(bin)-2]) {
-		fmt.Println("bad crc")
 		return nil, STRKEY_ERROR
 	}
-	return bin[1:len(bin)-2], StrKeyVersionByte(bin[0]>>3)
+	return bin[1 : len(bin)-2], StrKeyVersionByte(bin[0] >> 3)
 }
 
 func MustFromStrKey(want StrKeyVersionByte, in string) []byte {
