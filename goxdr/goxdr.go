@@ -80,6 +80,9 @@ func (e *emitter) chase_typedef(id string) string {
 	return id
 }
 
+const maxbound = "infinity"
+const unbound = "$unbound$"
+
 func (e *emitter) chase_bound(d *rpc_decl) string {
 	b := d.bound
 	for loop := map[string]bool{}; !loop[b]; {
@@ -92,15 +95,17 @@ func (e *emitter) chase_bound(d *rpc_decl) string {
 			b = d2.val
 		}
 	}
-	if b != "" {
-		i32, err := strconv.ParseInt(b, 0, 32)
-		if err != nil {
-			return b
-		} else if i32 != 0xffffffff {
-			return fmt.Sprintf("%d", i32)
-		}
+	if b == unbound {
+		return ""
+	} else if b == "" {
+		return maxbound
+	} else if i32, err := strconv.ParseUint(b, 0, 32); err != nil {
+		return b
+	} else if i32 == 0xffffffff {
+		return maxbound
+	} else {
+		return fmt.Sprintf("%d", i32)
 	}
-	return ""
 }
 
 func (e *emitter) decltype(parent rpc_sym, d *rpc_decl) string {
@@ -134,17 +139,34 @@ func (e *emitter) decltype(parent rpc_sym, d *rpc_decl) string {
 		return out.String()
 	}
 	typ := underscore(e.chase_typedef(d.typ)) + "_" + bound
+	if bound == maxbound {
+		bound = "0xffffffff"
+	}
 	if _, ok := e.emitted[typ]; !ok {
 		d1 := *d
 		d1.id = typ
-		d1.bound = ""
+		d1.bound = unbound
 		e.emit(&d1)
 		e.printf("func (*%s) XdrBound() uint32 {\n" +
 			"\treturn uint32(%s)\n" +
-			"}\n", typ, bound)
+			"}\n" +
+			"func (v *%s) XdrValid() bool {\n" +
+			"\treturn len(*v) < %s\n" +
+			"}\n", typ, bound, typ, bound)
 		if d1.typ == "string" {
 			e.printf("func (v *%s) String() string {\n" +
 				"\treturn string(*v)\n" +
+				"}\n" +
+				"func (v *%s) Set(s string) {\n" +
+				"\t*v = %s(s)\n" +
+				"}\n" +
+				"func (v *%s) XdrString() *string {\n" +
+				"\treturn (*string)(v)\n" +
+				"}\n",
+				typ, typ, typ, typ)
+		} else if d1.typ == "byte" {
+			e.printf("func (v *%s) XdrOpaque() *[]byte {\n" +
+				"\treturn (*[]byte)(v)\n" +
 				"}\n", typ)
 		}
 		e.emitted[typ] = struct{}{}
@@ -263,7 +285,7 @@ func (r *rpc_union) emit(e *emitter) {
 		fmt.Fprintf(out, "}\n")
 	}
 
-	fmt.Fprintf(out, "func (u *%s) XdrUnionValid() bool {\n", r.id)
+	fmt.Fprintf(out, "func (u *%s) XdrValid() bool {\n", r.id)
 	if r.hasdefault {
 		fmt.Fprintf(out, "\treturn true\n")
 	} else {

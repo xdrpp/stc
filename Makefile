@@ -15,7 +15,7 @@ goxdr/goxdr:
 	$(MAKE) -C goxdr
 
 xdr_generated.go: goxdr/goxdr $(XDRS)
-	goxdr/goxdr xdr/*.x > $@~
+	goxdr/goxdr $(XDRS) > $@~
 	mv -f $@~ $@
 
 clean:
