@@ -37,14 +37,14 @@ type XdrNum32 interface {
 	XdrValue() interface{}
 }
 
-type xdrtype_bool bool
-func (v *xdrtype_bool) GetU32() uint32 {
+type XdrBool bool
+func (v *XdrBool) GetU32() uint32 {
 	if *v {
 		return 1
 	}
 	return 0
 }
-func (v *xdrtype_bool) SetU32(nv uint32) {
+func (v *XdrBool) SetU32(nv uint32) {
 	switch nv {
 	case 0:
 		*v = false
@@ -53,34 +53,60 @@ func (v *xdrtype_bool) SetU32(nv uint32) {
 	}
 	xdrPanic("bool must be 0 or 1")
 }
-func (v *xdrtype_bool) XdrPointer() interface{} { return (*bool)(v) }
-func (v *xdrtype_bool) XdrValue() interface{} { return bool(*v) }
-func xdrconvert_bool(v *bool) XdrNum32 { return (*xdrtype_bool)(v) }
+func (v *XdrBool) XdrPointer() interface{} { return (*bool)(v) }
+func (v *XdrBool) XdrValue() interface{} { return bool(*v) }
+func XDR_bool(x XDR, name string, v *bool) {
+	x.marshal(name, (*XdrBool)(v))
+}
 
-type xdrtype_int32 int32
-func (v *xdrtype_int32) GetU32() uint32 { return uint32(*v) }
-func (v *xdrtype_int32) SetU32(nv uint32) { *v = xdrtype_int32(nv) }
-func (v *xdrtype_int32) XdrPointer() interface{} { return (*int32)(v) }
-func (v *xdrtype_int32) XdrValue() interface{} { return int32(*v) }
-func xdrconvert_int32(v *int32) XdrNum32 { return (*xdrtype_int32)(v) }
+type XdrInt32 int32
+func (v *XdrInt32) GetU32() uint32 { return uint32(*v) }
+func (v *XdrInt32) SetU32(nv uint32) { *v = XdrInt32(nv) }
+func (v *XdrInt32) XdrPointer() interface{} { return (*int32)(v) }
+func (v *XdrInt32) XdrValue() interface{} { return int32(*v) }
+func XDR_int32(x XDR, name string, v *int32) {
+	x.marshal(name, (*XdrInt32)(v))
+}
 
-type xdrtype_uint32 uint32
-func (v *xdrtype_uint32) GetU32() uint32 { return uint32(*v) }
-func (v *xdrtype_uint32) SetU32(nv uint32) { *v = xdrtype_uint32(nv) }
-func (v *xdrtype_uint32) XdrPointer() interface{} { return (*uint32)(v) }
-func (v *xdrtype_uint32) XdrValue() interface{} { return uint32(*v) }
-func xdrconvert_uint32(v *uint32) XdrNum32 { return (*xdrtype_uint32)(v) }
+type XdrUint32 uint32
+func (v *XdrUint32) GetU32() uint32 { return uint32(*v) }
+func (v *XdrUint32) SetU32(nv uint32) { *v = XdrUint32(nv) }
+func (v *XdrUint32) XdrPointer() interface{} { return (*uint32)(v) }
+func (v *XdrUint32) XdrValue() interface{} { return uint32(*v) }
+func XDR_uint32(x XDR, name string, v *uint32) {
+	x.marshal(name, (*XdrUint32)(v))
+}
 
-type xdrtype_float32 float32
-func (v *xdrtype_float32) GetU32() uint32 {
+type XdrFloat32 float32
+func (v *XdrFloat32) GetU32() uint32 {
 	return math.Float32bits(float32(*v))
 }
-func (v *xdrtype_float32) SetU32(nv uint32) {
-	*v = xdrtype_float32(math.Float32frombits(nv))
+func (v *XdrFloat32) SetU32(nv uint32) {
+	*v = XdrFloat32(math.Float32frombits(nv))
 }
-func (v *xdrtype_float32) XdrPointer() interface{} { return (*float32)(v) }
-func (v *xdrtype_float32) XdrValue() interface{} { return float32(*v) }
-func xdrconvert_float32(v *float32) XdrNum32 { return (*xdrtype_float32)(v) }
+func (v *XdrFloat32) XdrPointer() interface{} { return (*float32)(v) }
+func (v *XdrFloat32) XdrValue() interface{} { return float32(*v) }
+func XDR_float32(x XDR, name string, v *float32) {
+	x.marshal(name, (*XdrFloat32)(v))
+}
+
+type XdrSize struct {
+	size uint32
+	bound uint32
+}
+func (v *XdrSize) String() string { return fmt.Sprintf("%v", v.size) }
+func (v *XdrSize) GetU32() uint32 { return v.size }
+func (v *XdrSize) SetU32(nv uint32) {
+	if nv > v.bound {
+		xdrPanic("size %d greater than bound %d", nv, v.bound)
+	} else if int(nv) < 0 {
+		xdrPanic("size %d greater than max slice len", nv)
+	}
+	v.size = nv
+}
+func (v *XdrSize) XdrPointer() interface{} { return &v.size }
+func (v *XdrSize) XdrValue() interface{} { return v.size }
+func (v *XdrSize) XdrBound() uint32 { return v.bound }
 
 type XdrNum64 interface {
 	GetU64() uint64
@@ -89,30 +115,37 @@ type XdrNum64 interface {
 	XdrValue() interface{}
 }
 
-type xdrtype_int64 int64
-func (v *xdrtype_int64) GetU64() uint64 { return uint64(*v) }
-func (v *xdrtype_int64) SetU64(nv uint64) { *v = xdrtype_int64(nv) }
-func (v *xdrtype_int64) XdrPointer() interface{} { return (*int64)(v) }
-func (v *xdrtype_int64) XdrValue() interface{} { return int64(*v) }
-func xdrconvert_int64(v *int64) XdrNum64 { return (*xdrtype_int64)(v) }
+type XdrInt64 int64
+func (v *XdrInt64) GetU64() uint64 { return uint64(*v) }
+func (v *XdrInt64) SetU64(nv uint64) { *v = XdrInt64(nv) }
+func (v *XdrInt64) XdrPointer() interface{} { return (*int64)(v) }
+func (v *XdrInt64) XdrValue() interface{} { return int64(*v) }
+func XDR_int64(x XDR, name string, v *int64) {
+	x.marshal(name, (*XdrInt64)(v))
+}
 
-type xdrtype_uint64 uint64
-func (v *xdrtype_uint64) GetU64() uint64 { return uint64(*v) }
-func (v *xdrtype_uint64) SetU64(nv uint64) { *v = xdrtype_uint64(nv) }
-func (v *xdrtype_uint64) XdrPointer() interface{} { return (*uint64)(v) }
-func (v *xdrtype_uint64) XdrValue() interface{} { return uint64(*v) }
-func xdrconvert_uint64(v *uint64) XdrNum64 { return (*xdrtype_uint64)(v) }
+type XdrUint64 uint64
+func (v *XdrUint64) GetU64() uint64 { return uint64(*v) }
+func (v *XdrUint64) SetU64(nv uint64) { *v = XdrUint64(nv) }
+func (v *XdrUint64) XdrPointer() interface{} { return (*uint64)(v) }
+func (v *XdrUint64) XdrValue() interface{} { return uint64(*v) }
+func XDR_uint64(x XDR, name string, v *uint64) {
+	x.marshal(name, (*XdrUint64)(v))
+}
 
-type xdrtype_float64 float64
-func (v *xdrtype_float64) GetU64() uint64 {
+type XdrFloat64 float64
+func (v *XdrFloat64) GetU64() uint64 {
 	return math.Float64bits(float64(*v))
 }
-func (v *xdrtype_float64) SetU64(nv uint64) {
-	*v = xdrtype_float64(math.Float64frombits(nv))
+func (v *XdrFloat64) SetU64(nv uint64) {
+	*v = XdrFloat64(math.Float64frombits(nv))
 }
-func (v *xdrtype_float64) XdrPointer() interface{} { return (*float64)(v) }
-func (v *xdrtype_float64) XdrValue() interface{} { return float64(*v) }
-func xdrconvert_float64(v *float64) XdrNum64 { return (*xdrtype_float64)(v) }
+func (v *XdrFloat64) XdrPointer() interface{} { return (*float64)(v) }
+func (v *XdrFloat64) XdrValue() interface{} { return float64(*v) }
+func XDR_float64(x XDR, name string, v *float64) {
+	x.marshal(name, (*XdrFloat64)(v))
+}
+
 
 type XdrBytes interface {
 	GetByteSlice() []byte
@@ -125,39 +158,39 @@ type XdrVariableBytes interface {
 	XdrValue() interface{}
 }
 
-type xdr_string struct {
+type XdrString struct {
 	Str *string
 	Bound uint32
 }
-func (v *xdr_string) String() string { return fmt.Sprintf("%q", *v.Str) }
-func (v *xdr_string) GetByteSlice() []byte { return ([]byte)(*v.Str) }
-func (v *xdr_string) XdrBound() uint32 { return v.Bound }
-func (v *xdr_string) SetByteSlice(bs []byte) {
+func (v *XdrString) String() string { return fmt.Sprintf("%q", *v.Str) }
+func (v *XdrString) GetByteSlice() []byte { return ([]byte)(*v.Str) }
+func (v *XdrString) XdrBound() uint32 { return v.Bound }
+func (v *XdrString) SetByteSlice(bs []byte) {
 	if uintptr(len(bs)) > uintptr(v.Bound) {
 		xdrPanic("Cannot store %d bytes in string<%d>", len(bs), v.Bound)
 	}
 	*v.Str = string(bs)
 }
-func (v *xdr_string) XdrPointer() interface{} { return v.Str }
-func (v *xdr_string) XdrValue() interface{} { return *v.Str }
+func (v *XdrString) XdrPointer() interface{} { return v.Str }
+func (v *XdrString) XdrValue() interface{} { return *v.Str }
 
-type xdr_vec_opaque struct {
+type XdrVecOpaque struct {
 	Bytes *[]byte
 	Bound uint32
 }
-func (v *xdr_vec_opaque) String() string { return fmt.Sprintf("%v", *v.Bytes) }
-func (v *xdr_vec_opaque) GetByteSlice() []byte { return *v.Bytes }
-func (v *xdr_vec_opaque) XdrBound() uint32 { return v.Bound }
-func (v *xdr_vec_opaque) SetByteSlice(bs []byte) {
+func (v *XdrVecOpaque) String() string { return fmt.Sprintf("%v", *v.Bytes) }
+func (v *XdrVecOpaque) GetByteSlice() []byte { return *v.Bytes }
+func (v *XdrVecOpaque) XdrBound() uint32 { return v.Bound }
+func (v *XdrVecOpaque) SetByteSlice(bs []byte) {
 	if uintptr(len(bs)) > uintptr(v.Bound) {
 		xdrPanic("Cannot store %d bytes in string<%d>", len(bs), v.Bound)
 	}
 	*v.Bytes = bs
 }
-func (v *xdr_vec_opaque) XdrPointer() interface{} { return v.Bytes }
-func (v *xdr_vec_opaque) XdrValue() interface{} { return *v.Bytes }
+func (v *XdrVecOpaque) XdrPointer() interface{} { return v.Bytes }
+func (v *XdrVecOpaque) XdrValue() interface{} { return *v.Bytes }
 
-type xdrtype_array_opaque []byte
-func (v *xdrtype_array_opaque) GetByteSlice() []byte { return ([]byte)(*v) }
+type XdrArrayOpaque []byte
+func (v *XdrArrayOpaque) GetByteSlice() []byte { return ([]byte)(*v) }
 
 // end boilerplate` + "\n"

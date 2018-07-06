@@ -4,7 +4,7 @@ EXTRA_CLEAN = y.output
 all: $(BUILT_SOURCES)
 	go build
 
-$(BUILT_SOURCES): header.go.in parse.y syms.go
+$(BUILT_SOURCES): header.go.in parse.y syms.go goxdr.go
 	go generate
 
 clean:
@@ -22,3 +22,4 @@ maintainer-clean: clean
 	mv -f .gitignore~ .gitignore
 
 .PHONY: all clean maintainer-clean
+.NOTPARALLEL:
