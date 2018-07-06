@@ -205,7 +205,7 @@ func (e *emitter) get_xdrtype(parent rpc_sym, d *rpc_decl) string {
 	switch d.qual {
 	case SCALAR:
 		if d.typ == "string" {
-			return e.gen_string(d.bound)
+			return "xdr_string"
 		}
 		return "xdrtype_" + d.typ
 	case ARRAY:
@@ -213,6 +213,7 @@ func (e *emitter) get_xdrtype(parent rpc_sym, d *rpc_decl) string {
 			return "xdrtype_array_opaque"
 		}
 		xdrtype := "_xdrtype_array" + underscore(d.typ)
+/*
 		if !e.done(xdrtype) {
 			e.printf("type %s []%s\n" +
 				"func (v *%s) XdrTraverse(x XDR, name string) {\n" +
@@ -222,22 +223,59 @@ func (e *emitter) get_xdrtype(parent rpc_sym, d *rpc_decl) string {
 				"\t//}\n" +
 				"}\n", xdrtype, d.typ, xdrtype, d.typ)
 		}
+*/
 		return xdrtype
 	case VEC:
 		if d.typ == "byte" {
-			return e.gen_opaquevec(d.bound)
+			return "xdr_vec_opaque"
 		}
 		return e.gen_typevec(d)
 	case PTR:
 		xdrtype := "_ptr_" + d.typ
 		if !e.done(xdrtype) {
-			e.printf("type %s struct { ptr *%s }\n%s",
+			e.printf("type %s struct { ptr **%s }\n%s",
 				xdrtype, d.typ, xdrbound(xdrtype, "1"))
 		}
 		return xdrtype
 	default:
 		panic("bad qual_t");
 	}
+}
+
+func addr(val string) string {
+	if len(val) > 1 && val[0] == '*' {
+		return val[1:]
+	}
+	return "&" + val
+}
+
+func (e *emitter) convert(parent rpc_sym, val string, d *rpc_decl) string {
+	xdrtype := e.get_xdrtype(parent, d)
+	switch d.qual {
+	case SCALAR:
+		if d.typ == "string" {
+			b := d.bound
+			if b == "" {
+				b = "0xffffffff"
+			}
+			return fmt.Sprintf("xdr_string{%s, uint32(%s)}", addr(val), b)
+		}
+		return fmt.Sprintf("xdrconvert_%s(%s)", d.typ, addr(val))
+	case PTR:
+		return fmt.Sprintf("%s{%s}", xdrtype, addr(val))
+	case ARRAY:
+		return fmt.Sprintf("%s((%s)[:])", xdrtype, val)
+	case VEC:
+		if d.typ == "byte" {
+			b := d.bound
+			if b == "" {
+				b = "0xffffffff"
+			}
+			return fmt.Sprintf("xdr_vec_opaque{%s, uint32(%s)}", addr(val), b)
+		}
+		// XXX
+	}
+	return val
 }
 
 const maxbound = "infinity"
@@ -306,9 +344,14 @@ func (r *rpc_decl) emit(e *emitter) {
 
 func (r0 *rpc_typedef) emit(e *emitter) {
 	r := (*rpc_decl)(r0)
+	xdrtype := e.get_xdrtype(r0, r)
 	e.printf("type %s = %s\n" +
-		"type xdrtype_%s = %s\n",
-		r.id, e.decltype(r0, r), r.id, e.get_xdrtype(r0, r))
+		"type xdrtype_%s = %s\n" +
+		"func xdrconvert_%s(v *%s) %s {\n" +
+		"\treturn %s\n" +
+		"}\n",
+		r.id, e.decltype(r0, r), r.id, xdrtype,
+		r.id, r.id, xdrtype, e.convert(r0, "*v", r))
 }
 
 func (r *rpc_enum) emit(e *emitter) {
@@ -318,6 +361,10 @@ func (r *rpc_enum) emit(e *emitter) {
 		fmt.Fprintf(out, "\t%s = %s(%s)\n", tag.id, r.id, tag.val)
 	}
 	fmt.Fprintf(out, ")\n")
+	fmt.Fprintf(out, "type xdrtype_%s = *%s\n" +
+		"func xdrconvert_%s(v *%s) xdrtype_%s {\n" +
+		"\treturn v\n" +
+		"}\n", r.id, r.id, r.id, r.id, r.id)
 	fmt.Fprintf(out, "var _Xdr%sNames = map[int32]string{\n", r.id)
 	for _, tag := range r.tags {
 		fmt.Fprintf(out, "\tint32(%s): \"%s\",\n", tag.id, tag.id)
@@ -331,8 +378,8 @@ func (r *rpc_enum) emit(e *emitter) {
 	fmt.Fprintf(out, "func (v *%s) String() string {\n" +
 		"\tif s, ok := _Xdr%sNames[int32(*v)]; ok {\n" +
 		"\t\treturn s\n\t}\n" +
-		"\treturn \"unknown_%s\"\n}\n",
-		r.id, r.id, r.id)
+		"\treturn fmt.Sprintf(\"%s#%%d\", *v)\n" +
+		"}\n", r.id, r.id, r.id)
 	fmt.Fprintf(out, "func (v *%s) GetU32() uint32 {\n" +
 		"\treturn uint32(*v)\n" +
 		"}\n", r.id)
@@ -355,6 +402,10 @@ func (r *rpc_struct) emit(e *emitter) {
 		fmt.Fprintf(out, "\t%s %s\n", decl.id, e.decltype(r, &decl))
 	}
 	fmt.Fprintf(out, "}\n")
+	fmt.Fprintf(out, "type xdrtype_%s = *%s\n" +
+		"func xdrconvert_%s(v *%s) xdrtype_%s {\n" +
+		"\treturn v\n" +
+		"}\n", r.id, r.id, r.id, r.id, r.id)
 	e.append(out)
 }
 
@@ -364,7 +415,6 @@ func (r *rpc_union) emit(e *emitter) {
 	fmt.Fprintf(out, "\t%s %s\n", r.tagid, r.tagtype)
 	fmt.Fprintf(out, "\t_u interface{}\n")
 	fmt.Fprintf(out, "}\n")
-	fmt.Fprintf(out, "type xdrtype_%s = *%s\n", r.id, r.id)
 	for _, u := range r.fields {
 		if u.decl.id == "" || u.decl.typ == "void" {
 			continue
@@ -410,6 +460,11 @@ func (r *rpc_union) emit(e *emitter) {
 		fmt.Fprintf(out, "\t}\n")
 		fmt.Fprintf(out, "}\n")
 	}
+
+	fmt.Fprintf(out, "type xdrtype_%s = *%s\n" +
+		"func xdrconvert_%s(v *%s) xdrtype_%s {\n" +
+		"\treturn v\n" +
+		"}\n", r.id, r.id, r.id, r.id, r.id)
 
 	fmt.Fprintf(out, "func (u *%s) XdrValid() bool {\n", r.id)
 	if r.hasdefault {
