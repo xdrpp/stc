@@ -49,6 +49,14 @@ type emitter struct {
 	emitted map[string]struct{}
 }
 
+func (e *emitter) done(typ string) bool {
+	if _, ok := e.emitted[typ]; ok {
+		return true
+	}
+	e.emitted[typ] = struct{}{}
+	return false
+}
+
 func (e *emitter) append(out interface{}) {
 	var s string
 	switch t := out.(type) {
@@ -59,7 +67,9 @@ func (e *emitter) append(out interface{}) {
 	default:
 		panic("emitter append non-String")
 	}
-	e.declarations = append(e.declarations, s)
+	if (s != "") {
+		e.declarations = append(e.declarations, s)
+	}
 }
 
 func (e *emitter) printf(str string, args ...interface{}) {
@@ -79,6 +89,155 @@ func (e *emitter) chase_typedef(id string) string {
 		break
 	}
 	return id
+}
+
+func (e *emitter) get_bound(b string) string {
+	for loop := map[string]bool{}; !loop[b]; {
+		loop[b] = true
+		if s, ok := e.syms.SymbolMap[b]; !ok {
+			break
+		} else if d2, ok := s.(*rpc_const); !ok {
+			break
+		} else {
+			b = d2.val
+		}
+	}
+	if b == "" {
+		b = "0xffffffff"
+	}
+	if i32, err := strconv.ParseUint(b, 0, 32); err == nil {
+		b = fmt.Sprintf("%d", i32)
+	}
+	return b
+}
+
+func (e *emitter) get_typ(parent rpc_sym, d *rpc_decl) string {
+	if d.typ == "" {
+		if _, isTypedef := parent.(*rpc_typedef); isTypedef {
+			d.typ = underscore(d.id)
+		} else {
+			d.typ = underscore(*parent.symid()) + "_" + d.id
+		}
+		*d.inline_decl.symid() = d.typ
+		e.emit(d.inline_decl)
+	}
+	return d.typ
+}
+
+func xdrbound(typ, b string) string {
+	return fmt.Sprintf("func (*%s) XdrBound() uint32 {\n" +
+		"\treturn uint32(%s)\n" +
+		"}\n", typ, b)
+}
+
+/*
+func traverse_slice(typ, xdrtype string) string {
+	fmt.Sprintf("func (v *%s) XdrTraverse(x XDR, name string) {\n" +
+		"\tfor i := range *v {\n" +
+		"\t\tx.marshal(fmt.Sprintf(\"%%s[%%d]\", name, i),\n" +
+		"\t\t\t(*xdrtype_%s)(&(*v)[i]))\n" +
+		"\t}\n" +
+		"}\n", xdrtype, d.typ, xdrtype, d.typ)
+}
+*/
+
+func bytefuncs(typ, xdrtype, b string) string {
+	return fmt.Sprintf("func (v *%s) GetByteSlice() []byte {\n" +
+		"\treturn ([]byte)(*v)\n" +
+		"}\n" +
+		"func (v *%s) SetByteSlice(nv []byte) {\n" +
+		"\tif len(*v) > %s {\n" +
+		"\t\txdrPanic(\"Can't store %%d bytes in" +
+		" %s<%s>\", len(*v))" +
+		"\t}\n" +
+		"\t*v = %s(nv)\n" +
+		"}\n%s", typ, typ, b, xdrtype, b, typ, xdrbound(typ, b))
+}
+
+func (e *emitter) gen_string(b string) string {
+	b = e.get_bound(b)
+	typ := "_" + b + "_string"
+	if e.done(typ) {
+		return typ
+	}
+	e.printf("type %s string\n" +
+		"func (v *%s) String() string {\n" +
+		"\treturn fmt.Sprintf(\"%%q\", *v)\n" +
+		"}\n" +
+		"func (v *%s) GetString() string {\n" +
+		"\treturn string(*v)\n" +
+		"}\n" +
+		"func (v *%s) SetString(s string) {\n" +
+		"\tif len(s) > %s {\n" +
+		"\t\txdrPanic(\"Can't store %%d bytes in string<%s>\"," +
+		" len(s))\n" +
+		"\t}\n" +
+		"\t*v = %s(s)\n" +
+		"}\n%s",
+		typ, typ, typ, typ, b, b, typ, bytefuncs(typ, "string", b))
+	return typ
+}
+
+func (e *emitter) gen_opaquevec(b string) string {
+	b = e.get_bound(b)
+	typ := "_" + b + "_opaque"
+	if e.done(typ) {
+		return typ
+	}
+	e.printf("type %s []byte\n%s", typ, bytefuncs(typ, "opaque", b))
+	return typ
+}
+
+func (e *emitter) gen_typevec(d *rpc_decl) string {
+	b := e.get_bound(d.bound)
+	typ := "_" + b + underscore(d.typ)
+	if e.done(typ) {
+		return typ
+	}
+	e.printf("type %s []%s\n%s\n",
+		typ, d.typ, xdrbound(typ, b))
+	return typ
+}
+
+func (e *emitter) get_xdrtype(parent rpc_sym, d *rpc_decl) string {
+	e.get_typ(parent, d)
+
+	switch d.qual {
+	case SCALAR:
+		if d.typ == "string" {
+			return e.gen_string(d.bound)
+		}
+		return "xdrtype_" + d.typ
+	case ARRAY:
+		if d.typ == "byte" {
+			return "xdrtype_array_opaque"
+		}
+		xdrtype := "_xdrtype_array" + underscore(d.typ)
+		if !e.done(xdrtype) {
+			e.printf("type %s []%s\n" +
+				"func (v *%s) XdrTraverse(x XDR, name string) {\n" +
+				"\t//for i := range *v {\n" +
+				"\t//\tx.marshal(fmt.Sprintf(\"%%s[%%d]\", name, i),\n" +
+				"\t//\t\t(*xdrtype_%s)(&(*v)[i]))\n" +
+				"\t//}\n" +
+				"}\n", xdrtype, d.typ, xdrtype, d.typ)
+		}
+		return xdrtype
+	case VEC:
+		if d.typ == "byte" {
+			return e.gen_opaquevec(d.bound)
+		}
+		return e.gen_typevec(d)
+	case PTR:
+		xdrtype := "_ptr_" + d.typ
+		if !e.done(xdrtype) {
+			e.printf("type %s struct { ptr *%s }\n%s",
+				xdrtype, d.typ, xdrbound(xdrtype, "1"))
+		}
+		return xdrtype
+	default:
+		panic("bad qual_t");
+	}
 }
 
 const maxbound = "infinity"
@@ -110,87 +269,22 @@ func (e *emitter) chase_bound(d *rpc_decl) string {
 }
 
 func (e *emitter) decltype(parent rpc_sym, d *rpc_decl) string {
-	out := &strings.Builder{}
-	var bound string
+	typ := e.get_typ(parent, d)
+
+	e.get_xdrtype(parent, d)	// XXX
+
 	switch d.qual {
 	case SCALAR:
-		if d.typ == "string" {
-			bound = e.chase_bound(d)
-		}
+		return typ
 	case PTR:
-		fmt.Fprintf(out, "*")
+		return fmt.Sprintf("*%s", typ)
 	case ARRAY:
-		fmt.Fprintf(out, "[%s]", d.bound)
+		return fmt.Sprintf("[%s]%s", d.bound, typ)
 	case VEC:
-		if bound = e.chase_bound(d); bound == "" {
-			fmt.Fprintf(out, "[]")
-		}
+		return fmt.Sprintf("[]%s", typ)
+	default:
+		panic("emitter::decltype invalid qual_t")
 	}
-	if d.typ == "" {
-		if _, isTypedef := parent.(*rpc_typedef); isTypedef {
-			d.typ = underscore(d.id)
-		} else {
-			d.typ = underscore(*parent.symid()) + "_" + d.id
-		}
-		*d.inline_decl.symid() = d.typ
-		e.emit(d.inline_decl)
-	}
-	if bound == "" {
-		fmt.Fprintf(out, "%s", d.typ)
-		return out.String()
-	}
-	typ := underscore(e.chase_typedef(d.typ)) + "_" + bound
-	altbound := bound
-	if bound == maxbound {
-		bound = "0xffffffff"
-		altbound = ""
-	}
-	if _, ok := e.emitted[typ]; !ok {
-		d1 := *d
-		d1.id = typ
-		d1.bound = unbound
-		e.emit(&d1)
-		e.printf("func (*%s) XdrBound() uint32 {\n" +
-			"\treturn uint32(%s)\n" +
-			"}\n" +
-			"func (v *%s) XdrValid() bool {\n" +
-			"\treturn len(*v) < %s\n" +
-			"}\n", typ, bound, typ, bound)
-		if d1.typ == "string" {
-			e.printf("func (v *%s) String() string {\n" +
-				"\treturn fmt.Sprintf(\"%%q\", *v)\n" +
-				"}\n" +
-				"func (v *%s) GetString() string {\n" +
-				"\treturn string(*v)\n" +
-				"}\n" +
-				"func (v *%s) SetString(s string) {\n" +
-				"\tif len(s) > %s {\n" +
-				"\t\txdrPanic(\"Can't store %%d bytes in string<%s>\"," +
-				" len(s))\n" +
-				"\t}\n" +
-				"\t*v = %s(s)\n" +
-				"}\n",
-				typ, typ, typ, bound, altbound, typ)
-		}
-		if d1.typ == "byte" || d1.typ == "string" {
-			xdrtype := "opaque"
-			if (d1.typ == "string") {
-				xdrtype = "string"
-			}
-			e.printf("func (v *%s) GetByteSlice() []byte {\n" +
-				"\treturn ([]byte)(*v)\n" +
-				"}\n" +
-				"func (v *%s) SetByteSlice(nv []byte) {\n" +
-				"\tif len(*v) > %s {\n" +
-				"\t\txdrPanic(\"Can't store %%d bytes in" +
-				" %s<%s>\", len(*v))" +
-				"\t}\n" +
-				"\t*v = %s(nv)\n" +
-				"}\n", typ, typ, bound, xdrtype, altbound, typ)
-		}
-		e.emitted[typ] = struct{}{}
-	}
-	return typ
 }
 
 func (e *emitter) emit(sym rpc_sym) {
@@ -210,8 +304,11 @@ func (r *rpc_decl) emit(e *emitter) {
 	e.printf("type %s %s\n", r.id, e.decltype(r, r))
 }
 
-func (r *rpc_typedef) emit(e *emitter) {
-	e.printf("type %s = %s\n", r.id, e.decltype(r, (*rpc_decl)(r)))
+func (r0 *rpc_typedef) emit(e *emitter) {
+	r := (*rpc_decl)(r0)
+	e.printf("type %s = %s\n" +
+		"type xdrtype_%s = %s\n",
+		r.id, e.decltype(r0, r), r.id, e.get_xdrtype(r0, r))
 }
 
 func (r *rpc_enum) emit(e *emitter) {
@@ -267,6 +364,7 @@ func (r *rpc_union) emit(e *emitter) {
 	fmt.Fprintf(out, "\t%s %s\n", r.tagid, r.tagtype)
 	fmt.Fprintf(out, "\t_u interface{}\n")
 	fmt.Fprintf(out, "}\n")
+	fmt.Fprintf(out, "type xdrtype_%s = *%s\n", r.id, r.id)
 	for _, u := range r.fields {
 		if u.decl.id == "" || u.decl.typ == "void" {
 			continue
