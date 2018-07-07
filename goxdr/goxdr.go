@@ -142,7 +142,7 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 	case PTR:
 		frag =
 `	{
-		size := &XdrSize{0, 1}
+		size := XdrSize{0, 1}
 		if *TARGET != nil {
 			size.size = 1
 		}
@@ -173,7 +173,7 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 		}
 		frag =
 `    {
-		size := &XdrSize{uint32(len(*TARGET)), BOUND}
+		size := XdrSize{uint32(len(*TARGET)), BOUND}
 		x.marshal(NAME, &size)
 		vec := *TARGET
 		if int(size.size) < len(vec) {
@@ -419,8 +419,8 @@ func (r *rpc_union) emit(e *emitter) {
 			fmt.Fprintf(out, "\tcase %s:\n", strings.Join(u.cases, ","))
 		}
 		if u.decl.id != "" && u.decl.typ != "void" {
-			e.xdrgen("v." + u.decl.id + "()", "name + \"" + u.decl.id + "\"",
-				r.id, &u.decl)
+			out.WriteString(e.xdrgen("v." + u.decl.id + "()",
+				"name + \"" + u.decl.id + "\"", r.id, &u.decl))
 		}
 	}
 	fmt.Fprintf(out, "\t}\n}\n")

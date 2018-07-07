@@ -146,16 +146,23 @@ func XDR_float64(x XDR, name string, v *float64) {
 	x.marshal(name, (*XdrFloat64)(v))
 }
 
+func (v *XdrBool) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
+func (v *XdrInt32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
+func (v *XdrUint32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
+func (v *XdrFloat32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
+func (v *XdrInt64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
+func (v *XdrUint64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
+func (v *XdrFloat64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
 
 type XdrBytes interface {
 	GetByteSlice() []byte
+	XdrValue() interface{}
 }
 type XdrVariableBytes interface {
 	XdrBytes
 	XdrBound() uint32
 	SetByteSlice([]byte)
 	XdrPointer() interface{}
-	XdrValue() interface{}
 }
 
 type XdrString struct {
@@ -192,5 +199,6 @@ func (v *XdrVecOpaque) XdrValue() interface{} { return *v.Bytes }
 
 type XdrArrayOpaque []byte
 func (v *XdrArrayOpaque) GetByteSlice() []byte { return ([]byte)(*v) }
+func (v *XdrArrayOpaque) XdrValue() []byte { return *v }
 
 // end boilerplate` + "\n"

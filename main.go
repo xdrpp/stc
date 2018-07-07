@@ -8,6 +8,10 @@ type XP struct {
 	out io.Writer
 }
 
+type Valer interface {
+	XdrValue() interface{}
+}
+
 func (xp *XP) marshal(name string, val interface{}) {
 	fmt.Fprintf(xp.out, "%s: %v\n", name, val)
 }
