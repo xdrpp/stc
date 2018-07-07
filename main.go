@@ -32,7 +32,7 @@ func txPrint(t XdrAggregate) {
 }
 
 func main() {
-	// txPrint(txIn())
+	//txPrint(txIn())
 
 	var e TransactionEnvelope
 	_ = e
@@ -41,9 +41,10 @@ func main() {
 	*e.Tx.Memo.Text() = "Enjoy this transaction"
 	e.Tx.Operations = append(e.Tx.Operations, Operation{})
 	e.Tx.Operations[0].Body.Type = CREATE_ACCOUNT
-	txPrint(&e)
+	//txPrint(&e)
 
-	//txOut(&e)
+	txOut(&e)
+
 	//e.XdrMarshal(&XdrPrint{os.Stdout}, "")
 	//e.XdrMarshal(&XdrOut{os.Stdout}, "")
 	//e.Tx.SourceAccount.XdrMarshal(&XdrOut{os.Stdout}, "")

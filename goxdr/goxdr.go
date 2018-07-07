@@ -123,9 +123,6 @@ func (e *emitter) decltype(context string, d *rpc_decl) string {
 }
 
 func (e *emitter) is_aggregate(d *rpc_decl) bool {
-	if d.qual != SCALAR {
-		return false
-	}
 	t := d.inline_decl
 	if t == nil {
 		if t = e.syms.SymbolMap[d.typ]; t == nil {
@@ -156,7 +153,7 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 	case PTR:
 		marshal := "XDR_TYPE(x, NAME, *TARGET)"
 		if (agg) {
-			marshal = "x.Marshal(NAME, TARGET)"
+			marshal = "x.Marshal(NAME, *TARGET)"
 		}
 		frag =
 `	{
@@ -167,11 +164,12 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 		x.Marshal(NAME, &size)
 		if size.size == 0 {
 			*TARGET = nil
-			return
-		} else if *TARGET == nil {
-			*TARGET = new(TYPE)
+		} else {
+			if *TARGET == nil {
+				*TARGET = new(TYPE)
+			}
+			` + marshal + `
 		}
-		` + marshal + `
 	}
 `
 	case ARRAY:
