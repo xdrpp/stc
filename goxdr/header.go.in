@@ -24,7 +24,7 @@ type XDR interface {
 }
 
 type XdrAggregate interface {
-	XdrRecurse(XDR, string)
+	XdrMarshal(XDR, string)
 }
 
 const (
@@ -202,7 +202,7 @@ func (v *XdrVecOpaque) XdrPointer() interface{} { return v.Bytes }
 func (v *XdrVecOpaque) XdrValue() interface{} { return *v.Bytes }
 
 type XdrArrayOpaque []byte
-func (v *XdrArrayOpaque) GetByteSlice() []byte { return ([]byte)(*v) }
-func (v *XdrArrayOpaque) XdrValue() []byte { return *v }
+func (v XdrArrayOpaque) GetByteSlice() []byte { return ([]byte)(v) }
+func (v XdrArrayOpaque) XdrValue() interface{} { return v }
 
 // end boilerplate` + "\n"

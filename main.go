@@ -1,12 +1,7 @@
 package main
 
 import "fmt"
-import "io"
 import "os"
-
-type XP struct {
-	out io.Writer
-}
 
 func (pk *PublicKey) String() string {
 	switch pk.Type {
@@ -17,24 +12,14 @@ func (pk *PublicKey) String() string {
 	}
 }
 
-func (xp *XP) Marshal(name string, i interface{}) {
-	switch v := i.(type) {
-	case fmt.Stringer:
-		fmt.Fprintf(xp.out, "%s*: %s\n", name, v.String())
-	case XdrAggregate:
-		v.XdrRecurse(xp, name)
-	default:
-		fmt.Fprintf(xp.out, "%s: %v\n", name, i)
-	}
-}
-
 func main() {
-	var t Transaction
-	t.TimeBounds = &TimeBounds{MinTime: 12345}
-	t.Memo.Type = MEMO_TEXT
-	*t.Memo.Text() = "Enjoy this transaction"
-	t.Operations = append(t.Operations, Operation{})
-	t.Operations[0].Body.Type = CREATE_ACCOUNT
-	XDR_Transaction(&XP{os.Stdout}, "t", &t)
-	// XdrPrint(os.Stdout, "", &t)
+	var e TransactionEnvelope
+	e.Tx.TimeBounds = &TimeBounds{MinTime: 12345}
+	e.Tx.Memo.Type = MEMO_TEXT
+	*e.Tx.Memo.Text() = "Enjoy this transaction"
+	e.Tx.Operations = append(e.Tx.Operations, Operation{})
+	e.Tx.Operations[0].Body.Type = CREATE_ACCOUNT
+	//e.XdrMarshal(&XdrPrint{os.Stdout}, "")
+	e.XdrMarshal(&XdrOut{os.Stdout}, "")
+	//e.Tx.SourceAccount.XdrMarshal(&XdrOut{os.Stdout}, "")
 }

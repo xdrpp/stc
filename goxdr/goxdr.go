@@ -142,17 +142,22 @@ func (e *emitter) is_aggregate(d *rpc_decl) bool {
 
 func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 	typ := e.get_typ(context, d)
+	agg := e.is_aggregate(d)
 	var frag string
 	switch d.qual {
 	case SCALAR:
 		if typ == "string" {
 			frag = "\tx.Marshal(NAME, &XdrString{TARGET, BOUND})\n"
-		} else if e.is_aggregate(d) {
+		} else if agg {
 			frag = "\tx.Marshal(NAME, TARGET)\n"
 		} else {
 			frag = "\tXDR_TYPE(x, NAME, TARGET)\n"
 		}
 	case PTR:
+		marshal := "XDR_TYPE(x, NAME, *TARGET)"
+		if (agg) {
+			marshal = "x.Marshal(NAME, TARGET)"
+		}
 		frag =
 `	{
 		size := XdrSize{0, 1}
@@ -166,7 +171,7 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 		} else if *TARGET == nil {
 			*TARGET = new(TYPE)
 		}
-		XDR_TYPE(x, NAME, *TARGET)
+		` + marshal + `
 	}
 `
 	case ARRAY:
@@ -174,9 +179,13 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 			frag = "\tx.Marshal(NAME, XdrArrayOpaque((*TARGET)[:]))\n"
 			break;
 		}
+		marshal := `XDR_TYPE(x, fmt.Sprintf("%s[%d]", NAME, i), &(*TARGET)[i])`
+		if (agg) {
+			marshal = `x.Marshal(fmt.Sprintf("%s[%d]", NAME, i), TARGET)`
+		}
 		frag =
 `	for i := 0; i < len(*TARGET); i++ {
-			XDR_TYPE(x, fmt.Sprintf("%s[%d]", NAME, i), &(*TARGET)[i])
+			` + marshal + `
 	}
 `
 	case VEC:
@@ -184,8 +193,12 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 			frag = "\tx.Marshal(NAME, &XdrVecOpaque{TARGET, BOUND})\n"
 			break;
 		}
+		marshal := `XDR_TYPE(x, fmt.Sprintf("%s[%d]", NAME, i), &vec[i])`
+		if (agg) {
+			marshal = `x.Marshal(fmt.Sprintf("%s[%d]", NAME, i), &vec[i])`
+		}
 		frag =
-`    {
+`	{
 		size := XdrSize{uint32(len(*TARGET)), BOUND}
 		x.Marshal(NAME, &size)
 		vec := *TARGET
@@ -197,21 +210,23 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 				var zero TYPE
 				vec = append(vec, zero)
 			}
-			XDR_TYPE(x, fmt.Sprintf("%s[%d]", NAME, i), &vec[i])
+			` + marshal + `
 		}
 		*TARGET = vec
 	}
 `
 	}
-	tval := target				// XXX use this
-	if len(tval) >= 2 && tval[0] == '*' && tval[1] == '&' {
-		tval = target[2:]
+	var tval string
+	if len(target) >= 1 && target[0] == '&' {
+		tval = target[1:]
+	} else {
+		tval = "*" + target
 	}
 	normbound := d.bound
 	if normbound == "" {
 		normbound = "0xffffffff"
 	}
-	frag = strings.Replace(frag, "TVAL", target, -1)
+	frag = strings.Replace(frag, "*TARGET", tval, -1)
 	frag = strings.Replace(frag, "TARGET", target, -1)
 	frag = strings.Replace(frag, "NAME", name, -1)
 	frag = strings.Replace(frag, "BOUND", normbound, -1)
@@ -296,7 +311,7 @@ func (r *rpc_struct) emit(e *emitter) {
 				r.id, &r.decls[i]))
 	}
 	fmt.Fprintf(out, "}\n")
-	fmt.Fprintf(out, "func (v *%s) XdrRecurse(x XDR, name string) {\n" +
+	fmt.Fprintf(out, "func (v *%s) XdrMarshal(x XDR, name string) {\n" +
 		"\tXDR_%s(x, name, v)\n" +
 		"}\n", r.id, r.id)
 	e.append(out)
@@ -445,7 +460,7 @@ func (r *rpc_union) emit(e *emitter) {
 	}
 	fmt.Fprintf(out, "\t}\n}\n")
 
-	fmt.Fprintf(out, "func (v *%s) XdrRecurse(x XDR, name string) {\n" +
+	fmt.Fprintf(out, "func (v *%s) XdrMarshal(x XDR, name string) {\n" +
 		"\tXDR_%s(x, name, v)\n" +
 		"}\n", r.id, r.id)
 
