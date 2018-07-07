@@ -8,14 +8,19 @@ type XP struct {
 	out io.Writer
 }
 
+func (pk *PublicKey) String() string {
+	switch pk.Type {
+	case PUBLIC_KEY_TYPE_ED25519:
+		return ToStrKey(STRKEY_PUBKEY_ED25519, pk.Ed25519()[:])
+	default:
+		return fmt.Sprintf("KeyType#%d", int32(pk.Type))
+	}
+}
+
 func (xp *XP) Marshal(name string, i interface{}) {
 	switch v := i.(type) {
-	case *PublicKey:
-		switch v.Type {
-		case PUBLIC_KEY_TYPE_ED25519:
-			fmt.Fprintf(xp.out, "%s: %s\n", name,
-				ToStrKey(STRKEY_PUBKEY_ED25519, v.Ed25519()[:]))
-		}
+	case fmt.Stringer:
+		fmt.Fprintf(xp.out, "%s*: %s\n", name, v.String())
 	case XdrAggregate:
 		v.XdrRecurse(xp, name)
 	default:
