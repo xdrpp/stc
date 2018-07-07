@@ -162,7 +162,7 @@ type XdrBytes interface {
 	GetByteSlice() []byte
 	XdrValue() interface{}
 }
-type XdrVariableBytes interface {
+type XdrVarBytes interface {
 	XdrBytes
 	XdrBound() uint32
 	SetByteSlice([]byte)
