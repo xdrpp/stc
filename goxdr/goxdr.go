@@ -122,11 +122,22 @@ func (e *emitter) decltype(context string, d *rpc_decl) string {
 	}
 }
 
-func (d *rpc_decl) normbound() string {
-	if d.bound == "" {
-		return "0xffffffff"
+func (e *emitter) is_aggregate(d *rpc_decl) bool {
+	if d.qual != SCALAR {
+		return false
 	}
-	return d.bound
+	t := d.inline_decl
+	if t == nil {
+		if t = e.syms.SymbolMap[d.typ]; t == nil {
+			return false
+		}
+	}
+	switch t.(type) {
+	case *rpc_struct, *rpc_union:
+		return true
+	default:
+		return false
+	}
 }
 
 func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
@@ -135,7 +146,9 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 	switch d.qual {
 	case SCALAR:
 		if typ == "string" {
-			frag = "\tx.marshal(NAME, &XdrString{TARGET, BOUND})\n"
+			frag = "\tx.Marshal(NAME, &XdrString{TARGET, BOUND})\n"
+		} else if e.is_aggregate(d) {
+			frag = "\tx.Marshal(NAME, TARGET)\n"
 		} else {
 			frag = "\tXDR_TYPE(x, NAME, TARGET)\n"
 		}
@@ -146,7 +159,7 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 		if *TARGET != nil {
 			size.size = 1
 		}
-		x.marshal(NAME, &size)
+		x.Marshal(NAME, &size)
 		if size.size == 0 {
 			*TARGET = nil
 			return
@@ -158,7 +171,7 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 `
 	case ARRAY:
 		if typ == "byte" {
-			frag = "\tx.marshal(NAME, XdrArrayOpaque((*TARGET)[:]))\n"
+			frag = "\tx.Marshal(NAME, XdrArrayOpaque((*TARGET)[:]))\n"
 			break;
 		}
 		frag =
@@ -168,13 +181,13 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 `
 	case VEC:
 		if typ == "byte" {
-			frag = "\tx.marshal(NAME, &XdrVecOpaque{TARGET, BOUND})\n"
+			frag = "\tx.Marshal(NAME, &XdrVecOpaque{TARGET, BOUND})\n"
 			break;
 		}
 		frag =
 `    {
 		size := XdrSize{uint32(len(*TARGET)), BOUND}
-		x.marshal(NAME, &size)
+		x.Marshal(NAME, &size)
 		vec := *TARGET
 		if int(size.size) < len(vec) {
 			vec = vec[:int(size.size)]
@@ -190,14 +203,18 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 	}
 `
 	}
-	tval := target
+	tval := target				// XXX use this
 	if len(tval) >= 2 && tval[0] == '*' && tval[1] == '&' {
 		tval = target[2:]
+	}
+	normbound := d.bound
+	if normbound == "" {
+		normbound = "0xffffffff"
 	}
 	frag = strings.Replace(frag, "TVAL", target, -1)
 	frag = strings.Replace(frag, "TARGET", target, -1)
 	frag = strings.Replace(frag, "NAME", name, -1)
-	frag = strings.Replace(frag, "BOUND", d.normbound(), -1)
+	frag = strings.Replace(frag, "BOUND", normbound, -1)
 	frag = strings.Replace(frag, "TYPE", typ, -1)
 	return frag
 }
@@ -231,7 +248,7 @@ func (r *rpc_enum) emit(e *emitter) {
 	}
 	fmt.Fprintf(out, ")\n")
 	fmt.Fprintf(out, "func XDR_%s(x XDR, name string, v *%s) {\n" +
-		"\tx.marshal(name, v)\n" +
+		"\tx.Marshal(name, v)\n" +
 		"}\n", r.id, r.id)
 	fmt.Fprintf(out, "var _XdrNames_%s = map[int32]string{\n", r.id)
 	for _, tag := range r.tags {
@@ -279,6 +296,9 @@ func (r *rpc_struct) emit(e *emitter) {
 				r.id, &r.decls[i]))
 	}
 	fmt.Fprintf(out, "}\n")
+	fmt.Fprintf(out, "func (v *%s) XdrRecurse(x XDR, name string) {\n" +
+		"\tXDR_%s(x, name, v)\n" +
+		"}\n", r.id, r.id)
 	e.append(out)
 }
 
@@ -424,6 +444,10 @@ func (r *rpc_union) emit(e *emitter) {
 		}
 	}
 	fmt.Fprintf(out, "\t}\n}\n")
+
+	fmt.Fprintf(out, "func (v *%s) XdrRecurse(x XDR, name string) {\n" +
+		"\tXDR_%s(x, name, v)\n" +
+		"}\n", r.id, r.id)
 
 	e.append(out)
 }

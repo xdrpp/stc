@@ -8,12 +8,19 @@ type XP struct {
 	out io.Writer
 }
 
-type Valer interface {
-	XdrValue() interface{}
-}
-
-func (xp *XP) marshal(name string, val interface{}) {
-	fmt.Fprintf(xp.out, "%s: %v\n", name, val)
+func (xp *XP) Marshal(name string, i interface{}) {
+	switch v := i.(type) {
+	case *PublicKey:
+		switch v.Type {
+		case PUBLIC_KEY_TYPE_ED25519:
+			fmt.Fprintf(xp.out, "%s: %s\n", name,
+				ToStrKey(STRKEY_PUBKEY_ED25519, v.Ed25519()[:]))
+		}
+	case XdrAggregate:
+		v.XdrRecurse(xp, name)
+	default:
+		fmt.Fprintf(xp.out, "%s: %v\n", name, i)
+	}
 }
 
 func main() {
