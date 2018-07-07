@@ -5,7 +5,6 @@ import "io"
 import "io/ioutil"
 import "os"
 import "strings"
-import "strconv"
 
 //go:generate goyacc -o parse.go parse.y
 //go:generate sh -c "sed -e 's!^//UNCOMMENT:!!' header.go.in > header.go"
@@ -77,26 +76,6 @@ func (e *emitter) printf(str string, args ...interface{}) {
 	fmt.Fprintf(&e.output, str, args...)
 }
 
-func (e *emitter) get_bound(b string) string {
-	for loop := map[string]bool{}; !loop[b]; {
-		loop[b] = true
-		if s, ok := e.syms.SymbolMap[b]; !ok {
-			break
-		} else if d2, ok := s.(*rpc_const); !ok {
-			break
-		} else {
-			b = d2.val
-		}
-	}
-	if b == "" {
-		b = "0xffffffff"
-	}
-	if i32, err := strconv.ParseUint(b, 0, 32); err == nil {
-		b = fmt.Sprintf("%d", i32)
-	}
-	return b
-}
-
 func (e *emitter) get_typ(context string, d *rpc_decl) string {
 	if d.typ == "" {
 		d.typ = underscore(context) + "_" + d.id
@@ -144,29 +123,29 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 	switch d.qual {
 	case SCALAR:
 		if typ == "string" {
-			frag = "\tx.Marshal(NAME, &XdrString{TARGET, BOUND})\n"
+			frag = "\tx.Marshal($NAME, &XdrString{$TARGET, $BOUND})\n"
 		} else if agg {
-			frag = "\tx.Marshal(NAME, TARGET)\n"
+			frag = "\tx.Marshal($NAME, $TARGET)\n"
 		} else {
-			frag = "\tXDR_TYPE(x, NAME, TARGET)\n"
+			frag = "\tXDR_$TYPE(x, $NAME, $TARGET)\n"
 		}
 	case PTR:
-		marshal := "XDR_TYPE(x, NAME, *TARGET)"
+		marshal := "XDR_$TYPE(x, $NAME, *$TARGET)"
 		if (agg) {
-			marshal = "x.Marshal(NAME, *TARGET)"
+			marshal = "x.Marshal($NAME, *$TARGET)"
 		}
 		frag =
 `	{
 		size := XdrSize{0, 1}
-		if *TARGET != nil {
+		if *$TARGET != nil {
 			size.size = 1
 		}
-		x.Marshal(NAME, &size)
+		x.Marshal($NAME, &size)
 		if size.size == 0 {
-			*TARGET = nil
+			*$TARGET = nil
 		} else {
-			if *TARGET == nil {
-				*TARGET = new(TYPE)
+			if *$TARGET == nil {
+				*$TARGET = new($TYPE)
 			}
 			` + marshal + `
 		}
@@ -174,61 +153,58 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 `
 	case ARRAY:
 		if typ == "byte" {
-			frag = "\tx.Marshal(NAME, XdrArrayOpaque((*TARGET)[:]))\n"
+			frag = "\tx.Marshal($NAME, XdrArrayOpaque((*$TARGET)[:]))\n"
 			break;
 		}
-		marshal := `XDR_TYPE(x, fmt.Sprintf("%s[%d]", NAME, i), &(*TARGET)[i])`
+		marshal :=
+			`XDR_$TYPE(x, fmt.Sprintf("%s[%d]", $NAME, i), &(*$TARGET)[i])`
 		if (agg) {
-			marshal = `x.Marshal(fmt.Sprintf("%s[%d]", NAME, i), TARGET)`
+			marshal = `x.Marshal(fmt.Sprintf("%s[%d]", $NAME, i), $TARGET)`
 		}
 		frag =
-`	for i := 0; i < len(*TARGET); i++ {
+`	for i := 0; i < len(*$TARGET); i++ {
 			` + marshal + `
 	}
 `
 	case VEC:
 		if typ == "byte" {
-			frag = "\tx.Marshal(NAME, &XdrVecOpaque{TARGET, BOUND})\n"
+			frag = "\tx.Marshal($NAME, &XdrVecOpaque{$TARGET, $BOUND})\n"
 			break;
 		}
-		marshal := `XDR_TYPE(x, fmt.Sprintf("%s[%d]", NAME, i), &vec[i])`
+		marshal := `XDR_$TYPE(x, fmt.Sprintf("%s[%d]", $NAME, i), &vec[i])`
 		if (agg) {
-			marshal = `x.Marshal(fmt.Sprintf("%s[%d]", NAME, i), &vec[i])`
+			marshal = `x.Marshal(fmt.Sprintf("%s[%d]", $NAME, i), &vec[i])`
 		}
 		frag =
 `	{
-		size := XdrSize{uint32(len(*TARGET)), BOUND}
-		x.Marshal(NAME, &size)
-		vec := *TARGET
+		size := XdrSize{uint32(len(*$TARGET)), $BOUND}
+		x.Marshal($NAME, &size)
+		vec := *$TARGET
 		if int(size.size) < len(vec) {
 			vec = vec[:int(size.size)]
 		}
 		for i := uint32(0); i < size.size; i++ {
 			if (int(i) >= len(vec)) {
-				var zero TYPE
+				var zero $TYPE
 				vec = append(vec, zero)
 			}
 			` + marshal + `
 		}
-		*TARGET = vec
+		*$TARGET = vec
 	}
 `
-	}
-	var tval string
-	if len(target) >= 1 && target[0] == '&' {
-		tval = target[1:]
-	} else {
-		tval = "*" + target
 	}
 	normbound := d.bound
 	if normbound == "" {
 		normbound = "0xffffffff"
 	}
-	frag = strings.Replace(frag, "*TARGET", tval, -1)
-	frag = strings.Replace(frag, "TARGET", target, -1)
-	frag = strings.Replace(frag, "NAME", name, -1)
-	frag = strings.Replace(frag, "BOUND", normbound, -1)
-	frag = strings.Replace(frag, "TYPE", typ, -1)
+	if len(target) >= 1 && target[0] == '&' {
+		frag = strings.Replace(frag, "*$TARGET", target[1:], -1)
+	}
+	frag = strings.Replace(frag, "$TARGET", target, -1)
+	frag = strings.Replace(frag, "$NAME", name, -1)
+	frag = strings.Replace(frag, "$BOUND", normbound, -1)
+	frag = strings.Replace(frag, "$TYPE", typ, -1)
 	return frag
 }
 
