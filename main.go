@@ -32,7 +32,8 @@ func txPrint(t XdrAggregate) {
 }
 
 func main() {
-	//txPrint(txIn())
+	txPrint(txIn())
+	return
 
 	var e TransactionEnvelope
 	_ = e
@@ -43,7 +44,7 @@ func main() {
 	e.Tx.Operations[0].Body.Type = CREATE_ACCOUNT
 	//txPrint(&e)
 
-	txOut(&e)
+	//txOut(&e)
 
 	//e.XdrMarshal(&XdrPrint{os.Stdout}, "")
 	//e.XdrMarshal(&XdrOut{os.Stdout}, "")

@@ -274,10 +274,10 @@ func (r *rpc_struct) emit(e *emitter) {
 			e.decltype(r.id, &r.decls[i]))
 	}
 	fmt.Fprintf(out, "}\n")
-	fmt.Fprintf(out, "func XDR_%s(x XDR, name string, v *%s) {\n" +
+	fmt.Fprintf(out, "func (v *%s) XdrMarshal(x XDR, name string) {\n" +
 		"\tif name != \"\" {\n" +
 		"\t\tname = name + \".\"\n" +
-		"\t}\n", r.id, r.id)
+		"\t}\n", r.id)
 	for i := range r.decls {
 		fmt.Fprintf(out, "%s",
 			e.xdrgen("&v." + r.decls[i].id,
@@ -285,8 +285,8 @@ func (r *rpc_struct) emit(e *emitter) {
 				r.id, &r.decls[i]))
 	}
 	fmt.Fprintf(out, "}\n")
-	fmt.Fprintf(out, "func (v *%s) XdrMarshal(x XDR, name string) {\n" +
-		"\tXDR_%s(x, name, v)\n" +
+	fmt.Fprintf(out, "func XDR_%s(x XDR, name string, v *%s) {\n" +
+		"\tx.Marshal(name, v)\n" +
 		"}\n", r.id, r.id)
 	e.append(out)
 }
@@ -413,13 +413,13 @@ func (r *rpc_union) emit(e *emitter) {
 	}
 	fmt.Fprintf(out, "}\n")
 
-	fmt.Fprintf(out, "func XDR_%s(x XDR, name string, v *%s) {\n" +
+	fmt.Fprintf(out, "func (v *%s) XdrMarshal(x XDR, name string) {\n" +
 		"\tif name != \"\" {\n" +
 		"\t\tname = name + \".\"\n" +
 		"\t}\n" +
 		"\tXDR_%s(x, name + \"%s\", &v.%s)\n" +
 		"\tswitch v.%s {\n",
-		r.id, r.id, r.tagtype, r.tagid, r.tagid, r.tagid)
+		r.id, r.tagtype, r.tagid, r.tagid, r.tagid)
 	for i := range r.fields {
 		u := &r.fields[i]
 		if u.hasdefault {
@@ -434,8 +434,8 @@ func (r *rpc_union) emit(e *emitter) {
 	}
 	fmt.Fprintf(out, "\t}\n}\n")
 
-	fmt.Fprintf(out, "func (v *%s) XdrMarshal(x XDR, name string) {\n" +
-		"\tXDR_%s(x, name, v)\n" +
+	fmt.Fprintf(out, "func XDR_%s(x XDR, name string, v *%s) {\n" +
+		"\tx.Marshal(name, v)\n" +
 		"}\n", r.id, r.id)
 
 	e.append(out)

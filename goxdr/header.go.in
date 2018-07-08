@@ -42,6 +42,7 @@ type XdrNum32 interface {
 }
 
 type XdrBool bool
+func (v *XdrBool) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
 func (v *XdrBool) GetU32() uint32 {
 	if *v {
 		return 1
@@ -64,6 +65,7 @@ func XDR_bool(x XDR, name string, v *bool) {
 }
 
 type XdrInt32 int32
+func (v *XdrInt32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
 func (v *XdrInt32) GetU32() uint32 { return uint32(*v) }
 func (v *XdrInt32) SetU32(nv uint32) { *v = XdrInt32(nv) }
 func (v *XdrInt32) XdrPointer() interface{} { return (*int32)(v) }
@@ -73,6 +75,7 @@ func XDR_int32(x XDR, name string, v *int32) {
 }
 
 type XdrUint32 uint32
+func (v *XdrUint32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
 func (v *XdrUint32) GetU32() uint32 { return uint32(*v) }
 func (v *XdrUint32) SetU32(nv uint32) { *v = XdrUint32(nv) }
 func (v *XdrUint32) XdrPointer() interface{} { return (*uint32)(v) }
@@ -82,6 +85,7 @@ func XDR_uint32(x XDR, name string, v *uint32) {
 }
 
 type XdrFloat32 float32
+func (v *XdrFloat32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
 func (v *XdrFloat32) GetU32() uint32 {
 	return math.Float32bits(float32(*v))
 }
@@ -120,6 +124,7 @@ type XdrNum64 interface {
 }
 
 type XdrInt64 int64
+func (v *XdrInt64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
 func (v *XdrInt64) GetU64() uint64 { return uint64(*v) }
 func (v *XdrInt64) SetU64(nv uint64) { *v = XdrInt64(nv) }
 func (v *XdrInt64) XdrPointer() interface{} { return (*int64)(v) }
@@ -129,6 +134,7 @@ func XDR_int64(x XDR, name string, v *int64) {
 }
 
 type XdrUint64 uint64
+func (v *XdrUint64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
 func (v *XdrUint64) GetU64() uint64 { return uint64(*v) }
 func (v *XdrUint64) SetU64(nv uint64) { *v = XdrUint64(nv) }
 func (v *XdrUint64) XdrPointer() interface{} { return (*uint64)(v) }
@@ -138,6 +144,7 @@ func XDR_uint64(x XDR, name string, v *uint64) {
 }
 
 type XdrFloat64 float64
+func (v *XdrFloat64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
 func (v *XdrFloat64) GetU64() uint64 {
 	return math.Float64bits(float64(*v))
 }
@@ -149,14 +156,6 @@ func (v *XdrFloat64) XdrValue() interface{} { return float64(*v) }
 func XDR_float64(x XDR, name string, v *float64) {
 	x.Marshal(name, (*XdrFloat64)(v))
 }
-
-func (v *XdrBool) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
-func (v *XdrInt32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
-func (v *XdrUint32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
-func (v *XdrFloat32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
-func (v *XdrInt64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
-func (v *XdrUint64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
-func (v *XdrFloat64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
 
 type XdrBytes interface {
 	GetByteSlice() []byte
