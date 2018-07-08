@@ -27,6 +27,24 @@ type XdrAggregate interface {
 	XdrMarshal(XDR, string)
 }
 
+type XdrPtr interface {
+	XdrAggregate
+	GetPresent() bool
+	SetPresent(bool)
+	XdrMarshalValue(XDR, string)
+	XdrPointer() interface{}
+	XdrValue() interface{}
+}
+
+type XdrVec interface {
+	XdrAggregate
+	XdrBound() uint32
+	SetVecLen(uint32)
+	XdrMarshalN(XDR, string, uint32)
+	XdrPointer() interface{}
+	XdrValue() interface{}
+}
+
 const (
 	TRUE = true
 	FALSE = false

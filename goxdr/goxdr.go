@@ -4,6 +4,7 @@ import "fmt"
 import "io"
 import "io/ioutil"
 import "os"
+import "strconv"
 import "strings"
 
 //go:generate goyacc -o parse.go parse.y
@@ -138,20 +139,112 @@ func (v _ptrflag_$TYPE) SetU32(nv uint32) {
 		xdrPanic("*$TYPE present flag value %d should be 0 or 1", nv)
 	}
 }
-func (v _ptrflag_$TYPE) XdrPointer() interface{} { return v.p }
-func (v _ptrflag_$TYPE) XdrValue() interface{} { return *v.p }
+func (v _ptrflag_$TYPE) XdrPointer() interface{} { return nil }
+func (v _ptrflag_$TYPE) XdrValue() interface{} { return v.GetU32() != 0 }
 func (v _ptrflag_$TYPE) XdrBound() uint32 { return 1 }
-func (v $PTR) XdrMarshal(x XDR, name string) {
-	x.Marshal(name, _ptrflag_$TYPE(v))
+func (v $PTR) GetPresent() bool { return *v.p != nil }
+func (v $PTR) SetPresent(present bool) {
+	if !present {
+		*v.p = nil
+	} else if *v.p == nil {
+		*v.p = new($TYPE)
+	}
+}
+func (v $PTR) XdrMarshalValue(x XDR, name string) {
 	if *v.p != nil {
 		XDR_$TYPE(x, name, *v.p)
 	}
 }
+func (v $PTR) XdrMarshal(x XDR, name string) {
+	x.Marshal(name, _ptrflag_$TYPE(v))
+	v.XdrMarshalValue(x, name)
+}
+func (v $PTR) XdrPointer() interface{} { return v.p }
+func (v $PTR) XdrValue() interface{} { return *v.p }
 `
 	frag = strings.Replace(frag, "$PTR", ptrtyp, -1)
 	frag = strings.Replace(frag, "$TYPE", typ, -1)
 	e.append(frag)
 	return ptrtyp
+}
+
+func (e *emitter) get_bound(b string) string {
+	for loop := map[string]bool{}; !loop[b]; {
+		loop[b] = true
+		if s, ok := e.syms.SymbolMap[b]; !ok {
+			break
+		} else if d2, ok := s.(*rpc_const); !ok {
+			break
+		} else {
+			b = d2.val
+		}
+	}
+	if b == "" {
+		b = "0xffffffff"
+	}
+	if i32, err := strconv.ParseUint(b, 0, 32); err == nil {
+		b = fmt.Sprintf("%d", i32)
+	}
+	return b
+}
+
+func (e *emitter) gen_vec(typ, bound string) string {
+	bound = e.get_bound(bound)
+	vectyp := "XdrVec_" + bound + "_" + typ
+	if typ[0] == '_' {
+		// '_' starts inline declarations, so only one size
+		vectyp = "_XdrVec" + typ
+	}
+	if e.done(vectyp) {
+		return vectyp
+	}
+	frag :=
+`type $VEC []$TYPE
+func (v *$VEC) XdrBound() uint32 { return uint32($BOUND) }
+func (v *$VEC) SetVecLen(length uint32) {
+	l := int(length)
+	if l > int($BOUND) {
+		xdrPanic("SetVecLen length %d exceeds bound $BOUND", l)
+	} else if l <= cap(*v) {
+		if l != len(*v) {
+			*v = (*v)[:l]
+		}
+		return
+	}
+	newcap := 2*cap(*v)
+	if l > newcap {
+		newcap = l
+	} else if newcap > int($BOUND) {
+		newcap = int($BOUND)
+	}
+	nv := make([]$TYPE, l, newcap)
+	copy(nv, *v)
+	*v = nv
+}
+func (v *$VEC) XdrMarshalN(x XDR, name string, n uint32) {
+	if int(n) < len(*v) {
+		*v = (*v)[:int(n)]
+	}
+	for i := 0; i < int(n); i++ {
+		if (i >= len(*v)) {
+			v.SetVecLen(uint32(i+1))
+		}
+		XDR_$TYPE(x, fmt.Sprintf("%s[%d]", name, i), &(*v)[i])
+	}
+}
+func (v *$VEC) XdrMarshal(x XDR, name string) {
+	size := XdrSize{ size: uint32(len(*v)), bound: $BOUND }
+	x.Marshal(name, &size)
+	v.XdrMarshalN(x, name, size.size)
+}
+func (v *$VEC) XdrPointer() interface{} { return (*[]$TYPE)(v) }
+func (v *$VEC) XdrValue() interface{} { return ([]$TYPE)(*v) }
+`
+	frag = strings.Replace(frag, "$VEC", vectyp, -1)
+	frag = strings.Replace(frag, "$TYPE", typ, -1)
+	frag = strings.Replace(frag, "$BOUND", bound, -1)
+	e.append(frag)
+	return vectyp
 }
 
 func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
@@ -182,24 +275,8 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 			frag = "\tx.Marshal($NAME, &XdrVecOpaque{$TARGET, $BOUND})\n"
 			break;
 		}
-		frag =
-`	{
-		size := XdrSize{uint32(len(*$TARGET)), $BOUND}
-		x.Marshal($NAME, &size)
-		vec := *$TARGET
-		if int(size.size) < len(vec) {
-			vec = vec[:int(size.size)]
-		}
-		for i := uint32(0); i < size.size; i++ {
-			if (int(i) >= len(vec)) {
-				var zero $TYPE
-				vec = append(vec, zero)
-			}
-			XDR_$TYPE(x, fmt.Sprintf("%s[%d]", $NAME, i), &vec[i])
-		}
-		*$TARGET = vec
-	}
-`
+		vectyp := e.gen_vec(typ, d.bound)
+		frag = fmt.Sprintf("\tx.Marshal($NAME, (*%s)($TARGET))\n", vectyp)
 	}
 	normbound := d.bound
 	if normbound == "" {

@@ -14,6 +14,11 @@ func (xp *XdrPrint) Marshal(name string, i interface{}) {
 	switch v := i.(type) {
 	case fmt.Stringer:
 		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
+	case XdrPtr:
+		if !v.GetPresent() {
+			fmt.Fprintf(xp.Out, "%s: nil\n", name)
+		}
+		v.XdrMarshalValue(xp, name)
 	case XdrAggregate:
 		v.XdrMarshal(xp, name)
 	default:
