@@ -10,6 +10,10 @@ type XdrPrint struct {
 	Out io.Writer
 }
 
+func (xp *XdrPrint) Sprintf(f string, args ...interface{}) string {
+	return fmt.Sprintf(f, args...)
+}
+
 func (xp *XdrPrint) Marshal(name string, i interface{}) {
 	switch v := i.(type) {
 	case fmt.Stringer:
@@ -56,6 +60,10 @@ func put64(out io.Writer, val uint64) {
 
 type XdrOut struct {
 	Out io.Writer
+}
+
+func (xp *XdrOut) Sprintf(f string, args ...interface{}) string {
+	return ""
 }
 
 func (xo *XdrOut) Marshal(name string, i interface{}) {
@@ -117,6 +125,10 @@ func get64(in io.Reader) uint64 {
 
 type XdrIn struct {
 	In io.Reader
+}
+
+func (xp *XdrIn) Sprintf(f string, args ...interface{}) string {
+	return ""
 }
 
 func (xi *XdrIn) Marshal(name string, i interface{}) {

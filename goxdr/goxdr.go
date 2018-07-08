@@ -230,7 +230,7 @@ func (v *$VEC) XdrMarshalN(x XDR, name string, n uint32) {
 		if (i >= len(*v)) {
 			v.SetVecLen(uint32(i+1))
 		}
-		XDR_$TYPE(x, fmt.Sprintf("%s[%d]", name, i), &(*v)[i])
+		XDR_$TYPE(x, x.Sprintf("%s[%d]", name, i), &(*v)[i])
 	}
 }
 func (v *$VEC) XdrMarshal(x XDR, name string) {
@@ -268,7 +268,7 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 		}
 		frag =
 `	for i := 0; i < len(*$TARGET); i++ {
-			XDR_$TYPE(x, fmt.Sprintf("%s[%d]", $NAME, i), &(*$TARGET)[i])
+			XDR_$TYPE(x, x.Sprintf("%s[%d]", $NAME, i), &(*$TARGET)[i])
 	}
 `
 	case VEC:
@@ -359,15 +359,16 @@ func (r *rpc_struct) emit(e *emitter) {
 			e.decltype(r.id, &r.decls[i]))
 	}
 	fmt.Fprintf(out, "}\n")
-	fmt.Fprintf(out, "func (v *%s) XdrMarshal(x XDR, name string) {\n" +
-		"\tif name != \"\" {\n" +
-		"\t\tname = name + \".\"\n" +
-		"\t}\n", r.id)
+	fmt.Fprintf(out,
+`func (v *%s) XdrMarshal(x XDR, name string) {
+	if name != "" {
+		name = x.Sprintf("%%s.", name)
+	}
+`, r.id)
 	for i := range r.decls {
-		fmt.Fprintf(out, "%s",
-			e.xdrgen("&v." + r.decls[i].id,
-				"name + \"" + r.decls[i].id + "\"",
-				r.id, &r.decls[i]))
+		out.WriteString(e.xdrgen("&v." + r.decls[i].id,
+			`x.Sprintf("%s` + r.decls[i].id + `", name)`,
+			r.id, &r.decls[i]))
 	}
 	fmt.Fprintf(out, "}\n")
 	fmt.Fprintf(out, "func XDR_%s(x XDR, name string, v *%s) {\n" +
@@ -498,13 +499,14 @@ func (r *rpc_union) emit(e *emitter) {
 	}
 	fmt.Fprintf(out, "}\n")
 
-	fmt.Fprintf(out, "func (v *%s) XdrMarshal(x XDR, name string) {\n" +
-		"\tif name != \"\" {\n" +
-		"\t\tname = name + \".\"\n" +
-		"\t}\n" +
-		"\tXDR_%s(x, name + \"%s\", &v.%s)\n" +
-		"\tswitch v.%s {\n",
-		r.id, r.tagtype, r.tagid, r.tagid, r.tagid)
+	fmt.Fprintf(out,
+`func (v *%s) XdrMarshal(x XDR, name string) {
+	if name != "" {
+		name = x.Sprintf("%%s.", name)
+	}
+	XDR_%s(x, x.Sprintf("%%s.%s", name), &v.%s)
+	switch v.%s {
+`, r.id, r.tagtype, r.tagid, r.tagid, r.tagid)
 	for i := range r.fields {
 		u := &r.fields[i]
 		if u.hasdefault {

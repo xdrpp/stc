@@ -21,6 +21,10 @@ func xdrPanic(s string, args ...interface{}) {
 
 type XDR interface {
 	Marshal(name string, ptr interface{})
+
+	// This method should just be fmt.Sprintf for XDRs that use name.
+	// Those that don't use name can use a trivial method returning ""
+	Sprintf(string, ...interface{}) string
 }
 
 type XdrAggregate interface {
