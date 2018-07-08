@@ -13,12 +13,7 @@ package main
 import "fmt"
 import "math"
 
-type XdrError string
-func (v XdrError) Error() string { return string(v) }
-func xdrPanic(s string, args ...interface{}) {
-	panic(XdrError(fmt.Sprintf(s, args...)))
-}
-
+// The interface through which values are serialized, printed, etc.
 type XDR interface {
 	Marshal(name string, ptr interface{})
 
@@ -27,10 +22,87 @@ type XDR interface {
 	Sprintf(string, ...interface{}) string
 }
 
+// The error thrown by marshaling functions when data has bad value.
+type XdrError string
+func (v XdrError) Error() string { return string(v) }
+func xdrPanic(s string, args ...interface{}) {
+	panic(XdrError(fmt.Sprintf(s, args...)))
+}
+
+// RFC4506 defines bool as equivalent to an enum with values all-caps
+// TRUE and FALSE.  For convenience, we represent and XDR bool as a Go
+// bool instead, and so define these constants in case they show up in
+// union cases.
+const (
+	TRUE = true
+	FALSE = false
+)
+
+// All quantities that should be serialized as 32-bit numbers
+// (including bools, enums, union discriminants, the bit saying
+// whether or not a pointer is NULL, floats, and vector lenghts) are
+// passed to the XDR.Marshal function as a pointer to a defined type
+// implementing the XdrNum32 interface.  The one exception is string<>
+// and opaque<>, for which it is the job of XDR.Marshal to serialize
+// the 32-bit length.
+type XdrNum32 interface {
+	GetU32() uint32
+	SetU32(uint32)
+	XdrPointer() interface{}
+	XdrValue() interface{}
+}
+
+// All 64-bit numbers (hyper, unsigned hyper, and double) are passed
+// to XDR.Marshal as a pointer to a defined type implementing
+// XdrNum64.
+type XdrNum64 interface {
+	GetU64() uint64
+	SetU64(uint64)
+	XdrPointer() interface{}
+	XdrValue() interface{}
+}
+
+// opaque[] are passed to XDR.Marshal as quantities implementing the
+// XdrBytes interface.
+type XdrBytes interface {
+	GetByteSlice() []byte
+	XdrValue() interface{}
+}
+
+// opaque<> and string<> are passed to XDR.Marshal as quantities
+// implementing XdrVarBytes.  Since XdrVarBytes is a superset of
+// XdrBytes, Marshal functions that want to distinguish between
+// opaque<> and opaque[] should first try a type assertion for
+// XdrVarBytes (to check for opaque<>) and then if that fails try
+// XdrBytes (to check for opaque[]).
+type XdrVarBytes interface {
+	XdrBytes
+	XdrBound() uint32
+	SetByteSlice([]byte)
+	XdrPointer() interface{}
+}
+
+// Any struct, union, pointer, or variable-length array type (except
+// opaque<> and string<>) is passed to XDR.Marshal as a pointer
+// implementing the XdrAggregate interface.  It is the responsibility
+// of the XDR.Marshal function to call the XdrMarshal method so as to
+// recurse into the data structure.  Placing reponsibility on
+// XDR.Marshal for recursing allows a custom XDR to prune the
+// serialization at particular types (e.g., for pretty-printing a
+// partucular struct in a non-standard way).
 type XdrAggregate interface {
 	XdrMarshal(XDR, string)
 }
 
+// Any pointer type is passed to XDR.Marshal as a struct implementing
+// the XdrPtr interface.  Note this is a superset of XdrAggregate, so
+// when Marshal function that does nothing and calls XdrMarshal, it
+// will then get called twice, once with an XdrNum32 (to marshal the
+// non-NULL bit) and then again with the underlying value if the
+// pointer is non-nil.  An XDR.Marshal function that wants to special
+// case pointers get get the present bit from the GetPresent and
+// SetPresent methods, then bypass marshaling of the bit by calling
+// XdrMarshalValue instead of XdrMarshal.
 type XdrPtr interface {
 	XdrAggregate
 	GetPresent() bool
@@ -40,6 +112,15 @@ type XdrPtr interface {
 	XdrValue() interface{}
 }
 
+// Any vector type is passed as a pointer to a user-defined alias
+// around a slice that implements the XdrVec interface.  XdrVec is a
+// superset of XdrAggregate, so calling XdrMarshal will recurse to
+// call XDR.Marshal first on the size (of type XdrSize), then on each
+// element of the slice.  An XDR.Marshal function can manually marshal
+// the size and then call XdrMarshalN to marshal n vector elements.
+// (It is advisable *not* to call SetVecLen before calling
+// XdrMarshalN, as XdrMarshalN gradually grows the slice size to N so
+// as to avoid exhausting memory if bad input contains a huge size.)
 type XdrVec interface {
 	XdrAggregate
 	XdrBound() uint32
@@ -50,28 +131,11 @@ type XdrVec interface {
 	XdrValue() interface{}
 }
 
-const (
-	TRUE = true
-	FALSE = false
-)
-
 type XdrVoid = struct{}
-
-type XdrNum32 interface {
-	GetU32() uint32
-	SetU32(uint32)
-	XdrPointer() interface{}
-	XdrValue() interface{}
-}
 
 type XdrBool bool
 func (v *XdrBool) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
-func (v *XdrBool) GetU32() uint32 {
-	if *v {
-		return 1
-	}
-	return 0
-}
+func (v *XdrBool) GetU32() uint32 { if *v { return 1 }; return 0 }
 func (v *XdrBool) SetU32(nv uint32) {
 	switch nv {
 	case 0:
@@ -83,9 +147,7 @@ func (v *XdrBool) SetU32(nv uint32) {
 }
 func (v *XdrBool) XdrPointer() interface{} { return (*bool)(v) }
 func (v *XdrBool) XdrValue() interface{} { return bool(*v) }
-func XDR_bool(x XDR, name string, v *bool) {
-	x.Marshal(name, (*XdrBool)(v))
-}
+func XDR_bool(x XDR, name string, v *bool) { x.Marshal(name, (*XdrBool)(v)) }
 
 type XdrInt32 int32
 func (v *XdrInt32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
@@ -109,9 +171,7 @@ func XDR_uint32(x XDR, name string, v *uint32) {
 
 type XdrFloat32 float32
 func (v *XdrFloat32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
-func (v *XdrFloat32) GetU32() uint32 {
-	return math.Float32bits(float32(*v))
-}
+func (v *XdrFloat32) GetU32() uint32 { return math.Float32bits(float32(*v)) }
 func (v *XdrFloat32) SetU32(nv uint32) {
 	*v = XdrFloat32(math.Float32frombits(nv))
 }
@@ -139,22 +199,13 @@ func (v *XdrSize) XdrPointer() interface{} { return &v.size }
 func (v *XdrSize) XdrValue() interface{} { return v.size }
 func (v *XdrSize) XdrBound() uint32 { return v.bound }
 
-type XdrNum64 interface {
-	GetU64() uint64
-	SetU64(uint64)
-	XdrPointer() interface{}
-	XdrValue() interface{}
-}
-
 type XdrInt64 int64
 func (v *XdrInt64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
 func (v *XdrInt64) GetU64() uint64 { return uint64(*v) }
 func (v *XdrInt64) SetU64(nv uint64) { *v = XdrInt64(nv) }
 func (v *XdrInt64) XdrPointer() interface{} { return (*int64)(v) }
 func (v *XdrInt64) XdrValue() interface{} { return int64(*v) }
-func XDR_int64(x XDR, name string, v *int64) {
-	x.Marshal(name, (*XdrInt64)(v))
-}
+func XDR_int64(x XDR, name string, v *int64) { x.Marshal(name, (*XdrInt64)(v)) }
 
 type XdrUint64 uint64
 func (v *XdrUint64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
@@ -168,9 +219,7 @@ func XDR_uint64(x XDR, name string, v *uint64) {
 
 type XdrFloat64 float64
 func (v *XdrFloat64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
-func (v *XdrFloat64) GetU64() uint64 {
-	return math.Float64bits(float64(*v))
-}
+func (v *XdrFloat64) GetU64() uint64 { return math.Float64bits(float64(*v)) }
 func (v *XdrFloat64) SetU64(nv uint64) {
 	*v = XdrFloat64(math.Float64frombits(nv))
 }
@@ -178,17 +227,6 @@ func (v *XdrFloat64) XdrPointer() interface{} { return (*float64)(v) }
 func (v *XdrFloat64) XdrValue() interface{} { return float64(*v) }
 func XDR_float64(x XDR, name string, v *float64) {
 	x.Marshal(name, (*XdrFloat64)(v))
-}
-
-type XdrBytes interface {
-	GetByteSlice() []byte
-	XdrValue() interface{}
-}
-type XdrVarBytes interface {
-	XdrBytes
-	XdrBound() uint32
-	SetByteSlice([]byte)
-	XdrPointer() interface{}
 }
 
 type XdrString struct {
