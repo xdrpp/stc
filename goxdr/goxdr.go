@@ -168,7 +168,8 @@ func (v $PTR) XdrValue() interface{} { return *v.p }
 	return ptrtyp
 }
 
-func (e *emitter) get_bound(b string) string {
+func (e *emitter) get_bound(b0 string) (string, string) {
+	b := b0
 	for loop := map[string]bool{}; !loop[b]; {
 		loop[b] = true
 		if s, ok := e.syms.SymbolMap[b]; !ok {
@@ -184,13 +185,19 @@ func (e *emitter) get_bound(b string) string {
 	}
 	if i32, err := strconv.ParseUint(b, 0, 32); err == nil {
 		b = fmt.Sprintf("%d", i32)
+	} else if b[0] == '-' {
+		// will make go compiler report the error
+		return b0, b0
 	}
-	return b
+	if b == "4294967295" {
+		return b, "unbounded"
+	}
+	return b, b
 }
 
 func (e *emitter) gen_vec(typ, bound string) string {
-	bound = e.get_bound(bound)
-	vectyp := "XdrVec_" + bound + "_" + typ
+	bound, sbound := e.get_bound(bound)
+	vectyp := "XdrVec_" + sbound + "_" + typ
 	if typ[0] == '_' {
 		// '_' starts inline declarations, so only one size
 		vectyp = "_XdrVec" + typ
@@ -200,37 +207,46 @@ func (e *emitter) gen_vec(typ, bound string) string {
 	}
 	frag :=
 `type $VEC []$TYPE
-func (v *$VEC) XdrBound() uint32 { return uint32($BOUND) }
+func (v *$VEC) XdrBound() uint32 {
+	const bound uint32 = $BOUND // Force error if not const or doesn't fit
+	return bound
+}
+func (*$VEC) XdrCheckLen(length uint32) {
+	if length > uint32($BOUND) {
+		xdrPanic("$VEC length %d exceeds bound $BOUND", length)
+	} else if int(length) < 0 {
+		xdrPanic("$VEC length %d exceeds max int", length)
+	}
+}
 func (v *$VEC) GetVecLen() uint32 { return uint32(len(*v)) }
 func (v *$VEC) SetVecLen(length uint32) {
-	l := int(length)
-	if l > int($BOUND) {
-		xdrPanic("SetVecLen length %d exceeds bound $BOUND", l)
-	} else if l <= cap(*v) {
-		if l != len(*v) {
-			*v = (*v)[:l]
+	v.XdrCheckLen(length)
+	if int(length) <= cap(*v) {
+		if int(length) != len(*v) {
+			*v = (*v)[:int(length)]
 		}
 		return
 	}
 	newcap := 2*cap(*v)
-	if l > newcap {
-		newcap = l
-	} else if newcap > int($BOUND) {
+	if newcap < int(length) { // also catches overflow where 2*cap < 0
+		newcap = int(length)
+	} else if int($BOUND) >= 0 && newcap > int($BOUND) {
 		newcap = int($BOUND)
 	}
-	nv := make([]$TYPE, l, newcap)
+	nv := make([]$TYPE, int(length), newcap)
 	copy(nv, *v)
 	*v = nv
 }
 func (v *$VEC) XdrMarshalN(x XDR, name string, n uint32) {
-	if int(n) < len(*v) {
-		*v = (*v)[:int(n)]
-	}
+	v.XdrCheckLen(n)
 	for i := 0; i < int(n); i++ {
 		if (i >= len(*v)) {
 			v.SetVecLen(uint32(i+1))
 		}
 		XDR_$TYPE(x, x.Sprintf("%s[%d]", name, i), &(*v)[i])
+	}
+	if int(n) < len(*v) {
+		*v = (*v)[:int(n)]
 	}
 }
 func (v *$VEC) XdrMarshal(x XDR, name string) {
