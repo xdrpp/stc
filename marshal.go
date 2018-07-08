@@ -14,11 +14,16 @@ func (xp *XdrPrint) Marshal(name string, i interface{}) {
 	switch v := i.(type) {
 	case fmt.Stringer:
 		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
+/* If you want to avoid printing non-nil before value
 	case XdrPtr:
 		if !v.GetPresent() {
 			fmt.Fprintf(xp.Out, "%s: nil\n", name)
 		}
 		v.XdrMarshalValue(xp, name)
+*/
+	case XdrVec:
+		fmt.Fprintf(xp.Out, "%s.len: %d\n", name, v.GetVecLen())
+		v.XdrMarshalN(xp, name, v.GetVecLen())
 	case XdrAggregate:
 		v.XdrMarshal(xp, name)
 	default:

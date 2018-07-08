@@ -39,6 +39,7 @@ type XdrPtr interface {
 type XdrVec interface {
 	XdrAggregate
 	XdrBound() uint32
+	GetVecLen() uint32
 	SetVecLen(uint32)
 	XdrMarshalN(XDR, string, uint32)
 	XdrPointer() interface{}

@@ -201,6 +201,7 @@ func (e *emitter) gen_vec(typ, bound string) string {
 	frag :=
 `type $VEC []$TYPE
 func (v *$VEC) XdrBound() uint32 { return uint32($BOUND) }
+func (v *$VEC) GetVecLen() uint32 { return uint32(len(*v)) }
 func (v *$VEC) SetVecLen(length uint32) {
 	l := int(length)
 	if l > int($BOUND) {
