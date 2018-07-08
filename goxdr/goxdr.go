@@ -101,6 +101,59 @@ func (e *emitter) decltype(context string, d *rpc_decl) string {
 	}
 }
 
+func (e *emitter) gen_ptr(typ string) string {
+	ptrtyp := "XdrPtr_" + typ
+	if typ[0] == '_' {
+		ptrtyp = "_XdrPtr" + typ
+	}
+	if e.done(ptrtyp) {
+		return ptrtyp
+	}
+	frag :=
+`type $PTR struct {
+	p **$TYPE
+}
+type _ptrflag_$TYPE $PTR
+func (v _ptrflag_$TYPE) String() string {
+	if *v.p == nil {
+		return "nil"
+	}
+	return "non-nil"
+}
+func (v _ptrflag_$TYPE) GetU32() uint32 {
+	if *v.p == nil {
+		return 0
+	}
+	return 1
+}
+func (v _ptrflag_$TYPE) SetU32(nv uint32) {
+	switch nv {
+	case 0:
+		*v.p = nil
+	case 1:
+		if *v.p == nil {
+			*v.p = new($TYPE)
+		}
+	default:
+		xdrPanic("*$TYPE present flag value %d should be 0 or 1", nv)
+	}
+}
+func (v _ptrflag_$TYPE) XdrPointer() interface{} { return v.p }
+func (v _ptrflag_$TYPE) XdrValue() interface{} { return *v.p }
+func (v _ptrflag_$TYPE) XdrBound() uint32 { return 1 }
+func (v $PTR) XdrMarshal(x XDR, name string) {
+	x.Marshal(name, _ptrflag_$TYPE(v))
+	if *v.p != nil {
+		XDR_$TYPE(x, name, *v.p)
+	}
+}
+`
+	frag = strings.Replace(frag, "$PTR", ptrtyp, -1)
+	frag = strings.Replace(frag, "$TYPE", typ, -1)
+	e.append(frag)
+	return ptrtyp
+}
+
 func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 	typ := e.get_typ(context, d)
 	var frag string
@@ -112,23 +165,8 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 			frag = "\tXDR_$TYPE(x, $NAME, $TARGET)\n"
 		}
 	case PTR:
-		frag =
-`	{
-		size := XdrSize{0, 1}
-		if *$TARGET != nil {
-			size.size = 1
-		}
-		x.Marshal($NAME, &size)
-		if size.size == 0 {
-			*$TARGET = nil
-		} else {
-			if *$TARGET == nil {
-				*$TARGET = new($TYPE)
-			}
-			XDR_$TYPE(x, $NAME, *$TARGET)
-		}
-	}
-`
+		ptrtype := e.gen_ptr(typ)
+		frag = fmt.Sprintf("\tx.Marshal($NAME, %s{$TARGET})\n", ptrtype)
 	case ARRAY:
 		if typ == "byte" {
 			frag = "\tx.Marshal($NAME, XdrArrayOpaque((*$TARGET)[:]))\n"

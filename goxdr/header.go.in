@@ -204,4 +204,5 @@ type XdrArrayOpaque []byte
 func (v XdrArrayOpaque) GetByteSlice() []byte { return ([]byte)(v) }
 func (v XdrArrayOpaque) XdrValue() interface{} { return v }
 
-// end boilerplate` + "\n"
+// end boilerplate
+//UNCOMMENT:`
