@@ -230,8 +230,11 @@ func (v *$VEC) SetVecLen(length uint32) {
 	newcap := 2*cap(*v)
 	if newcap < int(length) { // also catches overflow where 2*cap < 0
 		newcap = int(length)
-	} else if int($BOUND) >= 0 && newcap > int($BOUND) {
-		newcap = int($BOUND)
+	} else if bound := uint($BOUND); uint(newcap) > bound {
+		if int(bound) < 0 {
+			bound = ^uint(0) >> 1
+		}
+		newcap = int(bound)
 	}
 	nv := make([]$TYPE, int(length), newcap)
 	copy(nv, *v)
