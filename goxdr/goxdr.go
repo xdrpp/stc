@@ -101,39 +101,17 @@ func (e *emitter) decltype(context string, d *rpc_decl) string {
 	}
 }
 
-func (e *emitter) is_aggregate(d *rpc_decl) bool {
-	t := d.inline_decl
-	if t == nil {
-		if t = e.syms.SymbolMap[d.typ]; t == nil {
-			return false
-		}
-	}
-	switch t.(type) {
-	case *rpc_struct, *rpc_union:
-		return true
-	default:
-		return false
-	}
-}
-
 func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 	typ := e.get_typ(context, d)
-	agg := e.is_aggregate(d)
 	var frag string
 	switch d.qual {
 	case SCALAR:
 		if typ == "string" {
 			frag = "\tx.Marshal($NAME, &XdrString{$TARGET, $BOUND})\n"
-		} else if agg {
-			frag = "\tx.Marshal($NAME, $TARGET)\n"
 		} else {
 			frag = "\tXDR_$TYPE(x, $NAME, $TARGET)\n"
 		}
 	case PTR:
-		marshal := "XDR_$TYPE(x, $NAME, *$TARGET)"
-		if (agg) {
-			marshal = "x.Marshal($NAME, *$TARGET)"
-		}
 		frag =
 `	{
 		size := XdrSize{0, 1}
@@ -147,7 +125,7 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 			if *$TARGET == nil {
 				*$TARGET = new($TYPE)
 			}
-			` + marshal + `
+			XDR_$TYPE(x, $NAME, *$TARGET)
 		}
 	}
 `
@@ -156,24 +134,15 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 			frag = "\tx.Marshal($NAME, XdrArrayOpaque((*$TARGET)[:]))\n"
 			break;
 		}
-		marshal :=
-			`XDR_$TYPE(x, fmt.Sprintf("%s[%d]", $NAME, i), &(*$TARGET)[i])`
-		if (agg) {
-			marshal = `x.Marshal(fmt.Sprintf("%s[%d]", $NAME, i), $TARGET)`
-		}
 		frag =
 `	for i := 0; i < len(*$TARGET); i++ {
-			` + marshal + `
+			XDR_$TYPE(x, fmt.Sprintf("%s[%d]", $NAME, i), &(*$TARGET)[i])
 	}
 `
 	case VEC:
 		if typ == "byte" {
 			frag = "\tx.Marshal($NAME, &XdrVecOpaque{$TARGET, $BOUND})\n"
 			break;
-		}
-		marshal := `XDR_$TYPE(x, fmt.Sprintf("%s[%d]", $NAME, i), &vec[i])`
-		if (agg) {
-			marshal = `x.Marshal(fmt.Sprintf("%s[%d]", $NAME, i), &vec[i])`
 		}
 		frag =
 `	{
@@ -188,7 +157,7 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 				var zero $TYPE
 				vec = append(vec, zero)
 			}
-			` + marshal + `
+			XDR_$TYPE(x, fmt.Sprintf("%s[%d]", $NAME, i), &vec[i])
 		}
 		*$TARGET = vec
 	}
