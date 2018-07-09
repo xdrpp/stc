@@ -68,6 +68,11 @@ func (xo *XdrOut) Marshal(name string, i interface{}) {
 		put32(xo.Out, v.GetU32())
 	case XdrNum64:
 		put64(xo.Out, v.GetU64())
+	case *XdrString:
+		s := v.GetString()
+		put32(xo.Out, uint32(len(s)))
+		io.WriteString(xo.Out, s)
+		xo.Out.Write(zerofill[len(s)&3])
 	case XdrVarBytes:
 		put32(xo.Out, uint32(len(v.GetByteSlice())))
 		putBytes(xo.Out, v.GetByteSlice())
