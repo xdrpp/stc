@@ -12,7 +12,7 @@ $(XDRS):
 	git archive --prefix=xdr/ FETCH_HEAD:src/xdr | tar xf -
 
 goxdr/goxdr:
-	$(MAKE) -C goxdr
+	GOARCH=$$(go env GOHOSTARCH) $(MAKE) -C goxdr
 
 xdr_generated.go: goxdr/goxdr $(XDRS)
 	goxdr/goxdr $(XDRS) > $@~
