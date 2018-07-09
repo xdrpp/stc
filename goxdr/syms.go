@@ -78,7 +78,6 @@ type rpc_sym interface {
 }
 
 type rpc_syms struct {
-	Package string
 	SymbolMap map[string]rpc_sym
 	Symbols []rpc_sym
 	Failed bool

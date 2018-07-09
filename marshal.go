@@ -85,12 +85,8 @@ func (xo *XdrOut) Marshal(name string, i interface{}) {
 }
 
 func readFull(in io.Reader, b []byte) {
-	for i := 0; i < len(b); {
-		l, err := in.Read(b[i:])
-		if err != nil {
-			panic(err)
-		}
-		i += l
+	if _, err := io.ReadFull(in, b); err != nil {
+		panic(err)
 	}
 }
 

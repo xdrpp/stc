@@ -91,14 +91,7 @@ definition:
 |	def_program
 	;
 
-def_namespace: T_NAMESPACE T_ID
-	{
-		l := yylex.(*Lexer)
-		if l.output.Package == "" {
-			l.output.Package = $2
-		}
-	}
-	'{' file '}'
+def_namespace: T_NAMESPACE T_ID '{' file '}'
 	{
 		$$ = nil
 	};

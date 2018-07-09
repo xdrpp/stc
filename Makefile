@@ -5,7 +5,7 @@ xdr/Stellar-ledger.x xdr/Stellar-overlay.x xdr/Stellar-transaction.x	\
 xdr/Stellar-types.x
 
 all: $(BUILT_SOURCES)
-	go build
+	go build -o stc
 
 $(XDRS):
 	git fetch --depth=1 https://github.com/stellar/stellar-core.git master
@@ -15,7 +15,7 @@ goxdr/goxdr:
 	GOARCH=$$(go env GOHOSTARCH) $(MAKE) -C goxdr
 
 xdr_generated.go: goxdr/goxdr $(XDRS)
-	goxdr/goxdr $(XDRS) > $@~
+	goxdr/goxdr -o $@~ $(XDRS)
 	mv -f $@~ $@
 
 clean:

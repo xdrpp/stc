@@ -1,11 +1,14 @@
 package main
 
-import "fmt"
-import "io"
-import "io/ioutil"
-import "os"
-import "strconv"
-import "strings"
+import (
+	"flag"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"strconv"
+	"strings"
+)
 
 //go:generate goyacc -o parse.go parse.y
 //go:generate sh -c "sed -e 's!^//UNCOMMENT:!!' header.go.in > header.go"
@@ -551,32 +554,60 @@ func (r *rpc_program) emit(e *emitter) {
 	// Do something?
 }
 
-func emitAll(syms *rpc_syms) {
+func emitAll(syms *rpc_syms) string {
 	e := emitter{
 		syms: syms,
 		emitted: map[string]struct{}{},
 	}
 
-	e.printf("package main\n")
-	e.append(header)
 	for _, s := range syms.Symbols  {
 		e.append("\n")
 		e.emit(s)
 	}
-	io.WriteString(os.Stdout, e.output.String())
+	return e.output.String()
 }
 
 func main() {
-	args := os.Args
-	if len(args) <= 1 { return }
-	args = args[1:]
+	opt_nobp := flag.Bool("b", false, "Suppress initial boilerplate code")
+	opt_output := flag.String("o", "", "Name of output file")
+	opt_pkg := flag.String("p", "main", "Name of package")
+	opt_help := flag.Bool("help", false, "Print usage")
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(),
+			"Usage: %s FLAGS [file1.x file2.x ...]\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+	if (*opt_help) {
+		flag.CommandLine.SetOutput(os.Stdout)
+		flag.Usage()
+		return
+	}
+
 	var syms rpc_syms
-	for _, arg := range args {
+	for _, arg := range flag.Args() {
 		parseXDR(&syms, arg)
 	}
 	if syms.Failed {
 		os.Exit(1)
-	} else {
-		emitAll(&syms)
 	}
+	code := emitAll(&syms)
+
+	out := os.Stdout
+	if (*opt_output != "") {
+		var err error
+		out, err = os.Create(*opt_output)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s: %s\n", os.Args[0], err.Error())
+		}
+	}
+
+	if *opt_pkg != "" {
+		fmt.Fprintf(out, "package %s\n", *opt_pkg)
+	}
+	if !*opt_nobp {
+		io.WriteString(out, header)
+	}
+
+	io.WriteString(out, code)
 }
