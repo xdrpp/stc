@@ -526,9 +526,9 @@ func (r *rpc_union) emit(e *emitter) {
 	if name != "" {
 		name = x.Sprintf("%%s.", name)
 	}
-	XDR_%s(x, x.Sprintf("%%s.%s", name), &v.%s)
-	switch v.%s {
-`, r.id, r.tagtype, r.tagid, r.tagid, r.tagid)
+	XDR_%s(x, x.Sprintf("%%s%[3]s", name), &v.%[3]s)
+	switch v.%[3]s {
+`, r.id, r.tagtype, r.tagid)
 	for i := range r.fields {
 		u := &r.fields[i]
 		if u.hasdefault {
@@ -538,7 +538,8 @@ func (r *rpc_union) emit(e *emitter) {
 		}
 		if u.decl.id != "" && u.decl.typ != "void" {
 			out.WriteString(e.xdrgen("v." + u.decl.id + "()",
-				"name + \"" + u.decl.id + "\"", r.id, &u.decl))
+				`x.Sprintf("%s` + u.decl.id + `", name)`,
+				r.id, &u.decl))
 		}
 	}
 	fmt.Fprintf(out, "\t}\n}\n")
