@@ -234,10 +234,17 @@ type XdrString struct {
 	Bound uint32
 }
 func (v *XdrString) String() string { return fmt.Sprintf("%q", *v.Str) }
-func (v *XdrString) GetByteSlice() []byte { return ([]byte)(*v.Str) }
 func (v *XdrString) XdrBound() uint32 { return v.Bound }
+func (v *XdrString) GetString() string { return *v.Str }
+func (v *XdrString) SetString(s string) {
+	if uint(len(s)) > uint(v.Bound) {
+		xdrPanic("Cannot store %d bytes in string<%d>", len(s), v.Bound)
+	}
+	*v.Str = s
+}
+func (v *XdrString) GetByteSlice() []byte { return ([]byte)(*v.Str) }
 func (v *XdrString) SetByteSlice(bs []byte) {
-	if uintptr(len(bs)) > uintptr(v.Bound) {
+	if uint(len(bs)) > uint(v.Bound) {
 		xdrPanic("Cannot store %d bytes in string<%d>", len(bs), v.Bound)
 	}
 	*v.Str = string(bs)
@@ -249,7 +256,9 @@ type XdrVecOpaque struct {
 	Bytes *[]byte
 	Bound uint32
 }
-func (v *XdrVecOpaque) String() string { return fmt.Sprintf("%v", *v.Bytes) }
+func (v *XdrVecOpaque) String() string {
+	return fmt.Sprintf("%x", []byte(*v.Bytes))
+}
 func (v *XdrVecOpaque) GetByteSlice() []byte { return *v.Bytes }
 func (v *XdrVecOpaque) XdrBound() uint32 { return v.Bound }
 func (v *XdrVecOpaque) SetByteSlice(bs []byte) {
@@ -264,6 +273,7 @@ func (v *XdrVecOpaque) XdrValue() interface{} { return *v.Bytes }
 type XdrArrayOpaque []byte
 func (v XdrArrayOpaque) GetByteSlice() []byte { return ([]byte)(v) }
 func (v XdrArrayOpaque) XdrValue() interface{} { return v }
+func (v XdrArrayOpaque) String() string { return fmt.Sprintf("%x", []byte(v)) }
 
 // end boilerplate
 //UNCOMMENT:`
