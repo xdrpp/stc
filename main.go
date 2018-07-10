@@ -9,33 +9,6 @@ import (
 	"strings"
 )
 
-func (pk *PublicKey) String() string {
-	switch pk.Type {
-	case PUBLIC_KEY_TYPE_ED25519:
-		return ToStrKey(STRKEY_PUBKEY_ED25519, pk.Ed25519()[:])
-	default:
-		return fmt.Sprintf("KeyType#%d", int32(pk.Type))
-	}
-}
-
-func (pk *PublicKey) Scan(ss fmt.ScanState, _ rune) error {
-	bs, err := ss.Token(true, func(c rune) bool {
-		return c >= 'A' && c <= 'Z' || c >= '0' && c <= '9'
-	})
-	if err != nil {
-		return err
-	}
-	key, vers := FromStrKey(string(bs))
-	switch vers {
-	case STRKEY_PUBKEY_ED25519:
-		pk.Type = PUBLIC_KEY_TYPE_ED25519
-		copy((*pk.Ed25519())[:], key)
-		return nil
-	default:
-		return XdrError("Invalid public key")
-	}
-}
-
 func txOut(e *TransactionEnvelope) string {
 	out := &strings.Builder{}
 	b64o := base64.NewEncoder(base64.StdEncoding, out)
@@ -122,11 +95,22 @@ func txScan(t XdrAggregate, in string) {
 	t.XdrMarshal(&XdrScan{kvs}, "")
 }
 
+func doKeyGen() {
+	pk, sk := KeyGen(PUBLIC_KEY_TYPE_ED25519)
+	fmt.Println(pk, sk)
+}
+
 func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to binary XDR")
 	opt_decompile := flag.Bool("d", false, "Decompile input from binary XDR")
+	opt_keygen := flag.Bool("keygen", false, "Create a new signing keypair")
 	opt_output := flag.String("o", "", "Output to file instead of stdout")
 	flag.Parse()
+
+	if (*opt_keygen) {
+		doKeyGen()
+		return
+	}
 
 	var input []byte
 	var err error

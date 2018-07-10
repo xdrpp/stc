@@ -1,11 +1,15 @@
 package main
 
 import "bytes"
-// import "fmt"
-// import "os"
-// import "crypto/rand"
+import "fmt"
+import "os"
+import "crypto"
+import "crypto/rand"
 import "encoding/base32"
-// import "golang.org/x/crypto/ed25519"
+import "golang.org/x/crypto/ed25519"
+
+type StrKeyError string
+func (e StrKeyError) Error() string { return string(e) }
 
 type StrKeyVersionByte byte
 
@@ -76,25 +80,104 @@ func MustFromStrKey(want StrKeyVersionByte, in string) []byte {
 	return bin
 }
 
-/*
-func main() {
+func (pk *PublicKey) String() string {
+	switch pk.Type {
+	case PUBLIC_KEY_TYPE_ED25519:
+		return ToStrKey(STRKEY_PUBKEY_ED25519, pk.Ed25519()[:])
+	default:
+		return fmt.Sprintf("KeyType#%d", int32(pk.Type))
+	}
+}
+
+func isKeyChar(c rune) bool {
+	return c >= 'A' && c <= 'Z' || c >= '0' && c <= '9'
+}
+
+func (pk *PublicKey) Scan(ss fmt.ScanState, _ rune) error {
+	bs, err := ss.Token(true, isKeyChar)
+	if err != nil {
+		return err
+	}
+	key, vers := FromStrKey(string(bs))
+	switch vers {
+	case STRKEY_PUBKEY_ED25519:
+		pk.Type = PUBLIC_KEY_TYPE_ED25519
+		copy((*pk.Ed25519())[:], key)
+		return nil
+	default:
+		return StrKeyError("Invalid public key")
+	}
+}
+
+type Ed25519Priv ed25519.PrivateKey
+
+func (sk Ed25519Priv) String() string {
+	return ToStrKey(STRKEY_SEED_ED25519, ed25519.PrivateKey(sk).Seed())
+}
+
+func (sk Ed25519Priv) Sign(msg []byte) ([]byte, error) {
+	return ed25519.PrivateKey(sk).Sign(rand.Reader, msg, crypto.Hash(0))
+}
+
+func (sk Ed25519Priv) PublicKey() *PublicKey {
+	ret := PublicKey{ Type: PUBLIC_KEY_TYPE_ED25519 }
+	copy((*ret.Ed25519())[:], ([]byte)(sk))
+	return &ret
+}
+
+type PrivateKey struct {
+	k interface {
+		String() string
+		Sign([]byte) ([]byte, error)
+		PublicKey() *PublicKey
+	}
+}
+func (sk PrivateKey) String() string { return sk.k.String() }
+func (sk PrivateKey) Sign(msg []byte) { sk.k.Sign(msg) }
+
+func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
+	bs, err := ss.Token(true, isKeyChar)
+	if err != nil {
+		return err
+	}
+	key, vers := FromStrKey(string(bs))
+	switch vers {
+	case STRKEY_SEED_ED25519:
+		sec.k = Ed25519Priv(ed25519.NewKeyFromSeed(key))
+		return nil
+	default:
+		return StrKeyError("Invalid private key")
+	}
+}
+
+func genEd25519() (*PublicKey, PrivateKey) {
 	pk, sk, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	pks := ToStrKey(STRKEY_PUBKEY_ED25519, pk)
-	sks := ToStrKey(STRKEY_SEED_ED25519, sk.Seed())
-
-	pk1 := MustFromStrKey(STRKEY_PUBKEY_ED25519, pks)
-	sk1 := MustFromStrKey(STRKEY_SEED_ED25519, sks)
-
-	fmt.Println(pks, sks)
-	if bytes.Compare(pk1, pk) != 0 {
-		fmt.Println("pk borked", pk, pk1)
+	ret := PublicKey{ Type: PUBLIC_KEY_TYPE_ED25519 }
+	if len(pk) != len(*ret.Ed25519()) {
+		panic("ed25519.GenerateKey length doesn't match")
 	}
-	if bytes.Compare(sk1, sk.Seed()) != 0 {
-		fmt.Println("sk borked", sk.Seed(), sk1)
+	copy((*ret.Ed25519())[:], pk)
+	return &ret, PrivateKey{ Ed25519Priv(sk) }
+}
+
+func KeyGen(pkt PublicKeyType) (*PublicKey, PrivateKey) {
+	switch pkt {
+	case PUBLIC_KEY_TYPE_ED25519:
+		return genEd25519()
+	default:
+		panic(fmt.Sprintf("KeyGen: unsupported PublicKeyType %v", pkt))
 	}
 }
-*/
+
+func Verify(pk *PublicKey, message, sig []byte) bool {
+	switch pk.Type {
+	case PUBLIC_KEY_TYPE_ED25519:
+		return ed25519.Verify((*pk.Ed25519())[:], message, sig)
+	default:
+		return false
+	}
+}
