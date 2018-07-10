@@ -5,12 +5,12 @@ all: $(BUILT_SOURCES)
 	go build
 
 $(BUILT_SOURCES): header.go.in parse.y syms.go goxdr.go
-	PATH="$$PATH:$$(go env GOPATH)/bin" \
-		test -n "$$(command -v goyacc)" || \
-		go get golang.org/x/tools/cmd/goyacc
-	PATH="$$PATH:$$(go env GOPATH)/bin" \
-		test -n "$$(command -v stringer)" || \
-		go get golang.org/x/tools/cmd/stringer
+#	PATH="$$PATH:$$(go env GOPATH)/bin" \
+#		test -n "$$(command -v goyacc)" || \
+#		go get golang.org/x/tools/cmd/goyacc
+#	PATH="$$PATH:$$(go env GOPATH)/bin" \
+#		test -n "$$(command -v stringer)" || \
+#		go get golang.org/x/tools/cmd/stringer
 	PATH="$$PATH:$$(go env GOPATH)/bin" go generate
 
 clean:
