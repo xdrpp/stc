@@ -276,7 +276,7 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 	switch d.qual {
 	case SCALAR:
 		if typ == "string" {
-			frag = "\tx.Marshal($NAME, &XdrString{$TARGET, $BOUND})\n"
+			frag = "\tx.Marshal($NAME, XdrString{$TARGET, $BOUND})\n"
 		} else {
 			frag = "\tXDR_$TYPE(x, $NAME, $TARGET)\n"
 		}
@@ -295,7 +295,7 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 `
 	case VEC:
 		if typ == "byte" {
-			frag = "\tx.Marshal($NAME, &XdrVecOpaque{$TARGET, $BOUND})\n"
+			frag = "\tx.Marshal($NAME, XdrVecOpaque{$TARGET, $BOUND})\n"
 			break;
 		}
 		vectyp := e.gen_vec(typ, d.bound)

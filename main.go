@@ -1,8 +1,11 @@
 package main
 
-import "encoding/base64"
-import "fmt"
-import "os"
+import (
+	"encoding/base64"
+	"fmt"
+	"os"
+	"strings"
+)
 
 func (pk *PublicKey) String() string {
 	switch pk.Type {
@@ -31,9 +34,13 @@ func txPrint(t XdrAggregate) {
 	t.XdrMarshal(&XdrPrint{os.Stdout}, "")
 }
 
+func txString(t XdrAggregate) string {
+	out := &strings.Builder{}
+	t.XdrMarshal(&XdrPrint{out}, "")
+	return out.String()
+}
+
 func main() {
-	txPrint(txIn())
-	return
 
 	var e TransactionEnvelope
 	_ = e
@@ -42,7 +49,20 @@ func main() {
 	*e.Tx.Memo.Text() = "Enjoy this transaction"
 	e.Tx.Operations = append(e.Tx.Operations, Operation{})
 	e.Tx.Operations[0].Body.Type = CREATE_ACCOUNT
+
+	{
+		out := &strings.Builder{}
+		e.XdrMarshal(&XdrOut{out}, "")
+		var e1 TransactionEnvelope
+		e1.XdrMarshal(&XdrIn{strings.NewReader(out.String())}, "")
+		if (txString(&e) != txString(&e1)) {
+			panic("unmarshal does not match")
+		}
+	}
 	//txPrint(&e)
+
+	txPrint(txIn())
+	return
 
 	//txOut(&e)
 
