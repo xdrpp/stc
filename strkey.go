@@ -6,12 +6,18 @@ import (
 	"os"
 	"crypto"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base32"
 	"golang.org/x/crypto/ed25519"
 )
 
 type StrKeyError string
 func (e StrKeyError) Error() string { return string(e) }
+
+const (
+	MainNet = "Public Global Stellar Network ; September 2015"
+	TestNet = "Test SDF Network ; September 2015"
+)
 
 type StrKeyVersionByte byte
 
@@ -165,7 +171,7 @@ type PrivateKey struct {
 	}
 }
 func (sk PrivateKey) String() string { return sk.k.String() }
-func (sk PrivateKey) Sign(msg []byte) { sk.k.Sign(msg) }
+func (sk PrivateKey) Sign(msg []byte) ([]byte, error) { return sk.k.Sign(msg) }
 func (sk PrivateKey) Public() *PublicKey { return sk.k.Public() }
 
 func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
@@ -181,6 +187,31 @@ func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 	default:
 		return StrKeyError("Invalid private key")
 	}
+}
+
+func (sec *PrivateKey) SignTx(network string, e *TransactionEnvelope) error {
+	var payload TransactionSignaturePayload
+	{
+		sum := sha256.Sum256(([]byte)(network))
+		copy(payload.NetworkId[:], sum[:])
+	}
+	payload.TaggedTransaction.Type = ENVELOPE_TYPE_TX
+	*payload.TaggedTransaction.Tx() = e.Tx
+
+	sum := sha256.New()
+	payload.XdrMarshal(&XdrOut{sum}, "")
+	msg := sum.Sum(nil)
+
+	sig, err := sec.Sign(msg)
+	if err != nil {
+		return err
+	}
+
+	e.Signatures = append(e.Signatures, DecoratedSignature{
+		Hint: sec.Public().Hint(),
+		Signature: sig,
+	})
+	return nil
 }
 
 func genEd25519() PrivateKey {

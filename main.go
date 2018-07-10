@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -99,15 +100,38 @@ func doKeyGen() {
 	sk := KeyGen(PUBLIC_KEY_TYPE_ED25519)
 	fmt.Println(sk)
 	fmt.Println(sk.Public())
-	fmt.Println(sk.Public().Hint())
+	fmt.Printf("%x\n", sk.Public().Hint())
 }
+
+var progname string
 
 func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to binary XDR")
 	opt_decompile := flag.Bool("d", false, "Decompile input from binary XDR")
 	opt_keygen := flag.Bool("keygen", false, "Create a new signing keypair")
 	opt_output := flag.String("o", "", "Output to file instead of stdout")
+	opt_inplace := flag.Bool("i", false,
+		"Edit the input file (required) in place")
+	opt_sign := flag.Bool("sign", false, "Sign the transaction")
+	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
+		progname = os.Args[0][pos+1:]
+	} else {
+		progname = os.Args[0]
+	}
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(),
+			"Usage: %[1]s OPTIONS [-c] [-d] [-i | -o FILE] [INPUT-FILE]\n" +
+			"       %[1]s [-keygen]\n", progname)
+		flag.PrintDefaults()
+	}
 	flag.Parse()
+
+	if *opt_inplace {
+		if *opt_output != "" || len(flag.Args()) == 0 {
+			flag.Usage()
+		}
+		*opt_output = flag.Args()[0]
+	}
 
 	if (*opt_keygen) {
 		doKeyGen()
@@ -130,12 +154,37 @@ func main() {
 	}
 	sinput := string(input)
 
+	if !*opt_decompile && strings.IndexByte(sinput, ':') == -1 {
+		if _, err := base64.StdEncoding.DecodeString(sinput); err == nil {
+			*opt_decompile = true
+		}
+	}
+
 	var e *TransactionEnvelope
 	if *opt_decompile {
 		e = txIn(sinput)
 	} else {
 		e = &TransactionEnvelope{}
 		txScan(e, sinput)
+	}
+
+	if *opt_sign {
+		fmt.Print("Enter Password: ")
+		bytePassword, err := terminal.ReadPassword(0)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		var sk PrivateKey
+		if n, err := fmt.Sscan(string(bytePassword), &sk); n != 1 {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Println(sk.Public())
+		if err = sk.SignTx(MainNet, e); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 
 	var output string
@@ -148,6 +197,10 @@ func main() {
 	if *opt_output == "" {
 		fmt.Print(output)
 	} else {
-		ioutil.WriteFile(*opt_output, []byte(output), 0666)
+		os.Remove(*opt_output + "~")
+		os.Link(*opt_output, *opt_output + "~")
+		tmp := fmt.Sprintf("%s#%d#", *opt_output, os.Getpid())
+		ioutil.WriteFile(tmp, []byte(output), 0666)
+		os.Rename(tmp, *opt_output)
 	}
 }
