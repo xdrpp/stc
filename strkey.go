@@ -1,12 +1,14 @@
 package main
 
-import "bytes"
-import "fmt"
-import "os"
-import "crypto"
-import "crypto/rand"
-import "encoding/base32"
-import "golang.org/x/crypto/ed25519"
+import (
+	"bytes"
+	"fmt"
+	"os"
+	"crypto"
+	"crypto/rand"
+	"encoding/base32"
+	"golang.org/x/crypto/ed25519"
+)
 
 type StrKeyError string
 func (e StrKeyError) Error() string { return string(e) }
@@ -65,7 +67,9 @@ func FromStrKey(in string) ([]byte, StrKeyVersionByte) {
 	if want != crc16(bin[:len(bin)-2]) {
 		return nil, STRKEY_ERROR
 	}
-	if len(bin) != 35 {
+	switch len(bin) - 3 {
+	case 32:
+	default:
 		// Just so happens all three key types are currently 32 bytes
 		return nil, STRKEY_ERROR
 	}
@@ -105,7 +109,33 @@ func (pk *PublicKey) Scan(ss fmt.ScanState, _ rune) error {
 		copy((*pk.Ed25519())[:], key)
 		return nil
 	default:
-		return StrKeyError("Invalid public key")
+		return StrKeyError("Invalid public key type")
+	}
+}
+
+func (pk *PublicKey) Verify(message, sig []byte) bool {
+	switch pk.Type {
+	case PUBLIC_KEY_TYPE_ED25519:
+		return ed25519.Verify((*pk.Ed25519())[:], message, sig)
+	default:
+		return false
+	}
+}
+
+func signerHint(bs []byte) (ret SignatureHint) {
+	if len(bs) < 4 {
+		panic("SignerHint invalid input")
+	}
+	copy(ret[:], bs[len(bs)-4:])
+	return
+}
+
+func (pk *PublicKey) Hint() SignatureHint {
+	switch pk.Type {
+	case PUBLIC_KEY_TYPE_ED25519:
+		return signerHint((*pk.Ed25519())[:])
+	default:
+		panic(StrKeyError("Invalid public key type"))
 	}
 }
 
@@ -119,21 +149,24 @@ func (sk Ed25519Priv) Sign(msg []byte) ([]byte, error) {
 	return ed25519.PrivateKey(sk).Sign(rand.Reader, msg, crypto.Hash(0))
 }
 
-func (sk Ed25519Priv) PublicKey() *PublicKey {
+func (sk Ed25519Priv) Public() *PublicKey {
 	ret := PublicKey{ Type: PUBLIC_KEY_TYPE_ED25519 }
-	copy((*ret.Ed25519())[:], ([]byte)(sk))
+	copy((*ret.Ed25519())[:],
+		ed25519.PrivateKey(sk).Public().(ed25519.PublicKey))
 	return &ret
 }
 
+// Use struct instead of interface so we can have Scan method
 type PrivateKey struct {
 	k interface {
 		String() string
 		Sign([]byte) ([]byte, error)
-		PublicKey() *PublicKey
+		Public() *PublicKey
 	}
 }
 func (sk PrivateKey) String() string { return sk.k.String() }
 func (sk PrivateKey) Sign(msg []byte) { sk.k.Sign(msg) }
+func (sk PrivateKey) Public() *PublicKey { return sk.k.Public() }
 
 func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 	bs, err := ss.Token(true, isKeyChar)
@@ -150,34 +183,20 @@ func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 	}
 }
 
-func genEd25519() (*PublicKey, PrivateKey) {
-	pk, sk, err := ed25519.GenerateKey(rand.Reader)
+func genEd25519() PrivateKey {
+	_, sk, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	ret := PublicKey{ Type: PUBLIC_KEY_TYPE_ED25519 }
-	if len(pk) != len(*ret.Ed25519()) {
-		panic("ed25519.GenerateKey length doesn't match")
-	}
-	copy((*ret.Ed25519())[:], pk)
-	return &ret, PrivateKey{ Ed25519Priv(sk) }
+	return PrivateKey{ Ed25519Priv(sk) }
 }
 
-func KeyGen(pkt PublicKeyType) (*PublicKey, PrivateKey) {
+func KeyGen(pkt PublicKeyType) PrivateKey {
 	switch pkt {
 	case PUBLIC_KEY_TYPE_ED25519:
 		return genEd25519()
 	default:
 		panic(fmt.Sprintf("KeyGen: unsupported PublicKeyType %v", pkt))
-	}
-}
-
-func Verify(pk *PublicKey, message, sig []byte) bool {
-	switch pk.Type {
-	case PUBLIC_KEY_TYPE_ED25519:
-		return ed25519.Verify((*pk.Ed25519())[:], message, sig)
-	default:
-		return false
 	}
 }

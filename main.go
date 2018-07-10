@@ -96,8 +96,10 @@ func txScan(t XdrAggregate, in string) {
 }
 
 func doKeyGen() {
-	pk, sk := KeyGen(PUBLIC_KEY_TYPE_ED25519)
-	fmt.Println(pk, sk)
+	sk := KeyGen(PUBLIC_KEY_TYPE_ED25519)
+	fmt.Println(sk)
+	fmt.Println(sk.Public())
+	fmt.Println(sk.Public().Hint())
 }
 
 func main() {
