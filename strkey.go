@@ -61,6 +61,10 @@ func FromStrKey(in string) ([]byte, StrKeyVersionByte) {
 	if want != crc16(bin[:len(bin)-2]) {
 		return nil, STRKEY_ERROR
 	}
+	if len(bin) != 35 {
+		// Just so happens all three key types are currently 32 bytes
+		return nil, STRKEY_ERROR
+	}
 	return bin[1 : len(bin)-2], StrKeyVersionByte(bin[0] >> 3)
 }
 

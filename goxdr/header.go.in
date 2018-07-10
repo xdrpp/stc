@@ -131,6 +131,11 @@ type XdrVec interface {
 	XdrValue() interface{}
 }
 
+func xdrSymChar(r rune) bool {
+	return (r|0x20 >= 'a' && r|0x20 <= 'z') ||
+		(r >= '0' && r <= '9') || r == '_'
+}
+
 type XdrVoid = struct{}
 
 type XdrBool bool

@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/base64"
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -16,22 +18,38 @@ func (pk *PublicKey) String() string {
 	}
 }
 
-func txOut(e *TransactionEnvelope) {
-	b64o := base64.NewEncoder(base64.StdEncoding, os.Stdout)
+func (pk *PublicKey) Scan(ss fmt.ScanState, _ rune) error {
+	bs, err := ss.Token(true, func(c rune) bool {
+		return c >= 'A' && c <= 'Z' || c >= '0' && c <= '9'
+	})
+	if err != nil {
+		return err
+	}
+	key, vers := FromStrKey(string(bs))
+	switch vers {
+	case STRKEY_PUBKEY_ED25519:
+		pk.Type = PUBLIC_KEY_TYPE_ED25519
+		copy((*pk.Ed25519())[:], key)
+		return nil
+	default:
+		return XdrError("Invalid public key")
+	}
+}
+
+func txOut(e *TransactionEnvelope) string {
+	out := &strings.Builder{}
+	b64o := base64.NewEncoder(base64.StdEncoding, out)
 	e.XdrMarshal(&XdrOut{b64o}, "")
 	b64o.Close()
-	os.Stdout.Write([]byte("\n"))
+	return out.String()
 }
 
-func txIn() *TransactionEnvelope {
+func txIn(input string) *TransactionEnvelope {
+	in := strings.NewReader(input)
 	var e TransactionEnvelope
-	b64i := base64.NewDecoder(base64.StdEncoding, os.Stdin)
+	b64i := base64.NewDecoder(base64.StdEncoding, in)
 	e.XdrMarshal(&XdrIn{b64i}, "")
 	return &e
-}
-
-func txPrint(t XdrAggregate) {
-	t.XdrMarshal(&XdrPrint{os.Stdout}, "")
 }
 
 func txString(t XdrAggregate) string {
@@ -40,33 +58,110 @@ func txString(t XdrAggregate) string {
 	return out.String()
 }
 
-func main() {
+type XdrScan struct {
+	kvs map[string]string
+}
 
-	var e TransactionEnvelope
-	_ = e
-	e.Tx.TimeBounds = &TimeBounds{MinTime: 12345}
-	e.Tx.Memo.Type = MEMO_TEXT
-	*e.Tx.Memo.Text() = "Enjoy this transaction"
-	e.Tx.Operations = append(e.Tx.Operations, Operation{})
-	e.Tx.Operations[0].Body.Type = CREATE_ACCOUNT
+func (*XdrScan) Sprintf(f string, args ...interface{}) string {
+	return fmt.Sprintf(f, args...)
+}
 
-	{
-		out := &strings.Builder{}
-		e.XdrMarshal(&XdrOut{out}, "")
-		var e1 TransactionEnvelope
-		e1.XdrMarshal(&XdrIn{strings.NewReader(out.String())}, "")
-		if (txString(&e) != txString(&e1)) {
-			panic("unmarshal does not match")
+type xdrPointer interface{
+	XdrPointer() interface{}
+}
+
+func (xs *XdrScan) Marshal(name string, i interface{}) {
+	val, ok := xs.kvs[name]
+	switch v := i.(type) {
+	case fmt.Scanner:
+		if !ok { return }
+		_, err := fmt.Sscan(val, v)
+		if err != nil {
+			xdrPanic("%s", err.Error())
 		}
+	case XdrPtr:
+		val = xs.kvs[name + ".present"]
+		for len(val) > 0 && val[0] == ' ' {
+			val = val[1:]
+		}
+		switch val {
+		case "false", "":
+			v.SetPresent(false)
+		case "true":
+			v.SetPresent(true)
+		default:
+			xdrPanic("%s.present (%s) must be true or false", name,
+				xs.kvs[name + ".present"])
+		}
+		v.XdrMarshalValue(xs, name)
+
+	case *XdrSize:
+		fmt.Sscan(xs.kvs[name + ".len"], v.XdrPointer())
+	case XdrAggregate:
+		v.XdrMarshal(xs, name)
+	case xdrPointer:
+		if !ok { return }
+		fmt.Sscan(val, v.XdrPointer())
+	default:
+		xdrPanic("XdrScan: Don't know how to parse %s\n", name)
 	}
-	//txPrint(&e)
+	delete(xs.kvs, name)
+}
 
-	txPrint(txIn())
-	return
+func txScan(t XdrAggregate, in string) {
+	kvs := map[string]string{}
+	lineno := 0
+	for _, line := range strings.Split(in, "\n") {
+		lineno++
+		kv := strings.SplitN(line, ":", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		kvs[kv[0]] = kv[1]
+	}
+	t.XdrMarshal(&XdrScan{kvs}, "")
+}
 
-	//txOut(&e)
+func main() {
+	opt_compile := flag.Bool("c", false, "Compile output to binary XDR")
+	opt_decompile := flag.Bool("d", false, "Decompile input from binary XDR")
+	opt_output := flag.String("o", "", "Output to file instead of stdout")
+	flag.Parse()
 
-	//e.XdrMarshal(&XdrPrint{os.Stdout}, "")
-	//e.XdrMarshal(&XdrOut{os.Stdout}, "")
-	//e.Tx.SourceAccount.XdrMarshal(&XdrOut{os.Stdout}, "")
+	var input []byte
+	var err error
+	switch (len(flag.Args())) {
+	case 0:
+		input, err = ioutil.ReadAll(os.Stdin)
+	case 1:
+		input, err = ioutil.ReadFile(flag.Args()[0])
+	default:
+		flag.Usage()
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+	sinput := string(input)
+
+	var e *TransactionEnvelope
+	if *opt_decompile {
+		e = txIn(sinput)
+	} else {
+		e = &TransactionEnvelope{}
+		txScan(e, sinput)
+	}
+
+	var output string
+	if *opt_compile {
+		output = txOut(e) + "\n"
+	} else {
+		output = txString(e)
+	}
+
+	if *opt_output == "" {
+		fmt.Print(output)
+	} else {
+		ioutil.WriteFile(*opt_output, []byte(output), 0666)
+	}
 }

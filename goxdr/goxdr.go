@@ -343,33 +343,53 @@ func (r *rpc_enum) emit(e *emitter) {
 		fmt.Fprintf(out, "\t%s = %s(%s)\n", tag.id, r.id, tag.val)
 	}
 	fmt.Fprintf(out, ")\n")
-	fmt.Fprintf(out, "func XDR_%s(x XDR, name string, v *%s) {\n" +
-		"\tx.Marshal(name, v)\n" +
-		"}\n", r.id, r.id)
+	fmt.Fprintf(out,
+`func XDR_%s(x XDR, name string, v *%[1]s) {
+	x.Marshal(name, v)
+}
+`, r.id)
 	fmt.Fprintf(out, "var _XdrNames_%s = map[int32]string{\n", r.id)
 	for _, tag := range r.tags {
 		fmt.Fprintf(out, "\tint32(%s): \"%s\",\n", tag.id, tag.id)
 	}
 	fmt.Fprintf(out, "}\n")
-	fmt.Fprintf(out, "func (*%s) XdrEnumNames() map[int32]string {\n" +
-		"\treturn _XdrNames_%s\n}\n", r.id, r.id)
-	fmt.Fprintf(out, "func (v *%s) String() string {\n" +
-		"\tif s, ok := _XdrNames_%s[int32(*v)]; ok {\n" +
-		"\t\treturn s\n\t}\n" +
-		"\treturn fmt.Sprintf(\"%s#%%d\", *v)\n" +
-		"}\n", r.id, r.id, r.id)
-	fmt.Fprintf(out, "func (v *%s) GetU32() uint32 {\n" +
-		"\treturn uint32(*v)\n" +
-		"}\n", r.id)
-	fmt.Fprintf(out, "func (v *%s) SetU32(n uint32) {\n" +
-		"\t*v = %s(n)\n" +
-		"}\n", r.id, r.id)
-	fmt.Fprintf(out, "func (v *%s) XdrPointer() interface{} {\n" +
-		"\treturn v\n" +
-		"}\n", r.id)
-	fmt.Fprintf(out, "func (v *%s) XdrValue() interface{} {\n" +
-		"\treturn *v\n" +
-		"}\n", r.id)
+	fmt.Fprintf(out,
+`func (*%[1]s) XdrEnumNames() map[int32]string {
+	return _XdrNames_%[1]s
+}
+func (v *%[1]s) String() string {
+	if s, ok := _XdrNames_%[1]s[int32(*v)]; ok {
+		return s
+	}
+	return fmt.Sprintf("%[1]s#%%d", *v)
+}
+func (v *%[1]s) Scan(ss fmt.ScanState, _ rune) error {
+	if tok, err := ss.Token(true, xdrSymChar); err != nil {
+		return err
+	} else {
+		stok := string(tok)
+		for val, name := range _XdrNames_%[1]s {
+			if name == stok {
+				*v = %[1]s(val)
+				return nil
+			}
+		}
+		return XdrError(fmt.Sprintf("%%s is not a valid %[1]s", tok))
+	}
+}
+func (v *%[1]s) GetU32() uint32 {
+	return uint32(*v)
+}
+func (v *%[1]s) SetU32(n uint32) {
+	*v = %[1]s(n)
+}
+func (v *%[1]s) XdrPointer() interface{} {
+	return v
+}
+func (v *%[1]s) XdrValue() interface{} {
+	return *v
+}
+`, r.id)
 	e.append(out)
 }
 
