@@ -95,7 +95,20 @@ func (pk *PublicKey) String() string {
 	case PUBLIC_KEY_TYPE_ED25519:
 		return ToStrKey(STRKEY_PUBKEY_ED25519, pk.Ed25519()[:])
 	default:
-		return fmt.Sprintf("KeyType#%d", int32(pk.Type))
+		return fmt.Sprintf("PublicKey.Type#%d", int32(pk.Type))
+	}
+}
+
+func (pk *SignerKey) String() string {
+	switch pk.Type {
+	case SIGNER_KEY_TYPE_ED25519:
+		return ToStrKey(STRKEY_PUBKEY_ED25519, pk.Ed25519()[:])
+	case SIGNER_KEY_TYPE_PRE_AUTH_TX:
+		return ToStrKey(STRKEY_PRE_AUTH_TX, pk.PreAuthTx()[:])
+	case SIGNER_KEY_TYPE_HASH_X:
+		return ToStrKey(STRKEY_HASH_X, pk.HashX()[:])
+	default:
+		return fmt.Sprintf("SignerKey.Type#%d", int32(pk.Type))
 	}
 }
 
@@ -112,17 +125,39 @@ func (pk *PublicKey) Scan(ss fmt.ScanState, _ rune) error {
 	switch vers {
 	case STRKEY_PUBKEY_ED25519:
 		pk.Type = PUBLIC_KEY_TYPE_ED25519
-		copy((*pk.Ed25519())[:], key)
+		copy(pk.Ed25519()[:], key)
 		return nil
 	default:
 		return StrKeyError("Invalid public key type")
 	}
 }
 
+func (pk *SignerKey) Scan(ss fmt.ScanState, _ rune) error {
+	bs, err := ss.Token(true, isKeyChar)
+	if err != nil {
+		return err
+	}
+	key, vers := FromStrKey(string(bs))
+	switch vers {
+	case STRKEY_PUBKEY_ED25519:
+		pk.Type = SIGNER_KEY_TYPE_ED25519
+		copy(pk.Ed25519()[:], key)
+	case STRKEY_PRE_AUTH_TX:
+		pk.Type = SIGNER_KEY_TYPE_PRE_AUTH_TX
+		copy(pk.PreAuthTx()[:], key)
+	case STRKEY_HASH_X:
+		pk.Type = SIGNER_KEY_TYPE_HASH_X
+		copy(pk.HashX()[:], key)
+	default:
+		return StrKeyError("Invalid signer key string")
+	}
+	return nil
+}
+
 func (pk *PublicKey) Verify(message, sig []byte) bool {
 	switch pk.Type {
 	case PUBLIC_KEY_TYPE_ED25519:
-		return ed25519.Verify((*pk.Ed25519())[:], message, sig)
+		return ed25519.Verify(pk.Ed25519()[:], message, sig)
 	default:
 		return false
 	}
@@ -139,7 +174,7 @@ func signerHint(bs []byte) (ret SignatureHint) {
 func (pk *PublicKey) Hint() SignatureHint {
 	switch pk.Type {
 	case PUBLIC_KEY_TYPE_ED25519:
-		return signerHint((*pk.Ed25519())[:])
+		return signerHint(pk.Ed25519()[:])
 	default:
 		panic(StrKeyError("Invalid public key type"))
 	}
@@ -157,8 +192,7 @@ func (sk Ed25519Priv) Sign(msg []byte) ([]byte, error) {
 
 func (sk Ed25519Priv) Public() *PublicKey {
 	ret := PublicKey{ Type: PUBLIC_KEY_TYPE_ED25519 }
-	copy((*ret.Ed25519())[:],
-		ed25519.PrivateKey(sk).Public().(ed25519.PublicKey))
+	copy(ret.Ed25519()[:], ed25519.PrivateKey(sk).Public().(ed25519.PublicKey))
 	return &ret
 }
 
