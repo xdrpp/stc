@@ -7,6 +7,11 @@ xdr/Stellar-types.x
 all: $(BUILT_SOURCES)
 	go build -o stc
 
+build-depend:
+	go get golang.org/x/crypto/... \
+		golang.org/x/tools/cmd/goyacc		\
+		golang.org/x/tools/cmd/stringer
+
 $(XDRS):
 	git fetch --depth=1 https://github.com/stellar/stellar-core.git master
 	git archive --prefix=xdr/ FETCH_HEAD:src/xdr | tar xf -
@@ -35,4 +40,4 @@ maintainer-clean: clean
 	echo xdr >> .gitignore~
 	mv -f .gitignore~ .gitignore
 
-.PHONY: all clean maintainer-clean goxdr/goxdr
+.PHONY: all build-depend clean maintainer-clean goxdr/goxdr

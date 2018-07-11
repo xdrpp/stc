@@ -1,14 +1,14 @@
 
 # Building `stc`
 
-To compile the program, you need `stringer`, `goyacc` and the Go
-`crypto/e25519` library installed.  If you don't already have these
+To compile the program, you need `stringer`, `goyacc` and the Go extra
+`crypto` library installed.  If you don't already have these
 installed, run the following command:
 
-    go get -u golang.org/x/crypto/ed25519 golang.org/x/tools/cmd/goyacc golang.org/x/tools/cmd/stringer
+    make build-depend
 
-That will place the tools under `$GOPATH` or `$HOME/go` by default.
-With these dependencies in place, just run:
+That will install these build dependencies under `$GOPATH` or
+`$HOME/go` by default.  Once these dependencies are place, just run:
 
     make
 
