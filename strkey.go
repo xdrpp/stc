@@ -3,12 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"crypto"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base32"
-	"golang.org/x/crypto/ed25519"
 )
 
 type StrKeyError string
@@ -128,7 +123,7 @@ func (pk *PublicKey) Scan(ss fmt.ScanState, _ rune) error {
 		copy(pk.Ed25519()[:], key)
 		return nil
 	default:
-		return StrKeyError("Invalid public key type")
+		panic(StrKeyError("Invalid public key type"))
 	}
 }
 
@@ -149,18 +144,9 @@ func (pk *SignerKey) Scan(ss fmt.ScanState, _ rune) error {
 		pk.Type = SIGNER_KEY_TYPE_HASH_X
 		copy(pk.HashX()[:], key)
 	default:
-		return StrKeyError("Invalid signer key string")
+		panic(StrKeyError("Invalid signer key string"))
 	}
 	return nil
-}
-
-func (pk *PublicKey) Verify(message, sig []byte) bool {
-	switch pk.Type {
-	case PUBLIC_KEY_TYPE_ED25519:
-		return ed25519.Verify(pk.Ed25519()[:], message, sig)
-	default:
-		return false
-	}
 }
 
 func signerHint(bs []byte) (ret SignatureHint) {
@@ -180,88 +166,15 @@ func (pk *PublicKey) Hint() SignatureHint {
 	}
 }
 
-type Ed25519Priv ed25519.PrivateKey
-
-func (sk Ed25519Priv) String() string {
-	return ToStrKey(STRKEY_SEED_ED25519, ed25519.PrivateKey(sk).Seed())
-}
-
-func (sk Ed25519Priv) Sign(msg []byte) ([]byte, error) {
-	return ed25519.PrivateKey(sk).Sign(rand.Reader, msg, crypto.Hash(0))
-}
-
-func (sk Ed25519Priv) Public() *PublicKey {
-	ret := PublicKey{ Type: PUBLIC_KEY_TYPE_ED25519 }
-	copy(ret.Ed25519()[:], ed25519.PrivateKey(sk).Public().(ed25519.PublicKey))
-	return &ret
-}
-
-// Use struct instead of interface so we can have Scan method
-type PrivateKey struct {
-	k interface {
-		String() string
-		Sign([]byte) ([]byte, error)
-		Public() *PublicKey
-	}
-}
-func (sk PrivateKey) String() string { return sk.k.String() }
-func (sk PrivateKey) Sign(msg []byte) ([]byte, error) { return sk.k.Sign(msg) }
-func (sk PrivateKey) Public() *PublicKey { return sk.k.Public() }
-
-func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
-	bs, err := ss.Token(true, isKeyChar)
-	if err != nil {
-		return err
-	}
-	key, vers := FromStrKey(string(bs))
-	switch vers {
-	case STRKEY_SEED_ED25519:
-		sec.k = Ed25519Priv(ed25519.NewKeyFromSeed(key))
-		return nil
+func (pk *SignerKey) Hint() SignatureHint {
+	switch pk.Type {
+	case SIGNER_KEY_TYPE_ED25519:
+		return signerHint(pk.Ed25519()[:])
+	case SIGNER_KEY_TYPE_PRE_AUTH_TX:
+		return signerHint(pk.PreAuthTx()[:])
+	case SIGNER_KEY_TYPE_HASH_X:
+		return signerHint(pk.HashX()[:])
 	default:
-		return StrKeyError("Invalid private key")
-	}
-}
-
-func (sec *PrivateKey) SignTx(network string, e *TransactionEnvelope) error {
-	var payload TransactionSignaturePayload
-	{
-		sum := sha256.Sum256(([]byte)(network))
-		copy(payload.NetworkId[:], sum[:])
-	}
-	payload.TaggedTransaction.Type = ENVELOPE_TYPE_TX
-	*payload.TaggedTransaction.Tx() = e.Tx
-
-	sum := sha256.New()
-	payload.XdrMarshal(&XdrOut{sum}, "")
-	msg := sum.Sum(nil)
-
-	sig, err := sec.Sign(msg)
-	if err != nil {
-		return err
-	}
-
-	e.Signatures = append(e.Signatures, DecoratedSignature{
-		Hint: sec.Public().Hint(),
-		Signature: sig,
-	})
-	return nil
-}
-
-func genEd25519() PrivateKey {
-	_, sk, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
-	return PrivateKey{ Ed25519Priv(sk) }
-}
-
-func KeyGen(pkt PublicKeyType) PrivateKey {
-	switch pkt {
-	case PUBLIC_KEY_TYPE_ED25519:
-		return genEd25519()
-	default:
-		panic(fmt.Sprintf("KeyGen: unsupported PublicKeyType %v", pkt))
+		panic(StrKeyError("Invalid signer key type"))
 	}
 }

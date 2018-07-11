@@ -105,14 +105,19 @@ func doKeyGen() {
 
 var progname string
 
+func b2i(b bool) int { if b { return 1}; return 0 }
+
 func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to binary XDR")
 	opt_decompile := flag.Bool("d", false, "Decompile input from binary XDR")
 	opt_keygen := flag.Bool("keygen", false, "Create a new signing keypair")
 	opt_output := flag.String("o", "", "Output to file instead of stdout")
+	opt_preauth := flag.Bool("preauth", false,
+		"Hash transaction for pre-auth use")
 	opt_inplace := flag.Bool("i", false,
 		"Edit the input file (required) in place")
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
+	opt_testnet := flag.Bool("testnet", false, "Sign/hash for testnet")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
 	} else {
@@ -120,12 +125,18 @@ func main() {
 	}
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
-			"Usage: %[1]s OPTIONS [-c] [-d] [-i | -o FILE] [INPUT-FILE]\n" +
+			"Usage: %[1]s [-sign] [-c] [-d] [-i | -o FILE] [INPUT-FILE]\n" +
+			"       %[1]s [-preauth] [-d] [INPUT-FILE]\n" +
 			"       %[1]s [-keygen]\n", progname)
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 
+	if *opt_preauth && *opt_output != "" ||
+		*opt_keygen && (*opt_compile || *opt_decompile || *opt_preauth ||
+		*opt_inplace) {
+		flag.Usage()
+	}
 	if *opt_inplace {
 		if *opt_output != "" || len(flag.Args()) == 0 {
 			flag.Usage()
@@ -168,6 +179,19 @@ func main() {
 		txScan(e, sinput)
 	}
 
+	net := MainNet
+	if *opt_testnet {
+		net = TestNet
+	}
+
+	if (*opt_preauth) {
+		sk := SignerKey{ Type: SIGNER_KEY_TYPE_PRE_AUTH_TX }
+		copy(sk.PreAuthTx()[:], TxPayloadHash(net, e))
+		fmt.Printf("%x\n", *sk.PreAuthTx())
+		fmt.Println(&sk)
+		return
+	}
+
 	if *opt_sign {
 		fmt.Print("Enter Password: ")
 		bytePassword, err := terminal.ReadPassword(0)
@@ -181,7 +205,7 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println(sk.Public())
-		if err = sk.SignTx(MainNet, e); err != nil {
+		if err = sk.SignTx(net, e); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
