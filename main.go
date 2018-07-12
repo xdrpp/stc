@@ -197,8 +197,10 @@ func main() {
 	}
 	sinput := string(input)
 
-	if !*opt_decompile && strings.IndexByte(sinput, ':') == -1 {
-		if _, err := base64.StdEncoding.DecodeString(sinput); err == nil {
+	if !*opt_decompile && len(sinput) != 0 &&
+		strings.IndexByte(sinput, ':') == -1 {
+		if bs, err := base64.StdEncoding.DecodeString(sinput);
+		err == nil && len(bs) > 0 {
 			*opt_decompile = true
 		}
 	}
