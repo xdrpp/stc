@@ -105,7 +105,37 @@ func doKeyGen() {
 
 var progname string
 
-func b2i(b bool) int { if b { return 1}; return 0 }
+func fixTx(XXX interface{}, e *TransactionEnvelope) {
+	feechan := make(chan uint32)
+	go func() {
+		if h := GetLedgerHeader(); h != nil {
+			feechan <- h.BaseFee
+		} else {
+			feechan <- 0
+		}
+	}()
+
+	seqchan := make(chan SequenceNumber)
+	go func() {
+		var zero AccountID
+		if e.Tx.SourceAccount == zero {
+			seqchan <- 0
+		} else if a := GetAccountEntry(e.Tx.SourceAccount.String()); a != nil {
+			var val SequenceNumber
+			fmt.Sscan(a.Sequence.String(), &val)
+			seqchan <- val
+		} else {
+			seqchan <- 0
+		}
+	}()
+
+	if newfee := uint32(len(e.Tx.Operations)) * <-feechan; newfee > e.Tx.Fee {
+		e.Tx.Fee = newfee
+	}
+	if newseq := <-seqchan; newseq > e.Tx.SeqNum {
+		e.Tx.SeqNum = newseq
+	}
+}
 
 func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to binary XDR")
@@ -118,6 +148,8 @@ func main() {
 		"Edit the input file (required) in place")
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
 	opt_testnet := flag.Bool("testnet", false, "Sign/hash for testnet")
+	opt_net := flag.Bool("n", false,
+		"Query network to update 0 fee and sequence number")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
 	} else {
@@ -182,6 +214,10 @@ func main() {
 	net := MainNet
 	if *opt_testnet {
 		net = TestNet
+	}
+
+	if *opt_net {
+		fixTx(net, e)
 	}
 
 	if (*opt_preauth) {
