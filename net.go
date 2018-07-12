@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -82,4 +83,12 @@ func GetLedgerHeader() (ret *LedgerHeader) {
 		strings.NewReader(lhx.Embedded.Records[0].Header_xdr))
 	ret.XdrMarshal(&XdrIn{b64i}, "")
 	return
+}
+
+func PostTransaction(XXX interface{}, e *TransactionEnvelope) error {
+	tx := txOut(e)
+	resp, err := http.PostForm(Horizon + "/transactions",
+		url.Values{"tx": {tx}})
+	defer resp.Body.Close()
+	return err
 }
