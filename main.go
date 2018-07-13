@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func txOut(e *TransactionEnvelope) string {
+func txOut(e XdrAggregate) string {
 	out := &strings.Builder{}
 	b64o := base64.NewEncoder(base64.StdEncoding, out)
 	e.XdrMarshal(&XdrOut{b64o}, "")
@@ -18,12 +18,21 @@ func txOut(e *TransactionEnvelope) string {
 	return out.String()
 }
 
-func txIn(input string) *TransactionEnvelope {
+func txIn(e XdrAggregate, input string) (err error) {
+	defer func() {
+		if i := recover(); i != nil {
+			if xe, ok := recover().(XdrError); ok {
+				err = xe
+				fmt.Fprintln(os.Stderr, xe)
+				return
+			}
+			panic(i)
+		}
+	}()
 	in := strings.NewReader(input)
-	var e TransactionEnvelope
 	b64i := base64.NewDecoder(base64.StdEncoding, in)
 	e.XdrMarshal(&XdrIn{b64i}, "")
-	return &e
+	return nil
 }
 
 func txString(t XdrAggregate) string {
@@ -82,7 +91,17 @@ func (xs *XdrScan) Marshal(name string, i interface{}) {
 	delete(xs.kvs, name)
 }
 
-func txScan(t XdrAggregate, in string) {
+func txScan(t XdrAggregate, in string) (err error) {
+	defer func() {
+		if i := recover(); i != nil {
+			if xe, ok := recover().(XdrError); ok {
+				err = xe
+				fmt.Fprintln(os.Stderr, xe)
+				return
+			}
+			panic(i)
+		}
+	}()
 	kvs := map[string]string{}
 	lineno := 0
 	for _, line := range strings.Split(in, "\n") {
@@ -94,6 +113,7 @@ func txScan(t XdrAggregate, in string) {
 		kvs[kv[0]] = kv[1]
 	}
 	t.XdrMarshal(&XdrScan{kvs}, "")
+	return nil
 }
 
 func doKeyGen() {
@@ -105,10 +125,10 @@ func doKeyGen() {
 
 var progname string
 
-func fixTx(XXX interface{}, e *TransactionEnvelope) {
+func fixTx(net *StellarNet, e *TransactionEnvelope) {
 	feechan := make(chan uint32)
 	go func() {
-		if h := GetLedgerHeader(); h != nil {
+		if h := GetLedgerHeader(net); h != nil {
 			feechan <- h.BaseFee
 		} else {
 			feechan <- 0
@@ -117,16 +137,16 @@ func fixTx(XXX interface{}, e *TransactionEnvelope) {
 
 	seqchan := make(chan SequenceNumber)
 	go func() {
+		var val SequenceNumber
 		var zero AccountID
-		if e.Tx.SourceAccount == zero {
-			seqchan <- 0
-		} else if a := GetAccountEntry(e.Tx.SourceAccount.String()); a != nil {
-			var val SequenceNumber
-			fmt.Sscan(a.Sequence.String(), &val)
-			seqchan <- val
-		} else {
-			seqchan <- 0
+		if e.Tx.SourceAccount != zero {
+			if a := GetAccountEntry(net, e.Tx.SourceAccount.String());
+			a != nil {
+				fmt.Sscan(a.Sequence.String(), &val)
+				val++
+			}
 		}
+		seqchan <- val
 	}()
 
 	if newfee := uint32(len(e.Tx.Operations)) * <-feechan; newfee > e.Tx.Fee {
@@ -147,9 +167,11 @@ func main() {
 	opt_inplace := flag.Bool("i", false,
 		"Edit the input file (required) in place")
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
-	opt_testnet := flag.Bool("testnet", false, "Sign/hash for testnet")
-	opt_net := flag.Bool("n", false,
-		"Query network to update 0 fee and sequence number")
+	opt_netname := flag.String("net", "main", `Network ID "main" or "test"`)
+	opt_update := flag.Bool("u", false,
+		"Query network to update fee and sequence number")
+	opt_post := flag.Bool("post", false,
+		"Post transaction instead of editing it")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
 	} else {
@@ -157,9 +179,11 @@ func main() {
 	}
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
-			"Usage: %[1]s [-sign] [-c] [-d] [-i | -o FILE] [INPUT-FILE]\n" +
-			"       %[1]s [-preauth] [-d] [INPUT-FILE]\n" +
-			"       %[1]s [-keygen]\n", progname)
+`Usage: %[1]s [-sign [-net=ID]] [-c] [-d] [-u] [-i | -o FILE] [INPUT-FILE]
+       %[1]s [-preauth] [-net=ID] [-d] [INPUT-FILE]
+       %[1]s [-keygen]
+       %[1]s [-post [-net=ID]] [-sign] [-d] [-u] [INPUT-FILE]
+`, progname)
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -205,29 +229,23 @@ func main() {
 		}
 	}
 
-	var e *TransactionEnvelope
+	var e TransactionEnvelope
 	if *opt_decompile {
-		e = txIn(sinput)
+		err = txIn(&e, sinput)
 	} else {
-		e = &TransactionEnvelope{}
-		txScan(e, sinput)
+		err = txScan(&e, sinput)
+	}
+	if err != nil {
+		os.Exit(1)
 	}
 
-	net := MainNet
-	if *opt_testnet {
-		net = TestNet
+	net, ok := Networks[*opt_netname]
+	if !ok {
+		fmt.Fprintf(os.Stderr, "unknown network %q\n", *opt_netname)
+		os.Exit(1)
 	}
-
-	if *opt_net {
-		fixTx(net, e)
-	}
-
-	if (*opt_preauth) {
-		sk := SignerKey{ Type: SIGNER_KEY_TYPE_PRE_AUTH_TX }
-		copy(sk.PreAuthTx()[:], TxPayloadHash(net, e))
-		fmt.Printf("%x\n", *sk.PreAuthTx())
-		fmt.Println(&sk)
-		return
+	if *opt_update {
+		fixTx(&net, &e)
 	}
 
 	if *opt_sign {
@@ -243,17 +261,37 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println(sk.Public())
-		if err = sk.SignTx(net, e); err != nil {
+		if err = sk.SignTx(net.NetworkId, &e); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 	}
 
+	if (*opt_post) {
+		res := PostTransaction(&net, &e)
+		if res != nil {
+			fmt.Print(txString(res))
+		}
+		if res == nil || res.Result.Code != TxSUCCESS {
+			fmt.Fprint(os.Stderr, "Post transaction failed\n")
+			os.Exit(1)
+		}
+		return
+	}
+
+	if (*opt_preauth) {
+		sk := SignerKey{ Type: SIGNER_KEY_TYPE_PRE_AUTH_TX }
+		copy(sk.PreAuthTx()[:], TxPayloadHash(net.NetworkId, &e))
+		fmt.Printf("%x\n", *sk.PreAuthTx())
+		fmt.Println(&sk)
+		return
+	}
+
 	var output string
 	if *opt_compile {
-		output = txOut(e) + "\n"
+		output = txOut(&e) + "\n"
 	} else {
-		output = txString(e)
+		output = txString(&e)
 	}
 
 	if *opt_output == "" {

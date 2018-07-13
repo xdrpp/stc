@@ -12,10 +12,19 @@ import (
 	"strings"
 )
 
-var Horizon = "https://horizon-testnet.stellar.org/"
+type StellarNet struct {
+	NetworkId string
+	Horizon string
+}
+var Networks = map[string]StellarNet{
+	"main": { "Public Global Stellar Network ; September 2015",
+		"https://horizon.stellar.org/"},
+	"test": { "Test SDF Network ; September 2015",
+		"https://horizon-testnet.stellar.org/"},
+}
 
-func get(query string) []byte {
-	resp, err := http.Get(Horizon + query)
+func get(net *StellarNet, query string) []byte {
+	resp, err := http.Get(net.Horizon + query)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return nil
@@ -42,8 +51,8 @@ type HorizonAccountEntry struct {
 	}
 }
 
-func GetAccountEntry(acct string) *HorizonAccountEntry {
-	if body := get("accounts/" + acct); body != nil {
+func GetAccountEntry(net *StellarNet, acct string) *HorizonAccountEntry {
+	if body := get(net, "accounts/" + acct); body != nil {
 		var ae HorizonAccountEntry
 		if err := json.Unmarshal(body, &ae); err != nil {
 			return nil
@@ -53,7 +62,7 @@ func GetAccountEntry(acct string) *HorizonAccountEntry {
 	return nil
 }
 
-func GetLedgerHeader() (ret *LedgerHeader) {
+func GetLedgerHeader(net *StellarNet) (ret *LedgerHeader) {
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -61,7 +70,7 @@ func GetLedgerHeader() (ret *LedgerHeader) {
 		}
 	}()
 
-	body := get("ledgers?limit=1&order=desc")
+	body := get(net, "ledgers?limit=1&order=desc")
 	if body == nil {
 		return nil
 	}
@@ -85,10 +94,34 @@ func GetLedgerHeader() (ret *LedgerHeader) {
 	return
 }
 
-func PostTransaction(XXX interface{}, e *TransactionEnvelope) error {
+func PostTransaction(
+	net *StellarNet, e *TransactionEnvelope) *TransactionResult {
 	tx := txOut(e)
-	resp, err := http.PostForm(Horizon + "/transactions",
+	resp, err := http.PostForm(net.Horizon + "/transactions",
 		url.Values{"tx": {tx}})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return nil
+	}
 	defer resp.Body.Close()
-	return err
+
+	js := json.NewDecoder(resp.Body)
+	var res struct {
+		Result_xdr string
+		Extras struct {
+			Result_xdr string
+		}
+	}
+	if err = js.Decode(&res); err != nil {
+		fmt.Fprintf(os.Stderr, "PostTransaction: %s\n", err.Error())
+		return nil
+	}
+	if res.Result_xdr == "" { res.Result_xdr = res.Extras.Result_xdr }
+
+	var ret TransactionResult
+	if err = txIn(&ret, res.Result_xdr); err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid result_xdr\n")
+		return nil
+	}
+	return &ret
 }
