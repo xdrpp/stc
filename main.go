@@ -116,6 +116,19 @@ func txScan(t XdrAggregate, in string) (err error) {
 	return nil
 }
 
+type acctInfo struct {
+	field string
+	name string
+	signers []HorizonSigner
+}
+type xdrGetAccounts struct {
+	accounts map[AccountID]acctInfo
+}
+
+
+func getAccounts() {
+}
+
 func doKeyGen() {
 	sk := KeyGen(PUBLIC_KEY_TYPE_ED25519)
 	fmt.Println(sk)

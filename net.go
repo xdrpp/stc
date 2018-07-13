@@ -38,6 +38,10 @@ func get(net *StellarNet, query string) []byte {
 	return body
 }
 
+type HorizonSigner struct {
+	Key string
+	Weight uint32
+}
 type HorizonAccountEntry struct {
 	Sequence json.Number
 	Thresholds struct {
@@ -45,10 +49,7 @@ type HorizonAccountEntry struct {
 		Med_threshold uint8
 		High_threshold uint8
 	}
-	Signers []struct {
-		Key string
-		Weight uint32
-	}
+	Signers []HorizonSigner
 }
 
 func GetAccountEntry(net *StellarNet, acct string) *HorizonAccountEntry {
