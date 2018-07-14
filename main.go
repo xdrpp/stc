@@ -155,8 +155,9 @@ func fixTx(net *StellarNet, e *TransactionEnvelope) {
 		if e.Tx.SourceAccount != zero {
 			if a := GetAccountEntry(net, e.Tx.SourceAccount.String());
 			a != nil {
-				fmt.Sscan(a.Sequence.String(), &val)
-				val++
+				if fmt.Sscan(a.Sequence.String(), &val); val != 0 {
+					val++
+				}
 			}
 		}
 		seqchan <- val
