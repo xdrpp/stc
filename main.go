@@ -122,11 +122,29 @@ type acctInfo struct {
 	signers []HorizonSigner
 }
 type xdrGetAccounts struct {
-	accounts map[AccountID]acctInfo
+	accounts map[AccountID]*acctInfo
 }
 
+func (xp *xdrGetAccounts) Sprintf(f string, args ...interface{}) string {
+	return fmt.Sprintf(f, args...)
+}
+func (xp *xdrGetAccounts) Marshal(field string, i interface{}) {
+	switch v := i.(type) {
+	case *AccountID:
+		if _, ok := xp.accounts[*v]; !ok {
+			xp.accounts[*v] = &acctInfo{ field: field }
+		}
+	case XdrAggregate:
+		v.XdrMarshal(xp, field)
+	}
+}
 
-func getAccounts() {
+func getAccounts(net *StellarNet, e *TransactionEnvelope) {
+	xga := xdrGetAccounts{ map[AccountID]*acctInfo{} }
+	e.XdrMarshal(&xga, "")
+	for ac := range xga.accounts {
+		fmt.Printf("%v\n", ac.String())
+	}
 }
 
 func doKeyGen() {
@@ -184,6 +202,7 @@ func main() {
 	opt_netname := flag.String("net", "main", `Network ID "main" or "test"`)
 	opt_update := flag.Bool("u", false,
 		"Query network to update fee and sequence number")
+	opt_name := flag.Bool("names", false, "Try to resolv account names")
 	opt_post := flag.Bool("post", false,
 		"Post transaction instead of editing it")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
@@ -306,6 +325,10 @@ func main() {
 		output = txOut(&e) + "\n"
 	} else {
 		output = txString(&e)
+	}
+
+	if *opt_name {
+		getAccounts(&net, &e)
 	}
 
 	if *opt_output == "" {
