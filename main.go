@@ -142,8 +142,23 @@ func (xp *xdrGetAccounts) Marshal(field string, i interface{}) {
 func getAccounts(net *StellarNet, e *TransactionEnvelope) {
 	xga := xdrGetAccounts{ map[AccountID]*acctInfo{} }
 	e.XdrMarshal(&xga, "")
-	for ac := range xga.accounts {
-		fmt.Printf("%v\n", ac.String())
+	c := make(chan struct{})
+	for ac, infp := range xga.accounts {
+		go func(ac AccountID, infp *acctInfo) {
+			if ae := GetAccountEntry(net, ac.String()); ae != nil {
+				infp.signers = ae.Signers
+			}
+			c <- struct{}{}
+		}(ac, infp)
+	}
+	for i := 0; i < len(xga.accounts); i++ {
+		<-c
+	}
+
+	for ac, infp := range xga.accounts {
+		for _, signer := range infp.signers {
+			fmt.Printf("%v %v\n", ac.String(), signer)
+		}
 	}
 }
 
@@ -329,15 +344,15 @@ func main() {
 
 	if *opt_name {
 		getAccounts(&net, &e)
+		return
 	}
 
 	if *opt_output == "" {
 		fmt.Print(output)
 	} else {
-		os.Remove(*opt_output + "~")
-		os.Link(*opt_output, *opt_output + "~")
-		tmp := fmt.Sprintf("%s#%d#", *opt_output, os.Getpid())
-		ioutil.WriteFile(tmp, []byte(output), 0666)
-		os.Rename(tmp, *opt_output)
+		if err = SafeWriteFile(*opt_output, []byte(output), 0666); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
 	}
 }
