@@ -94,7 +94,7 @@ func (pk *PublicKey) String() string {
 	}
 }
 
-func (pk *SignerKey) String() string {
+func (pk SignerKey) String() string {
 	switch pk.Type {
 	case SIGNER_KEY_TYPE_ED25519:
 		return ToStrKey(STRKEY_PUBKEY_ED25519, pk.Ed25519()[:])
@@ -123,7 +123,7 @@ func (pk *PublicKey) Scan(ss fmt.ScanState, _ rune) error {
 		copy(pk.Ed25519()[:], key)
 		return nil
 	default:
-		panic(StrKeyError("Invalid public key type"))
+		return StrKeyError("Invalid public key type")
 	}
 }
 
@@ -144,7 +144,7 @@ func (pk *SignerKey) Scan(ss fmt.ScanState, _ rune) error {
 		pk.Type = SIGNER_KEY_TYPE_HASH_X
 		copy(pk.HashX()[:], key)
 	default:
-		panic(StrKeyError("Invalid signer key string"))
+		return StrKeyError("Invalid signer key string")
 	}
 	return nil
 }
@@ -178,3 +178,4 @@ func (pk *SignerKey) Hint() SignatureHint {
 		panic(StrKeyError("Invalid signer key type"))
 	}
 }
+

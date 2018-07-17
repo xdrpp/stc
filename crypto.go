@@ -2,12 +2,13 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/sha256"
+	"fmt"
 	"golang.org/x/crypto/ed25519"
+	"os"
 )
 
 func XdrSHA256(t XdrAggregate) []byte {
@@ -29,6 +30,21 @@ func (pk *PublicKey) Verify(message, sig []byte) bool {
 	switch pk.Type {
 	case PUBLIC_KEY_TYPE_ED25519:
 		return ed25519.Verify(pk.Ed25519()[:], message, sig)
+	default:
+		return false
+	}
+}
+
+func (pk *SignerKey) VerifyTx(network string, e *TransactionEnvelope,
+	sig []byte) bool {
+	switch pk.Type {
+	case SIGNER_KEY_TYPE_ED25519:
+		return ed25519.Verify(pk.Ed25519()[:], TxPayloadHash(network, e), sig)
+	case SIGNER_KEY_TYPE_PRE_AUTH_TX:
+		return bytes.Equal(TxPayloadHash(network, e), pk.PreAuthTx()[:])
+	case SIGNER_KEY_TYPE_HASH_X:
+		x := sha256.Sum256(sig)
+		return bytes.Equal(x[:], pk.HashX()[:])
 	default:
 		return false
 	}

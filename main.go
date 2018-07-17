@@ -139,7 +139,7 @@ func (xp *xdrGetAccounts) Marshal(field string, i interface{}) {
 	}
 }
 
-func getAccounts(net *StellarNet, e *TransactionEnvelope) {
+func getAccounts(net *StellarNet, e *TransactionEnvelope, sc *SignerCache) {
 	xga := xdrGetAccounts{ map[AccountID]*acctInfo{} }
 	e.XdrMarshal(&xga, "")
 	c := make(chan struct{})
@@ -156,10 +156,19 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope) {
 	}
 
 	for ac, infp := range xga.accounts {
+		acs := ac.String()
 		for _, signer := range infp.signers {
-			fmt.Printf("%v %v\n", ac.String(), signer)
+			var comment string
+			if acs != signer.Key {
+				comment = fmt.Sprintf("signer for account %s", acs)
+			}
+			sc.Add(signer.Key, comment)
 		}
 	}
+}
+
+func checkSigs(net *StellarNet, sc *SignerCache, e *TransactionEnvelope) bool {
+	return false
 }
 
 func doKeyGen() {
@@ -217,7 +226,7 @@ func main() {
 	opt_netname := flag.String("net", "main", `Network ID "main" or "test"`)
 	opt_update := flag.Bool("u", false,
 		"Query network to update fee and sequence number")
-	opt_name := flag.Bool("names", false, "Try to resolv account names")
+	opt_learn := flag.Bool("l", false, "Learn new accounts/signers")
 	opt_post := flag.Bool("post", false,
 		"Post transaction instead of editing it")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
@@ -296,8 +305,17 @@ func main() {
 		fixTx(&net, &e)
 	}
 
+	var sc SignerCache
+	sc.Load(ConfigPath("signers"))
+	if *opt_learn {
+		getAccounts(&net, &e, &sc)
+		sc.Save(ConfigPath("signers"))
+	}
+
+	checkSigs(&net, &sc, &e)
+
 	if *opt_sign {
-		fmt.Print("Enter Password: ")
+		fmt.Print("Secret Key: ")
 		bytePassword, err := terminal.ReadPassword(0)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -342,15 +360,10 @@ func main() {
 		output = txString(&e)
 	}
 
-	if *opt_name {
-		getAccounts(&net, &e)
-		return
-	}
-
 	if *opt_output == "" {
 		fmt.Print(output)
 	} else {
-		if err = SafeWriteFile(*opt_output, []byte(output), 0666); err != nil {
+		if err = SafeWriteFile(*opt_output, output, 0666); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
