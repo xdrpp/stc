@@ -38,6 +38,7 @@ type TxStringCtx struct {
 	Out io.Writer
 	Env *TransactionEnvelope
 	Signers SignerCache
+	Accounts AccountHints
 	Net *StellarNet
 	Verbose bool
 	Help map[string]bool
@@ -59,6 +60,13 @@ type xdrEnumNames interface {
 
 func (xp *TxStringCtx) Marshal(name string, i interface{}) {
 	switch v := i.(type) {
+	case *AccountID:
+		ac := v.String()
+		if hint := xp.Accounts[ac]; hint != "" {
+			fmt.Fprintf(xp.Out, "%s: %s (%s)\n", name, ac, hint)
+		} else {
+			fmt.Fprintf(xp.Out, "%s: %s\n", name, ac)
+		}
 	case xdrEnumNames:
 		if xp.Verbose || xp.Help[name] {
 			fmt.Fprintf(xp.Out, "%s: %s (", name, v.String())

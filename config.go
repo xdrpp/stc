@@ -168,3 +168,46 @@ func (c SignerCache) Add(strkey, comment string) error {
 	}
 	return nil
 }
+
+type AccountHints map[string]string
+
+func (h AccountHints) String() string {
+	out := &strings.Builder{}
+	for k, v := range h {
+		fmt.Fprintf(out, "%s %s\n", k, v)
+	}
+	return out.String()
+}
+
+func (h *AccountHints) Load(filename string) error {
+	*h = make(AccountHints)
+	f, err := os.Open(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	defer func() { f.Close() }()
+
+	scanner := bufio.NewScanner(f)
+	scanner.Split(bufio.ScanLines)
+	for lineno := 1; scanner.Scan(); lineno++ {
+		v := strings.SplitN(scanner.Text(), " ", 2)
+		if len(v) == 0 || len(v[0]) == 0 {
+			continue
+		}
+		var ac AccountID
+		if _, err := fmt.Sscan(v[0], &ac); err != nil {
+			fmt.Fprintf(os.Stderr, "%s:%d: %s\n", filename, lineno, err.Error())
+			continue
+		}
+		(*h)[ac.String()] = strings.Trim(v[1], " ")
+	}
+	return nil
+}
+
+func (h *AccountHints) Save(filename string) error {
+	EnsureDir(filename)
+	return SafeWriteFile(filename, h.String(), 0666)
+}

@@ -309,9 +309,11 @@ edit_loop:
 	if *opt_compile {
 		output = txOut(&e) + "\n"
 	} else {
+		var h AccountHints
+		h.Load(ConfigPath("accounts"))
 		buf := &strings.Builder{}
 		TxStringCtx{ Out: buf, Env: &e, Signers: sc, Net: &net,
-			Verbose: *opt_verbose, Help: help }.Exec()
+			Verbose: *opt_verbose, Help: help, Accounts: h }.Exec()
 		output = buf.String()
 	}
 
