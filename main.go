@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -240,14 +241,20 @@ edit_loop:
 	}
 
 	var e TransactionEnvelope
+	var help map[string]bool
 	if *opt_decompile {
 		err = txIn(&e, sinput)
 	} else {
-		err = txScan(&e, sinput)
+		help, err = txScan(&e, sinput)
 	}
+	var pause bool
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
+		if *opt_edit {
+			pause = true
+		} else {
+			os.Exit(1)
+		}
 	}
 
 	net, ok := Networks[*opt_netname]
@@ -304,7 +311,7 @@ edit_loop:
 	} else {
 		buf := &strings.Builder{}
 		TxStringCtx{ Out: buf, Env: &e, Signers: sc, Net: &net,
-			Verbose: *opt_verbose }.Exec()
+			Verbose: *opt_verbose, Help: help }.Exec()
 		output = buf.String()
 	}
 
@@ -330,6 +337,11 @@ edit_loop:
 		}
 		if path, err := exec.LookPath(ed); err == nil {
 			ed = path
+		}
+
+		if pause {
+			fmt.Printf("Press return to run editor.")
+			bufio.NewReader(os.Stdin).ReadBytes('\n')
 		}
 
 		proc, err := os.StartProcess(ed, []string{ed, infile}, &os.ProcAttr{

@@ -40,6 +40,7 @@ type TxStringCtx struct {
 	Signers SignerCache
 	Net *StellarNet
 	Verbose bool
+	Help map[string]bool
 }
 
 func (xp *TxStringCtx) Sprintf(f string, args ...interface{}) string {
@@ -52,13 +53,14 @@ type xdrPointer interface {
 
 type xdrEnumNames interface {
 	fmt.Stringer
+	fmt.Scanner
 	XdrEnumNames() map[int32]string
 }
 
 func (xp *TxStringCtx) Marshal(name string, i interface{}) {
 	switch v := i.(type) {
 	case xdrEnumNames:
-		if xp.Verbose {
+		if xp.Verbose || xp.Help[name] {
 			fmt.Fprintf(xp.Out, "%s: %s (", name, v.String())
 			var notfirst bool
 			for _, name := range v.XdrEnumNames() {
@@ -108,6 +110,8 @@ Signatures[%[1]d].Signature: %[3]x
 
 type XdrScan struct {
 	kvs map[string]string
+	help map[string]bool
+	err bool
 }
 
 func (*XdrScan) Sprintf(f string, args ...interface{}) string {
@@ -121,38 +125,48 @@ func (xs *XdrScan) Marshal(name string, i interface{}) {
 		if !ok { return }
 		_, err := fmt.Sscan(val, v)
 		if err != nil {
-			xdrPanic("%s", err.Error())
+			xs.err = true
+			fmt.Fprintln(os.Stderr, err.Error())
+			xs.help[name] = true
+		} else if len(val) > 0 && val[len(val)-1] == '?' {
+			xs.help[name] = true
 		}
 	case XdrPtr:
-		val = xs.kvs[name + ".present"]
-		for len(val) > 0 && val[0] == ' ' {
-			val = val[1:]
-		}
+		fmt.Sscanf(xs.kvs[name + ".present"], "%s", &val)
 		switch val {
 		case "false", "":
 			v.SetPresent(false)
 		case "true":
 			v.SetPresent(true)
 		default:
-			xdrPanic("%s.present (%s) must be true or false", name,
-				xs.kvs[name + ".present"])
+			xs.err = true
+			fmt.Fprintf(os.Stderr, "%s.present (%s) must be true or false\n",
+				name, val)
 		}
 		v.XdrMarshalValue(xs, name)
-
 	case *XdrSize:
-		fmt.Sscan(xs.kvs[name + ".len"], v.XdrPointer())
+		var size uint32
+		fmt.Sscan(xs.kvs[name + ".len"], &size)
+		if size <= v.XdrBound() {
+			v.SetU32(size)
+		} else {
+			v.SetU32(v.XdrBound())
+			xs.err = true
+			fmt.Fprintf(os.Stderr, "%s.len (%d) exceeds maximum size %d.\n",
+				name, size, v.XdrBound())
+		}
 	case XdrAggregate:
 		v.XdrMarshal(xs, name)
 	case xdrPointer:
 		if !ok { return }
 		fmt.Sscan(val, v.XdrPointer())
 	default:
-		xdrPanic("XdrScan: Don't know how to parse %s\n", name)
+		xdrPanic("XdrScan: Don't know how to parse %s.\n", name)
 	}
 	delete(xs.kvs, name)
 }
 
-func txScan(t XdrAggregate, in string) (err error) {
+func txScan(t XdrAggregate, in string) (help map[string]bool, err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			switch i.(type) {
@@ -165,6 +179,7 @@ func txScan(t XdrAggregate, in string) (err error) {
 		}
 	}()
 	kvs := map[string]string{}
+	help = map[string]bool{}
 	lineno := 0
 	for _, line := range strings.Split(in, "\n") {
 		lineno++
@@ -174,7 +189,11 @@ func txScan(t XdrAggregate, in string) (err error) {
 		}
 		kvs[kv[0]] = kv[1]
 	}
-	t.XdrMarshal(&XdrScan{kvs}, "")
-	return nil
+	x := XdrScan{kvs: kvs, help: help}
+	t.XdrMarshal(&x, "")
+	if x.err {
+		err = XdrError("Some fields could not be parsed")
+	}
+	return
 }
 

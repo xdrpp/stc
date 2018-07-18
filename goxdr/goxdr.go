@@ -374,7 +374,7 @@ func (v *%[1]s) Scan(ss fmt.ScanState, _ rune) error {
 				return nil
 			}
 		}
-		return XdrError(fmt.Sprintf("%%s is not a valid %[1]s", tok))
+		return XdrError(fmt.Sprintf("%%s is not a valid %[1]s.", tok))
 	}
 }
 func (v *%[1]s) GetU32() uint32 {
