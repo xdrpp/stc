@@ -39,6 +39,7 @@ type TxStringCtx struct {
 	Env *TransactionEnvelope
 	Signers SignerCache
 	Net *StellarNet
+	Verbose bool
 }
 
 func (xp *TxStringCtx) Sprintf(f string, args ...interface{}) string {
@@ -49,8 +50,29 @@ type xdrPointer interface {
 	XdrPointer() interface{}
 }
 
+type xdrEnumNames interface {
+	fmt.Stringer
+	XdrEnumNames() map[int32]string
+}
+
 func (xp *TxStringCtx) Marshal(name string, i interface{}) {
 	switch v := i.(type) {
+	case xdrEnumNames:
+		if xp.Verbose {
+			fmt.Fprintf(xp.Out, "%s: %s (", name, v.String())
+			var notfirst bool
+			for _, name := range v.XdrEnumNames() {
+				if notfirst {
+					fmt.Fprintf(xp.Out, ", %s", name)
+				} else {
+					notfirst = true
+					fmt.Fprintf(xp.Out, "%s", name)
+				}
+			}
+			fmt.Fprintf(xp.Out, ")\n")
+		} else {
+			fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
+		}
 	case fmt.Stringer:
 		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
 	case XdrPtr:

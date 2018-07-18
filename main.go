@@ -130,6 +130,7 @@ func main() {
 	opt_learn := flag.Bool("l", false, "Learn new signers from network")
 	opt_post := flag.Bool("post", false,
 		"Post transaction instead of editing it")
+	opt_verbose := flag.Bool("v", false, "Annotate output more verbosely")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
 	} else {
@@ -150,10 +151,12 @@ func main() {
 		*opt_keygen && (*opt_compile || *opt_decompile || *opt_preauth ||
 		*opt_inplace) {
 		flag.Usage()
+		os.Exit(1)
 	}
 	if *opt_inplace {
 		if *opt_output != "" || len(flag.Args()) == 0 {
 			flag.Usage()
+			os.Exit(1)
 		}
 		*opt_output = flag.Args()[0]
 	}
@@ -172,6 +175,7 @@ func main() {
 		input, err = ioutil.ReadFile(flag.Args()[0])
 	default:
 		flag.Usage()
+		os.Exit(1)
 	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
@@ -257,7 +261,8 @@ func main() {
 		output = txOut(&e) + "\n"
 	} else {
 		buf := &strings.Builder{}
-		TxStringCtx{ Out: buf, Env: &e, Signers: sc, Net: &net }.Exec()
+		TxStringCtx{ Out: buf, Env: &e, Signers: sc, Net: &net,
+			Verbose: *opt_verbose }.Exec()
 		output = buf.String()
 	}
 
