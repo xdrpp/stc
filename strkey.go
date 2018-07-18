@@ -80,7 +80,7 @@ func FromStrKey(in string) ([]byte, StrKeyVersionByte) {
 func MustFromStrKey(want StrKeyVersionByte, in string) []byte {
 	bin, ver := FromStrKey(in)
 	if bin == nil || ver != want {
-		panic("invalid StrKey")
+		panic(StrKeyError("invalid StrKey"))
 	}
 	return bin
 }

@@ -10,34 +10,6 @@ import (
 	"strings"
 )
 
-type SignerKeyInfo struct {
-	Key SignerKey
-	Comment string
-}
-
-func (ski SignerKeyInfo) String() string {
-	if ski.Comment != "" {
-		return fmt.Sprintf("%s %s", ski.Key, ski.Comment)
-	}
-	return ski.Key.String()
-}
-
-func (ski *SignerKeyInfo) Scan(ss fmt.ScanState, c rune) error {
-	if err := ski.Key.Scan(ss, c); err != nil {
-		return err
-	}
-	if t, err := ss.Token(true, func (r rune) bool {
-		return !strings.ContainsRune("\r\n", r)
-	}); err != nil {
-		return err
-	} else {
-		ski.Comment = string(t)
-		return nil
-	}
-}
-
-type SignerCache map[SignatureHint][]SignerKeyInfo
-
 var ConfigDir string
 
 func init() {
@@ -92,6 +64,34 @@ func SafeWriteFile(filename string, data string, perm os.FileMode) error {
 func EnsureDir(filename string) error {
 	return os.MkdirAll(filepath.Dir(filename), 0777)
 }
+
+type SignerKeyInfo struct {
+	Key SignerKey
+	Comment string
+}
+
+func (ski SignerKeyInfo) String() string {
+	if ski.Comment != "" {
+		return fmt.Sprintf("%s %s", ski.Key, ski.Comment)
+	}
+	return ski.Key.String()
+}
+
+func (ski *SignerKeyInfo) Scan(ss fmt.ScanState, c rune) error {
+	if err := ski.Key.Scan(ss, c); err != nil {
+		return err
+	}
+	if t, err := ss.Token(true, func (r rune) bool {
+		return !strings.ContainsRune("\r\n", r)
+	}); err != nil {
+		return err
+	} else {
+		ski.Comment = string(t)
+		return nil
+	}
+}
+
+type SignerCache map[SignatureHint][]SignerKeyInfo
 
 func (c SignerCache) String() string {
 	out := &strings.Builder{}

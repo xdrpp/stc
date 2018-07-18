@@ -10,112 +10,6 @@ import (
 	"strings"
 )
 
-func txOut(e XdrAggregate) string {
-	out := &strings.Builder{}
-	b64o := base64.NewEncoder(base64.StdEncoding, out)
-	e.XdrMarshal(&XdrOut{b64o}, "")
-	b64o.Close()
-	return out.String()
-}
-
-func txIn(e XdrAggregate, input string) (err error) {
-	defer func() {
-		if i := recover(); i != nil {
-			if xe, ok := recover().(XdrError); ok {
-				err = xe
-				fmt.Fprintln(os.Stderr, xe)
-				return
-			}
-			panic(i)
-		}
-	}()
-	in := strings.NewReader(input)
-	b64i := base64.NewDecoder(base64.StdEncoding, in)
-	e.XdrMarshal(&XdrIn{b64i}, "")
-	return nil
-}
-
-func txString(t XdrAggregate) string {
-	out := &strings.Builder{}
-	t.XdrMarshal(&XdrPrint{out}, "")
-	return out.String()
-}
-
-type XdrScan struct {
-	kvs map[string]string
-}
-
-func (*XdrScan) Sprintf(f string, args ...interface{}) string {
-	return fmt.Sprintf(f, args...)
-}
-
-type xdrPointer interface{
-	XdrPointer() interface{}
-}
-
-func (xs *XdrScan) Marshal(name string, i interface{}) {
-	val, ok := xs.kvs[name]
-	switch v := i.(type) {
-	case fmt.Scanner:
-		if !ok { return }
-		_, err := fmt.Sscan(val, v)
-		if err != nil {
-			xdrPanic("%s", err.Error())
-		}
-	case XdrPtr:
-		val = xs.kvs[name + ".present"]
-		for len(val) > 0 && val[0] == ' ' {
-			val = val[1:]
-		}
-		switch val {
-		case "false", "":
-			v.SetPresent(false)
-		case "true":
-			v.SetPresent(true)
-		default:
-			xdrPanic("%s.present (%s) must be true or false", name,
-				xs.kvs[name + ".present"])
-		}
-		v.XdrMarshalValue(xs, name)
-
-	case *XdrSize:
-		fmt.Sscan(xs.kvs[name + ".len"], v.XdrPointer())
-	case XdrAggregate:
-		v.XdrMarshal(xs, name)
-	case xdrPointer:
-		if !ok { return }
-		fmt.Sscan(val, v.XdrPointer())
-	default:
-		xdrPanic("XdrScan: Don't know how to parse %s\n", name)
-	}
-	delete(xs.kvs, name)
-}
-
-func txScan(t XdrAggregate, in string) (err error) {
-	defer func() {
-		if i := recover(); i != nil {
-			if xe, ok := recover().(XdrError); ok {
-				err = xe
-				fmt.Fprintln(os.Stderr, xe)
-				return
-			}
-			panic(i)
-		}
-	}()
-	kvs := map[string]string{}
-	lineno := 0
-	for _, line := range strings.Split(in, "\n") {
-		lineno++
-		kv := strings.SplitN(line, ":", 2)
-		if len(kv) != 2 {
-			continue
-		}
-		kvs[kv[0]] = kv[1]
-	}
-	t.XdrMarshal(&XdrScan{kvs}, "")
-	return nil
-}
-
 type acctInfo struct {
 	field string
 	name string
@@ -139,14 +33,21 @@ func (xp *xdrGetAccounts) Marshal(field string, i interface{}) {
 	}
 }
 
-func getAccounts(net *StellarNet, e *TransactionEnvelope, sc *SignerCache) {
+func getAccounts(net *StellarNet, e *TransactionEnvelope, sc *SignerCache,
+	usenet bool) {
 	xga := xdrGetAccounts{ map[AccountID]*acctInfo{} }
 	e.XdrMarshal(&xga, "")
 	c := make(chan struct{})
 	for ac, infp := range xga.accounts {
 		go func(ac AccountID, infp *acctInfo) {
-			if ae := GetAccountEntry(net, ac.String()); ae != nil {
+			var ae *HorizonAccountEntry
+			if usenet {
+				ae = GetAccountEntry(net, ac.String())
+			}
+			if ae != nil {
 				infp.signers = ae.Signers
+			} else {
+				infp.signers = []HorizonSigner{{Key: ac.String()}}
 			}
 			c <- struct{}{}
 		}(ac, infp)
@@ -177,8 +78,6 @@ func doKeyGen() {
 	fmt.Println(sk.Public())
 	fmt.Printf("%x\n", sk.Public().Hint())
 }
-
-var progname string
 
 func fixTx(net *StellarNet, e *TransactionEnvelope) {
 	feechan := make(chan uint32)
@@ -213,6 +112,8 @@ func fixTx(net *StellarNet, e *TransactionEnvelope) {
 	}
 }
 
+var progname string
+
 func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to binary XDR")
 	opt_decompile := flag.Bool("d", false, "Decompile input from binary XDR")
@@ -226,7 +127,7 @@ func main() {
 	opt_netname := flag.String("net", "main", `Network ID "main" or "test"`)
 	opt_update := flag.Bool("u", false,
 		"Query network to update fee and sequence number")
-	opt_learn := flag.Bool("l", false, "Learn new accounts/signers")
+	opt_learn := flag.Bool("l", false, "Learn new signers from network")
 	opt_post := flag.Bool("post", false,
 		"Post transaction instead of editing it")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
@@ -307,10 +208,8 @@ func main() {
 
 	var sc SignerCache
 	sc.Load(ConfigPath("signers"))
-	if *opt_learn {
-		getAccounts(&net, &e, &sc)
-		sc.Save(ConfigPath("signers"))
-	}
+	getAccounts(&net, &e, &sc, *opt_learn)
+	sc.Save(ConfigPath("signers"))
 
 	checkSigs(&net, &sc, &e)
 
@@ -336,7 +235,7 @@ func main() {
 	if (*opt_post) {
 		res := PostTransaction(&net, &e)
 		if res != nil {
-			fmt.Print(txString(res))
+			fmt.Print(XdrToString(res))
 		}
 		if res == nil || res.Result.Code != TxSUCCESS {
 			fmt.Fprint(os.Stderr, "Post transaction failed\n")
@@ -357,7 +256,9 @@ func main() {
 	if *opt_compile {
 		output = txOut(&e) + "\n"
 	} else {
-		output = txString(&e)
+		buf := &strings.Builder{}
+		TxStringCtx{ Out: buf, Env: &e, Signers: sc, Net: &net }.Exec()
+		output = buf.String()
 	}
 
 	if *opt_output == "" {

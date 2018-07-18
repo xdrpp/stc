@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"strings"
 )
 
 type XdrPrint struct {
@@ -31,6 +32,11 @@ func (xp *XdrPrint) Marshal(name string, i interface{}) {
 	}
 }
 
+func XdrToString(t XdrAggregate) string {
+	out := &strings.Builder{}
+	t.XdrMarshal(&XdrPrint{out}, "")
+	return out.String()
+}
 
 var enc binary.ByteOrder = binary.BigEndian
 var zerofill [4][]byte = [...][]byte{
