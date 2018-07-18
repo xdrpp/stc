@@ -79,6 +79,26 @@ func doKeyGen() {
 	fmt.Printf("%x\n", sk.Public().Hint())
 }
 
+func getSecKey() *PrivateKey {
+	fmt.Print("Secret Key: ")
+	bytePassword, err := terminal.ReadPassword(0)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return nil
+	}
+	var sk PrivateKey
+	if n, err := fmt.Sscan(string(bytePassword), &sk); n != 1 {
+		fmt.Fprintln(os.Stderr, err)
+		return nil
+	}
+	return &sk
+}
+
+func doSec2pub() {
+	sk := getSecKey()
+	fmt.Println(sk.Public().String())
+}
+
 func fixTx(net *StellarNet, e *TransactionEnvelope) {
 	feechan := make(chan uint32)
 	go func() {
@@ -118,6 +138,7 @@ func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to binary XDR")
 	opt_decompile := flag.Bool("d", false, "Decompile input from binary XDR")
 	opt_keygen := flag.Bool("keygen", false, "Create a new signing keypair")
+	opt_sec2pub := flag.Bool("sec2pub", false, "Get public key from private")
 	opt_output := flag.String("o", "", "Output to file instead of stdout")
 	opt_preauth := flag.Bool("preauth", false,
 		"Hash transaction for pre-auth use")
@@ -138,9 +159,10 @@ func main() {
 	}
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
-`Usage: %[1]s [-sign [-net=ID]] [-c] [-d] [-u] [-i | -o FILE] [INPUT-FILE]
+`Usage: %[1]s [-sign] [-net=ID] [-c|-v] [-d] [-u] [-i | -o FILE] [INPUT-FILE]
        %[1]s [-preauth] [-net=ID] [-d] [INPUT-FILE]
        %[1]s [-keygen]
+       %[1]s [-sec2pub]
        %[1]s [-post [-net=ID]] [-sign] [-d] [-u] [INPUT-FILE]
 `, progname)
 		flag.PrintDefaults()
@@ -148,8 +170,9 @@ func main() {
 	flag.Parse()
 
 	if *opt_preauth && *opt_output != "" ||
-		*opt_keygen && (*opt_compile || *opt_decompile || *opt_preauth ||
-		*opt_inplace) {
+		(*opt_keygen || *opt_sec2pub) &&
+		(*opt_compile || *opt_decompile || *opt_preauth || *opt_inplace) ||
+		(*opt_keygen && *opt_sec2pub) {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -163,6 +186,10 @@ func main() {
 
 	if (*opt_keygen) {
 		doKeyGen()
+		return
+	}
+	if (*opt_sec2pub) {
+		doSec2pub()
 		return
 	}
 
@@ -218,15 +245,8 @@ func main() {
 	checkSigs(&net, &sc, &e)
 
 	if *opt_sign {
-		fmt.Print("Secret Key: ")
-		bytePassword, err := terminal.ReadPassword(0)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		var sk PrivateKey
-		if n, err := fmt.Sscan(string(bytePassword), &sk); n != 1 {
-			fmt.Fprintln(os.Stderr, err)
+		sk := getSecKey()
+		if sk == nil {
 			os.Exit(1)
 		}
 		fmt.Println(sk.Public())
