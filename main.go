@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -58,6 +59,9 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, sc *SignerCache,
 
 	for ac, infp := range xga.accounts {
 		acs := ac.String()
+		if acs == "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF" {
+			continue
+		}
 		for _, signer := range infp.signers {
 			var comment string
 			if acs != signer.Key {
@@ -66,10 +70,6 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, sc *SignerCache,
 			sc.Add(signer.Key, comment)
 		}
 	}
-}
-
-func checkSigs(net *StellarNet, sc *SignerCache, e *TransactionEnvelope) bool {
-	return false
 }
 
 func doKeyGen() {
@@ -132,25 +132,34 @@ func fixTx(net *StellarNet, e *TransactionEnvelope) {
 	}
 }
 
+func b2i(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 var progname string
 
 func main() {
-	opt_compile := flag.Bool("c", false, "Compile output to binary XDR")
-	opt_decompile := flag.Bool("d", false, "Decompile input from binary XDR")
+	opt_compile := flag.Bool("c", false, "Compile output to base64 XDR")
+	opt_decompile := flag.Bool("d", false, "Decompile input from base64 XDR")
 	opt_keygen := flag.Bool("keygen", false, "Create a new signing keypair")
 	opt_sec2pub := flag.Bool("sec2pub", false, "Get public key from private")
 	opt_output := flag.String("o", "", "Output to file instead of stdout")
 	opt_preauth := flag.Bool("preauth", false,
 		"Hash transaction for pre-auth use")
-	opt_inplace := flag.Bool("i", false,
-		"Edit the input file (required) in place")
+	opt_inplace := flag.Bool("i", false, "Edit the input file in place")
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
 	opt_netname := flag.String("net", "main", `Network ID "main" or "test"`)
 	opt_update := flag.Bool("u", false,
 		"Query network to update fee and sequence number")
 	opt_learn := flag.Bool("l", false, "Learn new signers from network")
+	opt_help := flag.Bool("help", false, "Print usage information")
 	opt_post := flag.Bool("post", false,
 		"Post transaction instead of editing it")
+	opt_edit := flag.Bool("edit", false,
+		"keep editing the file until it doesn't change")
 	opt_verbose := flag.Bool("v", false, "Annotate output more verbosely")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
@@ -159,53 +168,65 @@ func main() {
 	}
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
-`Usage: %[1]s [-sign] [-net=ID] [-c|-v] [-d] [-u] [-i | -o FILE] [INPUT-FILE]
-       %[1]s [-preauth] [-net=ID] [-d] [INPUT-FILE]
-       %[1]s [-keygen]
-       %[1]s [-sec2pub]
-       %[1]s [-post [-net=ID]] [-sign] [-d] [-u] [INPUT-FILE]
+`Usage: %[1]s [-sign] [-net=ID] [-c|-v] [-l] [-u] [-i | -o FILE] INPUT-FILE
+       %[1]s -preauth [-net=ID] INPUT-FILE
+       %[1]s -post [-sign] [-net=ID] [-u] INPUT-FILE
+       %[1]s -keygen
+       %[1]s -sec2pub
 `, progname)
 		flag.PrintDefaults()
 	}
 	flag.Parse()
-
-	if *opt_preauth && *opt_output != "" ||
-		(*opt_keygen || *opt_sec2pub) &&
-		(*opt_compile || *opt_decompile || *opt_preauth || *opt_inplace) ||
-		(*opt_keygen && *opt_sec2pub) {
+	if (*opt_help) {
+		flag.CommandLine.SetOutput(os.Stdout)
 		flag.Usage()
-		os.Exit(1)
+		return
 	}
-	if *opt_inplace {
-		if *opt_output != "" || len(flag.Args()) == 0 {
+
+	if len(flag.Args()) == 0 {
+		if *opt_sign || *opt_compile || *opt_decompile || *opt_preauth ||
+			*opt_post || *opt_learn || *opt_update || *opt_inplace ||
+			b2i(*opt_sec2pub) + b2i(*opt_keygen) != 1 {
 			flag.Usage()
 			os.Exit(1)
 		}
-		*opt_output = flag.Args()[0]
-	}
-
-	if (*opt_keygen) {
-		doKeyGen()
-		return
-	}
-	if (*opt_sec2pub) {
-		doSec2pub()
+		if (*opt_keygen) {
+			doKeyGen()
+		} else if (*opt_sec2pub) {
+			doSec2pub()
+		}
 		return
 	}
 
-	var input []byte
-	var err error
-	switch (len(flag.Args())) {
-	case 0:
-		input, err = ioutil.ReadAll(os.Stdin)
-	case 1:
-		input, err = ioutil.ReadFile(flag.Args()[0])
-	default:
+	infile := flag.Args()[0]
+
+	if *opt_keygen || *opt_sec2pub ||
+		(*opt_inplace && (*opt_preauth || *opt_output != "")) ||
+		((*opt_inplace || *opt_edit) && infile == "-") ||
+		(b2i(*opt_preauth) + b2i(*opt_post) + b2i(*opt_compile) +
+		b2i(*opt_edit) > 1) ||
+		*opt_edit && (*opt_sign || *opt_inplace) {
 		flag.Usage()
 		os.Exit(1)
 	}
-	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+
+	if *opt_edit {
+		*opt_inplace = true
+	}
+	if *opt_inplace {
+		*opt_output = infile
+	}
+
+edit_loop:
+	var input []byte
+	var err error
+	if infile == "-" {
+		input, err = ioutil.ReadAll(os.Stdin)
+	} else {
+		input, err = ioutil.ReadFile(infile)
+	}
+	if err != nil && !(*opt_edit && os.IsNotExist(err)) {
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	sinput := string(input)
@@ -225,6 +246,7 @@ func main() {
 		err = txScan(&e, sinput)
 	}
 	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 
@@ -240,12 +262,10 @@ func main() {
 	var sc SignerCache
 	sc.Load(ConfigPath("signers"))
 	getAccounts(&net, &e, &sc, *opt_learn)
-	sc.Save(ConfigPath("signers"))
-
-	checkSigs(&net, &sc, &e)
 
 	if *opt_sign {
 		sk := getSecKey()
+		sc.Add(sk.Public().String(), "")
 		if sk == nil {
 			os.Exit(1)
 		}
@@ -255,6 +275,8 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	sc.Save(ConfigPath("signers"))
 
 	if (*opt_post) {
 		res := PostTransaction(&net, &e)
@@ -292,6 +314,41 @@ func main() {
 		if err = SafeWriteFile(*opt_output, output, 0666); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
+		}
+	}
+
+	if *opt_edit {
+		fi, err := os.Stat(infile)
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
+		ed, ok := os.LookupEnv("EDITOR")
+		if !ok {
+			ed = "vi"
+		}
+		if path, err := exec.LookPath(ed); err == nil {
+			ed = path
+		}
+
+		proc, err := os.StartProcess(ed, []string{ed, infile}, &os.ProcAttr{
+			Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
+		})
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+		proc.Wait()
+
+		fi2, err := os.Stat(infile)
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
+		if fi.Size() != fi2.Size() || fi.ModTime() != fi2.ModTime() {
+			goto edit_loop
 		}
 	}
 }

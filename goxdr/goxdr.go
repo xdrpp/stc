@@ -424,6 +424,19 @@ func (r *rpc_union) emit(e *emitter) {
 	fmt.Fprintf(out, "type %s struct {\n", r.id)
 	fmt.Fprintf(out, "\t%s %s\n", r.tagid, r.tagtype)
 	fmt.Fprintf(out, "\t_u interface{}\n")
+	for i := range r.fields {
+		u := &r.fields[i]
+		if u.decl.id == "" || u.decl.typ == "void" {
+			continue
+		}
+		if (u.hasdefault) {
+			fmt.Fprintf(out, "\t// default:\n")
+		} else {
+			fmt.Fprintf(out, "\t// %s:\n", strings.Join(u.cases, ","))
+		}
+		fmt.Fprintf(out, "\t//    %s() *%s\n", u.decl.id,
+			e.decltype(r.id, &u.decl))
+	}
 	fmt.Fprintf(out, "}\n")
 	for i := range r.fields {
 		u := &r.fields[i]
@@ -432,17 +445,19 @@ func (r *rpc_union) emit(e *emitter) {
 		}
 		ret := e.decltype(r.id, &u.decl)
 		fmt.Fprintf(out, "func (u *%s) %s() *%s {\n", r.id, u.decl.id, ret)
-		goodcase := fmt.Sprintf("\t\tif v, ok := u._u.(*%s); ok {\n" +
-			"\t\t\treturn v\n" +
-			"\t\t} else {\n" +
-			"\t\t\tvar zero %s\n" +
-			"\t\t\tu._u = &zero\n" +
-			"\t\t\treturn &zero\n" +
-			"\t\t}\n", ret, ret)
+		goodcase := fmt.Sprintf(
+`		if v, ok := u._u.(*%[1]s); ok {
+			return v
+		} else {
+			var zero %[1]s
+			u._u = &zero
+			return &zero
+		}
+`, ret)
 		badcase := fmt.Sprintf(
-			"\t\txdrPanic(\"%s.%s accessed when %s == %%v\", u.%s)\n" +
-				"\t\treturn nil\n",
-			r.id, u.decl.id, r.tagid, r.tagid)
+`		xdrPanic("%s.%s accessed when %s == %%v", u.%[3]s)
+		return nil
+`, r.id, u.decl.id, r.tagid)
 		fmt.Fprintf(out, "\tswitch u.%s {\n", r.tagid)
 		if u.hasdefault && len(r.fields) > 1 {
 			needcomma := false
