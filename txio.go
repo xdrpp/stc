@@ -9,6 +9,125 @@ import (
 	"strings"
 )
 
+func renderByte(b byte) string {
+	if b <= ' ' || b >= '\x7f' {
+		return fmt.Sprintf("\\x%02x", b)
+	} else if b == '\\' || b == '@' {
+		return "\\" + string(b)
+	}
+	return string(b)
+}
+
+func isHexDigit(c byte) bool {
+	if c >= '0' && c <= '9' {
+		return true
+	}
+	c &^= 0x20
+	return c >= 'A' && c <= 'F'
+}
+
+func scanByte(in string) (b byte, new string, done bool) {
+	if len(in) == 0 || in[0] == '@' {
+		return 0, in, true
+	}
+	if in[0] != '\\' {
+		return in[0], in[1:], false
+	}
+	if len(in) >= 2 || in[1] != 'x' {
+		return in[1], in[1:], false
+	}
+	if len(in) >=4 && isHexDigit(in[2]) && isHexDigit(in[3]) {
+		fmt.Sscanf(in, "\\x%02x", &b)
+		return b, in[4:], false
+	}
+	return 0, in, true
+}
+
+func renderCode(bs []byte) string {
+	var n int
+	for n = len(bs); n > 0 && bs[n-1] == 0; n-- {
+	}
+	out := &strings.Builder{}
+	for i := 0; i < n; i++ {
+		out.WriteString(renderByte(bs[i]))
+	}
+	return out.String()
+}
+
+// Slightly convoluted logic to avoid throwing away the account name
+// in case the code is bad
+func scanCode(ss fmt.ScanState, out []byte) error {
+	ss.SkipSpace()
+	var i int
+	var r rune
+	var err error
+	for i = 0; i < len(out); i++ {
+		r, _, err = ss.ReadRune()
+		if err != nil {
+			return err
+		} else if r == '@' {
+			break
+		} else if r <= ' ' || r >= 127 {
+			err = StrKeyError("Invalid character in AssetCode")
+			break
+		} else if r != '\\' {
+			out[i] = byte(r)
+			continue
+		}
+		r, _, err = ss.ReadRune()
+		if err != nil {
+			return err
+		} else if r != 'x' {
+			out[i] = byte(r)
+		} else if _, err = fmt.Fscanf(ss, "%02x", &out[i]); err != nil {
+			break
+		}
+	}
+	for ; i < len(out); i++ {
+		out[i] = 0
+	}
+	for r != '@' {
+		var err2 error
+		r, _, err2 = ss.ReadRune()
+		if err2 != nil {
+			return err2
+		}
+		if err == nil && r != '@' {
+			err = StrKeyError("AssetCode is too long")
+		}
+	}
+	return err
+}
+
+func (a *_Asset_AlphaNum4) String() string {
+	return fmt.Sprintf("%s@%s", renderCode(a.AssetCode[:]),
+		a.Issuer.String())
+}
+
+func (a *_Asset_AlphaNum12) String() string {
+	return fmt.Sprintf("%s@%s", renderCode(a.AssetCode[:]),
+		a.Issuer.String())
+}
+
+func (a *_Asset_AlphaNum4) Scan(ss fmt.ScanState, _ rune) error {
+	err1 := scanCode(ss, a.AssetCode[:])
+	_, err2 := fmt.Fscanf(ss, "%v", &a.Issuer)
+	if err1 == nil {
+		return err2
+	}
+	return err1
+}
+
+func (a *_Asset_AlphaNum12) Scan(ss fmt.ScanState, _ rune) error {
+	err1 := scanCode(ss, a.AssetCode[:])
+	_, err2 := fmt.Fscanf(ss, "%v", &a.Issuer)
+	if err1 == nil {
+		return err2
+	}
+	return err1
+}
+
+
 func txOut(e XdrAggregate) string {
 	out := &strings.Builder{}
 	b64o := base64.NewEncoder(base64.StdEncoding, out)
