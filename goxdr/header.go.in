@@ -15,6 +15,46 @@ import "math"
 
 // The interface through which values are serialized, printed, etc.
 type XDR interface {
+	// A function that gets called for each value to be marshalled.
+	// The ptr interface{} will be one of the following:
+	//
+	// * A pointer type implementing XdrNum32 for bool, int, unsigned
+	//   int, float, the size of variable-length arrays except string
+	//   and opaque, and enums.  In the case of enums, that instance
+	//   will just be a pointer to the enum.  In the case of the other
+	//   types, it will be a pointer to a defined type that implements
+	//   the XdrUint32 interface (since plan go types cannot implement
+	//   methods).  Variable array sizes are passed as *XdrSize, which
+	//   enforces the bound.
+	//
+	// * A pointer type implementing XdrNum64 for hyper, unsigned
+	//   hyper, and double.  These are user-defined versions of int64,
+	//   uint64, and float64, called XdrInt64, XdrUint64, and
+	//   XdrFloat64, respectively.
+	//
+	// * An instance of XdrBytes for strings and opaque.
+	//   Specifically, strings are passed as XdrString, and
+	//   variable-length opaque<> vectors are passed as XdrVecOpaque,
+	//   both of which implement XdrVarBytes.  Fixed-length opaque[]
+	//   arrays are passed as XdrArrayOpaque which only implements
+	//   XdrBytes, not XdrVarBytes.
+	//
+	// * An instance of XdrAggregate for structs, unions, and
+	//   pointers.  Note that structs and unions are just passed as
+	//   pointers to the underlying structures (which all implement
+	//   XdrAggregate).  Pointers are passed as an XdrPtr interface
+	//   implemented by a defined pointer type (since plain pointers
+	//   cannot have methods).
+	//
+	// For most cases, you can get a pointer to the underlying type
+	// via the XdrPointer() method, and get the raw value via the
+	// XdrValue() method, both of which return interface{}.
+	//
+	// Note that the Marshal method is responsible for recursing into
+	// XdrAggregate instance by calling the XdrMarshal method.
+	// Requiring the Marshal method to recurse manually allows it not
+	// to recurse in cases where it needs to special-case the handling
+	// of specific types.
 	Marshal(name string, ptr interface{})
 
 	// This method should just be fmt.Sprintf for XDRs that use name.
