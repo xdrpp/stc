@@ -38,25 +38,24 @@ func XdrToString(t XdrAggregate) string {
 	return out.String()
 }
 
-var enc binary.ByteOrder = binary.BigEndian
-var zerofill [4][]byte = [...][]byte{
+var xdrZerofill [4][]byte = [...][]byte{
 	{}, {0,0,0}, {0,0}, {0},
 }
 
-func putBytes(out io.Writer, val []byte) {
+func xdrPutBytes(out io.Writer, val []byte) {
 	out.Write(val)
-	out.Write(zerofill[len(val)&3])
+	out.Write(xdrZerofill[len(val)&3])
 }
 
-func put32(out io.Writer, val uint32) {
+func xdrPut32(out io.Writer, val uint32) {
 	b := make([]byte, 4)
-	enc.PutUint32(b, val)
+	binary.BigEndian.PutUint32(b, val)
 	out.Write(b)
 }
 
-func put64(out io.Writer, val uint64) {
+func xdrPut64(out io.Writer, val uint64) {
 	b := make([]byte, 8)
-	enc.PutUint64(b, val)
+	binary.BigEndian.PutUint64(b, val)
 	out.Write(b)
 }
 
@@ -71,19 +70,19 @@ func (xp *XdrOut) Sprintf(f string, args ...interface{}) string {
 func (xo *XdrOut) Marshal(name string, i interface{}) {
 	switch v := i.(type) {
 	case XdrNum32:
-		put32(xo.Out, v.GetU32())
+		xdrPut32(xo.Out, v.GetU32())
 	case XdrNum64:
-		put64(xo.Out, v.GetU64())
+		xdrPut64(xo.Out, v.GetU64())
 	case XdrString:
 		s := v.GetString()
-		put32(xo.Out, uint32(len(s)))
+		xdrPut32(xo.Out, uint32(len(s)))
 		io.WriteString(xo.Out, s)
-		xo.Out.Write(zerofill[len(s)&3])
+		xo.Out.Write(xdrZerofill[len(s)&3])
 	case XdrVarBytes:
-		put32(xo.Out, uint32(len(v.GetByteSlice())))
-		putBytes(xo.Out, v.GetByteSlice())
+		xdrPut32(xo.Out, uint32(len(v.GetByteSlice())))
+		xdrPutBytes(xo.Out, v.GetByteSlice())
 	case XdrBytes:
-		putBytes(xo.Out, v.GetByteSlice())
+		xdrPutBytes(xo.Out, v.GetByteSlice())
 	case XdrAggregate:
 		v.XdrMarshal(xo, name)
 	default:
@@ -91,22 +90,18 @@ func (xo *XdrOut) Marshal(name string, i interface{}) {
 	}
 }
 
-func readFull(in io.Reader, b []byte) {
+func xdrReadN(in io.Reader, n uint32) []byte {
+	// XXX for large n, must build up buffer to avoid DoS
+	b := make([]byte, n)
 	if _, err := io.ReadFull(in, b); err != nil {
 		panic(err)
 	}
-}
-
-func readN(in io.Reader, n uint32) []byte {
-	// XXX for large n, must build up buffer to avoid DoS
-	b := make([]byte, n)
-	readFull(in, b)
 	return b
 }
 
-func readPad(in io.Reader, n uint32) {
+func xdrReadPad(in io.Reader, n uint32) {
 	if n & 3 != 0 {
-		got := readN(in, 4-(n&3))
+		got := xdrReadN(in, 4-(n&3))
 		for _, b := range got {
 			if b != 0 {
 				xdrPanic("padding contained non-zero bytes")
@@ -115,14 +110,14 @@ func readPad(in io.Reader, n uint32) {
 	}
 }
 
-func get32(in io.Reader) uint32 {
-	b := readN(in, 4)
-	return enc.Uint32(b)
+func xdrGet32(in io.Reader) uint32 {
+	b := xdrReadN(in, 4)
+	return binary.BigEndian.Uint32(b)
 }
 
-func get64(in io.Reader) uint64 {
-	b := readN(in, 8)
-	return enc.Uint64(b)
+func xdrGet64(in io.Reader) uint64 {
+	b := xdrReadN(in, 8)
+	return binary.BigEndian.Uint64(b)
 }
 
 
@@ -137,16 +132,18 @@ func (xp *XdrIn) Sprintf(f string, args ...interface{}) string {
 func (xi *XdrIn) Marshal(name string, i interface{}) {
 	switch v := i.(type) {
 	case XdrNum32:
-		v.SetU32(get32(xi.In))
+		v.SetU32(xdrGet32(xi.In))
 	case XdrNum64:
-		v.SetU64(get64(xi.In))
+		v.SetU64(xdrGet64(xi.In))
 	case XdrVarBytes:
-		n := get32(xi.In)
-		v.SetByteSlice(readN(xi.In, n))
-		readPad(xi.In, n)
+		n := xdrGet32(xi.In)
+		v.SetByteSlice(xdrReadN(xi.In, n))
+		xdrReadPad(xi.In, n)
 	case XdrBytes:
-		readFull(xi.In, v.GetByteSlice())
-		readPad(xi.In, uint32(len(v.GetByteSlice())))
+		if _, err := io.ReadFull(xi.In, v.GetByteSlice()); err != nil {
+			panic(err)
+		}
+		xdrReadPad(xi.In, uint32(len(v.GetByteSlice())))
 	case XdrAggregate:
 		v.XdrMarshal(xi, name)
 	}
