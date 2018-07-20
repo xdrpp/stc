@@ -7,40 +7,16 @@ import (
 	"io"
 	"os"
 	"strings"
+	"unicode"
 )
 
 func renderByte(b byte) string {
 	if b <= ' ' || b >= '\x7f' {
 		return fmt.Sprintf("\\x%02x", b)
-	} else if b == '\\' || b == '@' {
+	} else if b == '\\' {
 		return "\\" + string(b)
 	}
 	return string(b)
-}
-
-func isHexDigit(c byte) bool {
-	if c >= '0' && c <= '9' {
-		return true
-	}
-	c &^= 0x20
-	return c >= 'A' && c <= 'F'
-}
-
-func scanByte(in string) (b byte, new string, done bool) {
-	if len(in) == 0 || in[0] == '@' {
-		return 0, in, true
-	}
-	if in[0] != '\\' {
-		return in[0], in[1:], false
-	}
-	if len(in) >= 2 || in[1] != 'x' {
-		return in[1], in[1:], false
-	}
-	if len(in) >=4 && isHexDigit(in[2]) && isHexDigit(in[3]) {
-		fmt.Sscanf(in, "\\x%02x", &b)
-		return b, in[4:], false
-	}
-	return 0, in, true
 }
 
 func renderCode(bs []byte) string {
@@ -56,17 +32,23 @@ func renderCode(bs []byte) string {
 
 // Slightly convoluted logic to avoid throwing away the account name
 // in case the code is bad
-func scanCode(ss fmt.ScanState, out []byte) error {
-	ss.SkipSpace()
+func scanCode(out []byte, input string) error {
+	ss := strings.NewReader(input)
+skipspace:
+	if r, _, err := ss.ReadRune(); unicode.IsSpace(r) {
+		goto skipspace
+	} else if err == nil {
+		ss.UnreadRune()
+	}
 	var i int
-	var r rune
+	var r = ' '
 	var err error
 	for i = 0; i < len(out); i++ {
 		r, _, err = ss.ReadRune()
-		if err != nil {
-			return err
-		} else if r == '@' {
+		if err == io.EOF || unicode.IsSpace(r) {
 			break
+		} else if err != nil {
+			return err
 		} else if r <= ' ' || r >= 127 {
 			err = StrKeyError("Invalid character in AssetCode")
 			break
@@ -80,53 +62,18 @@ func scanCode(ss fmt.ScanState, out []byte) error {
 		} else if r != 'x' {
 			out[i] = byte(r)
 		} else if _, err = fmt.Fscanf(ss, "%02x", &out[i]); err != nil {
-			break
+			return err
 		}
 	}
 	for ; i < len(out); i++ {
 		out[i] = 0
 	}
-	for r != '@' {
-		var err2 error
-		r, _, err2 = ss.ReadRune()
-		if err2 != nil {
-			return err2
-		}
-		if err == nil && r != '@' {
-			err = StrKeyError("AssetCode is too long")
-		}
+	r, _, err = ss.ReadRune()
+	if err != io.EOF && !unicode.IsSpace(r) {
+		return StrKeyError("AssetCode too long")
 	}
-	return err
+	return nil
 }
-
-func (a *_Asset_AlphaNum4) String() string {
-	return fmt.Sprintf("%s@%s", renderCode(a.AssetCode[:]),
-		a.Issuer.String())
-}
-
-func (a *_Asset_AlphaNum12) String() string {
-	return fmt.Sprintf("%s@%s", renderCode(a.AssetCode[:]),
-		a.Issuer.String())
-}
-
-func (a *_Asset_AlphaNum4) Scan(ss fmt.ScanState, _ rune) error {
-	err1 := scanCode(ss, a.AssetCode[:])
-	_, err2 := fmt.Fscanf(ss, "%v", &a.Issuer)
-	if err1 == nil {
-		return err2
-	}
-	return err1
-}
-
-func (a *_Asset_AlphaNum12) Scan(ss fmt.ScanState, _ rune) error {
-	err1 := scanCode(ss, a.AssetCode[:])
-	_, err2 := fmt.Fscanf(ss, "%v", &a.Issuer)
-	if err1 == nil {
-		return err2
-	}
-	return err1
-}
-
 
 func txOut(e XdrAggregate) string {
 	out := &strings.Builder{}
@@ -161,6 +108,7 @@ type TxStringCtx struct {
 	Net *StellarNet
 	Verbose bool
 	Help map[string]bool
+	inAsset bool
 }
 
 func (xp *TxStringCtx) Sprintf(f string, args ...interface{}) string {
@@ -202,6 +150,12 @@ func (xp *TxStringCtx) Marshal(name string, i interface{}) {
 		} else {
 			fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
 		}
+	case XdrArrayOpaque:
+		if xp.inAsset {
+			fmt.Fprintf(xp.Out, "%s: %s\n", name, renderCode(v.GetByteSlice()))
+		} else {
+			fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
+		}
 	case fmt.Stringer:
 		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
 	case XdrPtr:
@@ -210,6 +164,10 @@ func (xp *TxStringCtx) Marshal(name string, i interface{}) {
 	case XdrVec:
 		fmt.Fprintf(xp.Out, "%s.len: %d\n", name, v.GetVecLen())
 		v.XdrMarshalN(xp, name, v.GetVecLen())
+	case *Asset:
+		xp.inAsset = true
+		defer func() { xp.inAsset = false }()
+		v.XdrMarshal(xp, name)
 	case XdrAggregate:
 		v.XdrMarshal(xp, name)
 	default:
@@ -228,7 +186,7 @@ func (ctx TxStringCtx) Exec() {
 			hint = fmt.Sprintf("%x BAD SIGNATURE", ctx.Env.Signatures[i].Hint)
 		}
 		fmt.Fprintf(ctx.Out,
-`Signatures[%d].Hint: %s
+			`Signatures[%d].Hint: %s
 Signatures[%[1]d].Signature: %[3]x
 `, i, hint, ctx.Env.Signatures[i].Signature)
 	}
@@ -239,6 +197,7 @@ type XdrScan struct {
 	kvs map[string]string
 	help map[string]bool
 	err bool
+	inAsset bool
 }
 
 func (*XdrScan) Sprintf(f string, args ...interface{}) string {
@@ -248,6 +207,20 @@ func (*XdrScan) Sprintf(f string, args ...interface{}) string {
 func (xs *XdrScan) Marshal(name string, i interface{}) {
 	val, ok := xs.kvs[name]
 	switch v := i.(type) {
+	case XdrArrayOpaque:
+		var err error
+		if xs.inAsset {
+			err = scanCode(v.GetByteSlice(), val)
+		} else if !ok {
+			return
+		} else {
+			_, err = fmt.Sscan(val, v)
+		}
+		if err != nil {
+			xs.err = true
+			fmt.Fprintln(os.Stderr, err.Error())
+			xs.help[name] = true
+		}
 	case fmt.Scanner:
 		if !ok { return }
 		_, err := fmt.Sscan(val, v)
@@ -282,6 +255,10 @@ func (xs *XdrScan) Marshal(name string, i interface{}) {
 			fmt.Fprintf(os.Stderr, "%s.len (%d) exceeds maximum size %d.\n",
 				name, size, v.XdrBound())
 		}
+	case *Asset:
+		xs.inAsset = true
+		defer func() { xs.inAsset = false }()
+		v.XdrMarshal(xs, name)
 	case XdrAggregate:
 		v.XdrMarshal(xs, name)
 	case xdrPointer:
