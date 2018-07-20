@@ -13,6 +13,7 @@ package main
 //
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -455,12 +456,11 @@ func (xo *XdrOut) Marshal(name string, i interface{}) {
 }
 
 func xdrReadN(in io.Reader, n uint32) []byte {
-	// XXX for large n, must build up buffer to avoid DoS
-	b := make([]byte, n)
-	if _, err := io.ReadFull(in, b); err != nil {
-		panic(err)
+	var b bytes.Buffer
+	if _, err := io.CopyN(&b, in, int64(n)); err != nil {
+		xdrPanic(err.Error())
 	}
-	return b
+	return b.Bytes()
 }
 
 func xdrReadPad(in io.Reader, n uint32) {
