@@ -16,6 +16,7 @@ import (
 type emitter struct {
 	syms *rpc_syms
 	output strings.Builder
+	footer strings.Builder
 	emitted map[string]struct{}
 }
 
@@ -78,6 +79,23 @@ func (e *emitter) append(out interface{}) {
 
 func (e *emitter) printf(str string, args ...interface{}) {
 	fmt.Fprintf(&e.output, str, args...)
+}
+
+func (e *emitter) xappend(out interface{}) {
+	var s string
+	switch t := out.(type) {
+	case string:
+		s = t
+	case fmt.Stringer:
+		s = t.String()
+	default:
+		panic("emitter append non-String")
+	}
+	e.footer.WriteString(s)
+}
+
+func (e *emitter) xprintf(str string, args ...interface{}) {
+	fmt.Fprintf(&e.footer, str, args...)
 }
 
 func (e *emitter) get_typ(context string, d *rpc_decl) string {
@@ -167,7 +185,7 @@ func (v $PTR) XdrValue() interface{} { return *v.p }
 `
 	frag = strings.Replace(frag, "$PTR", ptrtyp, -1)
 	frag = strings.Replace(frag, "$TYPE", typ, -1)
-	e.append(frag)
+	e.footer.WriteString(frag)
 	return ptrtyp
 }
 
@@ -266,7 +284,7 @@ func (v *$VEC) XdrValue() interface{} { return ([]$TYPE)(*v) }
 	frag = strings.Replace(frag, "$VEC", vectyp, -1)
 	frag = strings.Replace(frag, "$TYPE", typ, -1)
 	frag = strings.Replace(frag, "$BOUND", bound, -1)
-	e.append(frag)
+	e.footer.WriteString(frag)
 	return vectyp
 }
 
@@ -325,14 +343,14 @@ func (r *rpc_const) emit(e *emitter) {
 
 func (r *rpc_decl) emit(e *emitter) {
 	e.printf("type %s %s\n", r.id, e.decltype("", r))
-	e.printf("func XDR_%s(x XDR, name string, v *%s) {\n%s}\n",
+	e.xprintf("func XDR_%s(x XDR, name string, v *%s) {\n%s}\n",
 		r.id, r.id, e.xdrgen("v", "name", "", r))
 }
 
 func (r0 *rpc_typedef) emit(e *emitter) {
 	r := (*rpc_decl)(r0)
 	e.printf("type %s = %s\n", r.id, e.decltype("", r))
-	e.printf("func XDR_%s(x XDR, name string, v *%s) {\n%s}\n",
+	e.xprintf("func XDR_%s(x XDR, name string, v *%s) {\n%s}\n",
 		r.id, r.id, e.xdrgen("v", "name", "", r))
 }
 
@@ -343,6 +361,8 @@ func (r *rpc_enum) emit(e *emitter) {
 		fmt.Fprintf(out, "\t%s = %s(%s)\n", tag.id, r.id, tag.val)
 	}
 	fmt.Fprintf(out, ")\n")
+	e.append(out)
+	out.Reset()
 	fmt.Fprintf(out,
 `func XDR_%s(x XDR, name string, v *%[1]s) {
 	x.Marshal(name, v)
@@ -390,7 +410,7 @@ func (v *%[1]s) XdrValue() interface{} {
 	return *v
 }
 `, r.id)
-	e.append(out)
+	e.xappend(out)
 }
 
 func (r *rpc_struct) emit(e *emitter) {
@@ -401,6 +421,9 @@ func (r *rpc_struct) emit(e *emitter) {
 			e.decltype(r.id, &r.decls[i]))
 	}
 	fmt.Fprintf(out, "}\n")
+	e.append(out)
+	out.Reset()
+
 	fmt.Fprintf(out,
 `func (v *%s) XdrMarshal(x XDR, name string) {
 	if name != "" {
@@ -416,7 +439,7 @@ func (r *rpc_struct) emit(e *emitter) {
 	fmt.Fprintf(out, "func XDR_%s(x XDR, name string, v *%s) {\n" +
 		"\tx.Marshal(name, v)\n" +
 		"}\n", r.id, r.id)
-	e.append(out)
+	e.xappend(out)
 }
 
 func (r *rpc_union) emit(e *emitter) {
@@ -438,6 +461,8 @@ func (r *rpc_union) emit(e *emitter) {
 			e.decltype(r.id, &u.decl))
 	}
 	fmt.Fprintf(out, "}\n")
+	e.append(out)
+	out.Reset()
 	for i := range r.fields {
 		u := &r.fields[i]
 		if u.decl.id == "" || u.decl.typ == "void" {
@@ -583,7 +608,7 @@ func (r *rpc_union) emit(e *emitter) {
 		"\tx.Marshal(name, v)\n" +
 		"}\n", r.id, r.id)
 
-	e.append(out)
+	e.xappend(out)
 }
 
 func (r *rpc_program) emit(e *emitter) {
@@ -596,10 +621,20 @@ func emitAll(syms *rpc_syms) string {
 		emitted: map[string]struct{}{},
 	}
 
+	e.append(`
+// Data types defined in XDR file
+`)
+
 	for _, s := range syms.Symbols  {
 		e.append("\n")
 		e.emit(s)
 	}
+	e.append(`
+// Helper types and generated marshaling functions
+
+`)
+	e.append(e.footer.String())
+	e.footer.Reset()
 	return e.output.String()
 }
 
