@@ -446,7 +446,6 @@ func (r *rpc_union) emit(e *emitter) {
 	out := &strings.Builder{}
 	fmt.Fprintf(out, "type %s struct {\n", r.id)
 	fmt.Fprintf(out, "\t%s %s\n", r.tagid, r.tagtype)
-	fmt.Fprintf(out, "\t_u interface{}\n")
 	for i := range r.fields {
 		u := &r.fields[i]
 		if u.decl.id == "" || u.decl.typ == "void" {
@@ -460,7 +459,8 @@ func (r *rpc_union) emit(e *emitter) {
 		fmt.Fprintf(out, "\t//    %s() *%s\n", u.decl.id,
 			e.decltype(r.id, &u.decl))
 	}
-	fmt.Fprintf(out, "}\n")
+	fmt.Fprintf(out, "\t_u interface{}\n" +
+		"}\n")
 	e.append(out)
 	out.Reset()
 	for i := range r.fields {
