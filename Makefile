@@ -4,13 +4,17 @@ XDRS = xdr/Stellar-SCP.x xdr/Stellar-ledger-entries.x			\
 xdr/Stellar-ledger.x xdr/Stellar-overlay.x xdr/Stellar-transaction.x	\
 xdr/Stellar-types.x
 
+GO_DEPENDS = golang.org/x/crypto/... golang.org/x/tools/cmd/goyacc	\
+golang.org/x/tools/cmd/stringer
+
 all: $(BUILT_SOURCES)
 	go build -o stc
 
 build-depend:
-	go get golang.org/x/crypto/... \
-		golang.org/x/tools/cmd/goyacc		\
-		golang.org/x/tools/cmd/stringer
+	go get $(GO_DEPENDS)
+
+update-depend:
+	go get -u $(GO_DEPENDS)
 
 $(XDRS):
 	git fetch --depth=1 https://github.com/stellar/stellar-core.git master
@@ -40,4 +44,4 @@ maintainer-clean: clean
 	echo xdr >> .gitignore~
 	mv -f .gitignore~ .gitignore
 
-.PHONY: all build-depend clean maintainer-clean goxdr/goxdr
+.PHONY: all build-depend update-depend clean maintainer-clean goxdr/goxdr
