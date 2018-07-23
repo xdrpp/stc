@@ -10,15 +10,27 @@ import (
 	"strings"
 )
 
+type StellarNet struct {
+	NetworkId string
+	Horizon string
+}
+
+var defaultNets = map[string]StellarNet{
+	"main": { "Public Global Stellar Network ; September 2015",
+		"https://horizon.stellar.org/"},
+	"test": { "Test SDF Network ; September 2015",
+		"https://horizon-testnet.stellar.org/"},
+}
+
 var ConfigDir string
 
 func init() {
 	if d, ok := os.LookupEnv("STCDIR"); ok {
 		ConfigDir = d
 	} else if d, ok = os.LookupEnv("XDG_CONFIG_HOME"); ok {
-		ConfigDir = d + "/stc"
+		ConfigDir = filepath.Join(d, "stc")
 	} else if d, ok = os.LookupEnv("HOME"); ok {
-		ConfigDir = d + "/.config/stc"
+		ConfigDir = filepath.Join(d, ".config", "stc")
 	} else {
 		ConfigDir = ".stc"
 	}
@@ -210,4 +222,47 @@ func (h *AccountHints) Load(filename string) error {
 func (h *AccountHints) Save(filename string) error {
 	EnsureDir(filename)
 	return SafeWriteFile(filename, h.String(), 0666)
+}
+
+func netInit() {
+	dir := ConfigPath("networks")
+	os.MkdirAll(dir, 0777)
+	for net, val := range defaultNets {
+		path := filepath.Join(dir, net)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			SafeWriteFile(path, fmt.Sprintf("%q\n%s\n",
+				val.NetworkId, val.Horizon), 0666)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, "default")); os.IsNotExist(err) {
+		os.Symlink("main", filepath.Join(dir, "default"))
+		if _, err := os.Stat(filepath.Join(dir, "default"));
+		os.IsNotExist(err) {
+			val := defaultNets["main"]
+			SafeWriteFile(filepath.Join(dir, "default"), fmt.Sprintf("%q\n%s\n",
+				val.NetworkId, val.Horizon), 0666)
+		}
+	}
+}
+
+func GetStellarNet(net string) *StellarNet {
+	netInit()
+	path := filepath.Join(ConfigDir, "networks", net);
+	f, err := os.Open(path);
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return nil
+	}
+	defer func() { f.Close() }()
+	var ret StellarNet
+	_, err = fmt.Fscanf(f, "%q\n", &ret.NetworkId)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s:1: %s\n", path, err.Error())
+		return nil
+	}
+	scanner := bufio.NewScanner(f)
+	scanner.Split(bufio.ScanLines)
+	scanner.Scan()
+	ret.Horizon = scanner.Text()
+	return &ret
 }

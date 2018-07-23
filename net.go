@@ -12,17 +12,6 @@ import (
 	"strings"
 )
 
-type StellarNet struct {
-	NetworkId string
-	Horizon string
-}
-var Networks = map[string]StellarNet{
-	"main": { "Public Global Stellar Network ; September 2015",
-		"https://horizon.stellar.org/"},
-	"test": { "Test SDF Network ; September 2015",
-		"https://horizon-testnet.stellar.org/"},
-}
-
 func get(net *StellarNet, query string) []byte {
 	resp, err := http.Get(net.Horizon + query)
 	if err != nil {

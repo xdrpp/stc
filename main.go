@@ -152,10 +152,11 @@ func main() {
 		"Hash transaction for pre-auth use")
 	opt_inplace := flag.Bool("i", false, "Edit the input file in place")
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
-	opt_netname := flag.String("net", "main", `Network ID "main" or "test"`)
+	opt_netname := flag.String("net", "default",
+		`Network ID ("main" or "test")`)
 	opt_update := flag.Bool("u", false,
 		"Query network to update fee and sequence number")
-	opt_learn := flag.Bool("l", false, "Learn new signers from network")
+	opt_learn := flag.Bool("l", false, "Learn new signers")
 	opt_help := flag.Bool("help", false, "Print usage information")
 	opt_post := flag.Bool("post", false,
 		"Post transaction instead of editing it")
@@ -257,18 +258,18 @@ edit_loop:
 		}
 	}
 
-	net, ok := Networks[*opt_netname]
-	if !ok {
+	net := GetStellarNet(*opt_netname)
+	if net == nil {
 		fmt.Fprintf(os.Stderr, "unknown network %q\n", *opt_netname)
 		os.Exit(1)
 	}
 	if *opt_update {
-		fixTx(&net, &e)
+		fixTx(net, &e)
 	}
 
 	var sc SignerCache
 	sc.Load(ConfigPath("signers"))
-	getAccounts(&net, &e, &sc, *opt_learn)
+	getAccounts(net, &e, &sc, *opt_learn)
 
 	if *opt_sign {
 		sk := getSecKey()
@@ -283,10 +284,12 @@ edit_loop:
 		}
 	}
 
-	sc.Save(ConfigPath("signers"))
+	if *opt_learn {
+		sc.Save(ConfigPath("signers"))
+	}
 
 	if (*opt_post) {
-		res := PostTransaction(&net, &e)
+		res := PostTransaction(net, &e)
 		if res != nil {
 			fmt.Print(XdrToString(res))
 		}
@@ -312,7 +315,7 @@ edit_loop:
 		var h AccountHints
 		h.Load(ConfigPath("accounts"))
 		buf := &strings.Builder{}
-		TxStringCtx{ Out: buf, Env: &e, Signers: sc, Net: &net,
+		TxStringCtx{ Out: buf, Env: &e, Signers: sc, Net: net,
 			Verbose: *opt_verbose, Help: help, Accounts: h }.Exec()
 		output = buf.String()
 	}
