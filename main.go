@@ -35,8 +35,7 @@ func (xp *xdrGetAccounts) Marshal(field string, i interface{}) {
 	}
 }
 
-func getAccounts(net *StellarNet, e *TransactionEnvelope, sc *SignerCache,
-	usenet bool) {
+func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 	xga := xdrGetAccounts{ map[AccountID]*acctInfo{} }
 	e.XdrMarshal(&xga, "")
 	c := make(chan struct{})
@@ -68,7 +67,7 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, sc *SignerCache,
 			if acs != signer.Key {
 				comment = fmt.Sprintf("signer for account %s", acs)
 			}
-			sc.Add(signer.Key, comment)
+			net.Signers.Add(signer.Key, comment)
 		}
 	}
 }
@@ -133,6 +132,63 @@ func fixTx(net *StellarNet, e *TransactionEnvelope) {
 	}
 }
 
+// Guess whether input is key: value lines or compiled base64
+func isCompiled(content string) bool {
+	if len(content) != 0 && strings.IndexByte(content, ':') == -1 {
+		bs, err := base64.StdEncoding.DecodeString(content);
+		if err == nil && len(bs) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func readTx(infile string) (txe *TransactionEnvelope, help XdrHelp, err error) {
+	var input []byte
+	if infile == "-" {
+		input, err = ioutil.ReadAll(os.Stdin)
+	} else {
+		input, err = ioutil.ReadFile(infile)
+	}
+	if err != nil {
+		return
+	}
+	sinput := string(input)
+
+	var e TransactionEnvelope
+	if isCompiled(sinput) {
+		err = txIn(&e, sinput)
+	} else {
+		help, err = txScan(&e, sinput)
+	}
+	if err == nil {
+		txe = &e
+	}
+	return
+}
+
+func writeTx(outfile string, e *TransactionEnvelope, net *StellarNet,
+	help XdrHelp) error {
+	var output string
+	if help == nil {
+		output = txOut(e) + "\n"
+	} else {
+		buf := &strings.Builder{}
+		TxStringCtx{ Out: buf, Env: e, Net: net, Help: help }.Exec()
+		output = buf.String()
+	}
+
+	if outfile == "" {
+		fmt.Print(output)
+	} else {
+		if err := SafeWriteFile(outfile, output, 0666); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			return err
+		}
+	}
+	return nil
+}
+
 func b2i(b bool) int {
 	if b {
 		return 1
@@ -144,7 +200,6 @@ var progname string
 
 func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to base64 XDR")
-	opt_decompile := flag.Bool("d", false, "Decompile input from base64 XDR")
 	opt_keygen := flag.Bool("keygen", false, "Create a new signing keypair")
 	opt_sec2pub := flag.Bool("sec2pub", false, "Get public key from private")
 	opt_output := flag.String("o", "", "Output to file instead of stdout")
@@ -162,7 +217,6 @@ func main() {
 		"Post transaction instead of editing it")
 	opt_edit := flag.Bool("edit", false,
 		"keep editing the file until it doesn't change")
-	opt_verbose := flag.Bool("v", false, "Annotate output more verbosely")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
 	} else {
@@ -170,9 +224,10 @@ func main() {
 	}
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
-`Usage: %[1]s [-sign] [-net=ID] [-c|-v] [-l] [-u] [-i | -o FILE] INPUT-FILE
+			`Usage: %[1]s [-sign] [-net=ID] [-c|-v] [-l] [-u] [-i | -o FILE] INPUT-FILE
        %[1]s -preauth [-net=ID] INPUT-FILE
        %[1]s -post [-sign] [-net=ID] [-u] INPUT-FILE
+       %[1]s -edit FILE
        %[1]s -keygen
        %[1]s -sec2pub
 `, progname)
@@ -186,7 +241,7 @@ func main() {
 	}
 
 	if len(flag.Args()) == 0 {
-		if *opt_sign || *opt_compile || *opt_decompile || *opt_preauth ||
+		if *opt_sign || *opt_compile || *opt_preauth ||
 			*opt_post || *opt_learn || *opt_update || *opt_inplace ||
 			b2i(*opt_sec2pub) + b2i(*opt_keygen) != 1 {
 			flag.Usage()
@@ -200,6 +255,11 @@ func main() {
 		return
 	}
 
+	if len(flag.Args()) != 1 {
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	infile := flag.Args()[0]
 
 	if *opt_keygen || *opt_sec2pub ||
@@ -207,55 +267,26 @@ func main() {
 		((*opt_inplace || *opt_edit) && infile == "-") ||
 		(b2i(*opt_preauth) + b2i(*opt_post) + b2i(*opt_compile) +
 		b2i(*opt_edit) > 1) ||
-		*opt_edit && (*opt_sign || *opt_inplace) {
+		*opt_edit && (*opt_sign || *opt_inplace || infile == "-") {
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	if *opt_edit {
+/*
+		f, err := ioutil.TempFile("", progname)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+		path := f.Name()
+		defer os.Remove(path)
+		*opt_output = path
+*/
 		*opt_inplace = true
 	}
 	if *opt_inplace {
 		*opt_output = infile
-	}
-
-edit_loop:
-	var input []byte
-	var err error
-	if infile == "-" {
-		input, err = ioutil.ReadAll(os.Stdin)
-	} else {
-		input, err = ioutil.ReadFile(infile)
-	}
-	if err != nil && !(*opt_edit && os.IsNotExist(err)) {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
-	sinput := string(input)
-
-	if !*opt_decompile && len(sinput) != 0 &&
-		strings.IndexByte(sinput, ':') == -1 {
-		if bs, err := base64.StdEncoding.DecodeString(sinput);
-		err == nil && len(bs) > 0 {
-			*opt_decompile = true
-		}
-	}
-
-	var e TransactionEnvelope
-	var help map[string]bool
-	if *opt_decompile {
-		err = txIn(&e, sinput)
-	} else {
-		help, err = txScan(&e, sinput)
-	}
-	var pause bool
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		if *opt_edit {
-			pause = true
-		} else {
-			os.Exit(1)
-		}
 	}
 
 	net := GetStellarNet(*opt_netname)
@@ -263,33 +294,49 @@ edit_loop:
 		fmt.Fprintf(os.Stderr, "unknown network %q\n", *opt_netname)
 		os.Exit(1)
 	}
-	if *opt_update {
-		fixTx(net, &e)
+
+edit_loop:
+	e, help, err := readTx(infile)
+
+	var pause bool
+	if err != nil {
+		if *opt_edit && os.IsNotExist(err) {
+			e = &TransactionEnvelope{}
+		} else {
+			fmt.Fprintln(os.Stderr, err.Error())
+			if (*opt_edit) {
+				pause = true
+			} else {
+				os.Exit(1)
+			}
+		}
 	}
 
-	var sc SignerCache
-	sc.Load(ConfigPath("signers"))
-	getAccounts(net, &e, &sc, *opt_learn)
+	if *opt_update {
+		fixTx(net, e)
+	}
+
+	getAccounts(net, e, *opt_learn)
 
 	if *opt_sign {
 		sk := getSecKey()
-		sc.Add(sk.Public().String(), "")
+		net.Signers.Add(sk.Public().String(), "")
 		if sk == nil {
 			os.Exit(1)
 		}
 		fmt.Println(sk.Public())
-		if err = sk.SignTx(net.NetworkId, &e); err != nil {
+		if err = sk.SignTx(net.NetworkId, e); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 	}
 
 	if *opt_learn {
-		sc.Save(ConfigPath("signers"))
+		net.SaveSigners()
 	}
 
 	if (*opt_post) {
-		res := PostTransaction(net, &e)
+		res := PostTransaction(net, e)
 		if res != nil {
 			fmt.Print(XdrToString(res))
 		}
@@ -302,35 +349,25 @@ edit_loop:
 
 	if (*opt_preauth) {
 		sk := SignerKey{ Type: SIGNER_KEY_TYPE_PRE_AUTH_TX }
-		copy(sk.PreAuthTx()[:], TxPayloadHash(net.NetworkId, &e))
+		copy(sk.PreAuthTx()[:], TxPayloadHash(net.NetworkId, e))
 		fmt.Printf("%x\n", *sk.PreAuthTx())
 		fmt.Println(&sk)
 		return
 	}
 
-	var output string
-	if *opt_compile {
-		output = txOut(&e) + "\n"
-	} else {
-		var h AccountHints
-		h.Load(ConfigPath("accounts"))
-		buf := &strings.Builder{}
-		TxStringCtx{ Out: buf, Env: &e, Signers: sc, Net: net,
-			Verbose: *opt_verbose, Help: help, Accounts: h }.Exec()
-		output = buf.String()
-	}
 
-	if *opt_output == "" {
-		fmt.Print(output)
-	} else {
-		if err = SafeWriteFile(*opt_output, output, 0666); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
+	if *opt_compile {
+		help = nil
+	} else if help == nil {
+		help = make(XdrHelp)
+	}
+	if err = writeTx(*opt_output, e, net, help); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
 	}
 
 	if *opt_edit {
-		fi, err := os.Stat(infile)
+		fi, err := os.Stat(*opt_output)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(1)
@@ -349,16 +386,17 @@ edit_loop:
 			bufio.NewReader(os.Stdin).ReadBytes('\n')
 		}
 
-		proc, err := os.StartProcess(ed, []string{ed, infile}, &os.ProcAttr{
-			Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
-		})
+		proc, err := os.StartProcess(ed,
+			[]string{ed, *opt_output}, &os.ProcAttr{
+				Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
+			})
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(1)
 		}
 		proc.Wait()
 
-		fi2, err := os.Stat(infile)
+		fi2, err := os.Stat(*opt_output)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(1)

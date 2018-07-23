@@ -3,41 +3,52 @@ package main
 
 import (
 	"bufio"
-	"path/filepath"
+	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 type StellarNet struct {
+	Name string
 	NetworkId string
 	Horizon string
+	Signers SignerCache
+	Accounts AccountHints
 }
 
-var defaultNets = map[string]StellarNet{
-	"main": { "Public Global Stellar Network ; September 2015",
-		"https://horizon.stellar.org/"},
-	"test": { "Test SDF Network ; September 2015",
-		"https://horizon-testnet.stellar.org/"},
+var defaultNets = []StellarNet{
+	{Name: "main",
+		NetworkId: "Public Global Stellar Network ; September 2015",
+		Horizon: "https://horizon.stellar.org/"},
+	{Name: "test",
+		NetworkId: "Test SDF Network ; September 2015",
+		Horizon: "https://horizon-testnet.stellar.org/"},
 }
 
-var ConfigDir string
+var ConfigRoot string
 
 func init() {
 	if d, ok := os.LookupEnv("STCDIR"); ok {
-		ConfigDir = d
+		ConfigRoot = d
 	} else if d, ok = os.LookupEnv("XDG_CONFIG_HOME"); ok {
-		ConfigDir = filepath.Join(d, "stc")
+		ConfigRoot = filepath.Join(d, "stc")
 	} else if d, ok = os.LookupEnv("HOME"); ok {
-		ConfigDir = filepath.Join(d, ".config", "stc")
+		ConfigRoot = filepath.Join(d, ".config", "stc")
 	} else {
-		ConfigDir = ".stc"
+		ConfigRoot = ".stc"
 	}
 }
 
-func ConfigPath(name string) string {
-	return filepath.Join(ConfigDir, name)
+func (net *StellarNet) ConfigPath(names ...string) string {
+	args := make([]string, 2, 2 + len(names))
+	args[0] = ConfigRoot
+	args[1] = net.Name
+	args = append(args, names...)
+	return filepath.Join(args...)
 }
 
 func SafeWriteFile(filename string, data string, perm os.FileMode) error {
@@ -200,7 +211,7 @@ func (h *AccountHints) Load(filename string) error {
 		}
 		return err
 	}
-	defer func() { f.Close() }()
+	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
 	scanner.Split(bufio.ScanLines)
@@ -224,45 +235,64 @@ func (h *AccountHints) Save(filename string) error {
 	return SafeWriteFile(filename, h.String(), 0666)
 }
 
-func netInit() {
-	dir := ConfigPath("networks")
-	os.MkdirAll(dir, 0777)
-	for net, val := range defaultNets {
-		path := filepath.Join(dir, net)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			SafeWriteFile(path, fmt.Sprintf("%q\n%s\n",
-				val.NetworkId, val.Horizon), 0666)
-		}
-	}
-	if _, err := os.Stat(filepath.Join(dir, "default")); os.IsNotExist(err) {
-		os.Symlink("main", filepath.Join(dir, "default"))
-		if _, err := os.Stat(filepath.Join(dir, "default"));
-		os.IsNotExist(err) {
-			val := defaultNets["main"]
-			SafeWriteFile(filepath.Join(dir, "default"), fmt.Sprintf("%q\n%s\n",
-				val.NetworkId, val.Horizon), 0666)
-		}
+func FileExists(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	} else if os.IsNotExist(err) {
+		return false
+	} else {
+		panic(err)
 	}
 }
 
-func GetStellarNet(net string) *StellarNet {
-	netInit()
-	path := filepath.Join(ConfigDir, "networks", net);
-	f, err := os.Open(path);
+func PrintErr() {
+	i := recover()
+	if err, ok := i.(error); ok {
+		fmt.Fprintln(os.Stderr, err.Error())
+	} else if i != nil {
+		panic(i)
+	}
+}
+
+func CreateIfMissing(path string, contents string) {
+	defer PrintErr()
+	if !FileExists(path) {
+		SafeWriteFile(path, contents, 0666)
+	}
+}
+
+func netInit() {
+	for _, net := range defaultNets {
+		os.MkdirAll(net.ConfigPath(), 0777)
+		CreateIfMissing(net.ConfigPath("network_id"), net.NetworkId + "\n")
+		CreateIfMissing(net.ConfigPath("horizon"), net.Horizon + "\n")
+	}
+	os.Symlink(defaultNets[0].Name, filepath.Join(ConfigRoot, "default"))
+}
+
+func head(path string) string {
+	input, err := ioutil.ReadFile(path)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
-		return nil
+		return ""
 	}
-	defer func() { f.Close() }()
-	var ret StellarNet
-	_, err = fmt.Fscanf(f, "%q\n", &ret.NetworkId)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s:1: %s\n", path, err.Error())
-		return nil
+	if pos := bytes.IndexByte(input, '\n'); pos >= 0 {
+		input = input[:pos]
 	}
-	scanner := bufio.NewScanner(f)
-	scanner.Split(bufio.ScanLines)
-	scanner.Scan()
-	ret.Horizon = scanner.Text()
-	return &ret
+	return string(input)
+}
+
+func GetStellarNet(name string) *StellarNet {
+	netInit()
+	net := &StellarNet{ Name: name }
+	net.NetworkId = head(net.ConfigPath("network_id"))
+	net.Horizon = head(net.ConfigPath("horizon"))
+	net.Signers.Load(net.ConfigPath("signers"))
+	net.Accounts.Load(net.ConfigPath("accounts"))
+	return net
+}
+
+func (net *StellarNet) SaveSigners() error {
+	return net.Signers.Save(net.ConfigPath("signers"))
 }

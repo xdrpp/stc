@@ -103,11 +103,8 @@ func txIn(e XdrAggregate, input string) (err error) {
 type TxStringCtx struct {
 	Out io.Writer
 	Env *TransactionEnvelope
-	Signers SignerCache
-	Accounts AccountHints
 	Net *StellarNet
-	Verbose bool
-	Help map[string]bool
+	Help XdrHelp
 	inAsset bool
 }
 
@@ -129,13 +126,13 @@ func (xp *TxStringCtx) Marshal(name string, i interface{}) {
 	switch v := i.(type) {
 	case *AccountID:
 		ac := v.String()
-		if hint := xp.Accounts[ac]; hint != "" {
+		if hint := xp.Net.Accounts[ac]; hint != "" {
 			fmt.Fprintf(xp.Out, "%s: %s (%s)\n", name, ac, hint)
 		} else {
 			fmt.Fprintf(xp.Out, "%s: %s\n", name, ac)
 		}
 	case xdrEnumNames:
-		if xp.Verbose || xp.Help[name] {
+		if xp.Help[name] {
 			fmt.Fprintf(xp.Out, "%s: %s (", name, v.String())
 			var notfirst bool
 			for _, name := range v.XdrEnumNames() {
@@ -180,7 +177,7 @@ func (ctx TxStringCtx) Exec() {
 	fmt.Fprintf(ctx.Out, "Signatures.len: %d\n", len(ctx.Env.Signatures))
 	for i := range(ctx.Env.Signatures) {
 		var hint string
-		if ski := ctx.Signers.Lookup(ctx.Net, ctx.Env, i); ski != nil {
+		if ski := ctx.Net.Signers.Lookup(ctx.Net, ctx.Env, i); ski != nil {
 			hint = fmt.Sprintf("%x (%s)", ctx.Env.Signatures[i].Hint, *ski)
 		} else {
 			hint = fmt.Sprintf("%x BAD SIGNATURE", ctx.Env.Signatures[i].Hint)
@@ -192,10 +189,11 @@ Signatures[%[1]d].Signature: %[3]x
 	}
 }
 
+type XdrHelp map[string]bool
 
 type XdrScan struct {
 	kvs map[string]string
-	help map[string]bool
+	help XdrHelp
 	err bool
 	inAsset bool
 }
@@ -270,7 +268,7 @@ func (xs *XdrScan) Marshal(name string, i interface{}) {
 	delete(xs.kvs, name)
 }
 
-func txScan(t XdrAggregate, in string) (help map[string]bool, err error) {
+func txScan(t XdrAggregate, in string) (help XdrHelp, err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			switch i.(type) {
@@ -283,7 +281,7 @@ func txScan(t XdrAggregate, in string) (help map[string]bool, err error) {
 		}
 	}()
 	kvs := map[string]string{}
-	help = map[string]bool{}
+	help = make(XdrHelp)
 	lineno := 0
 	for _, line := range strings.Split(in, "\n") {
 		lineno++
