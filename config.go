@@ -44,9 +44,10 @@ func init() {
 }
 
 func (net *StellarNet) ConfigPath(names ...string) string {
-	args := make([]string, 2, 2 + len(names))
+	args := make([]string, 3, 3 + len(names))
 	args[0] = ConfigRoot
-	args[1] = net.Name
+	args[1] = "networks"
+	args[2] = net.Name
 	args = append(args, names...)
 	return filepath.Join(args...)
 }
@@ -270,7 +271,8 @@ func netInit() {
 		CreateIfMissing(net.ConfigPath("network_id"), net.NetworkId + "\n")
 		CreateIfMissing(net.ConfigPath("horizon"), net.Horizon + "\n")
 	}
-	os.Symlink(defaultNets[0].Name, filepath.Join(ConfigRoot, "default"))
+	os.Symlink(defaultNets[0].Name,
+		filepath.Join(ConfigRoot, "networks", "default"))
 }
 
 func head(path string) (string, error) {

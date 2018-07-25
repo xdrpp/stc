@@ -8,7 +8,12 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/armor"
+	"golang.org/x/crypto/openpgp/packet"
+	//"io/ioutil"
 	"os"
+	"strings"
 )
 
 func XdrSHA256(t XdrAggregate) []byte {
@@ -123,3 +128,48 @@ func KeyGen(pkt PublicKeyType) PrivateKey {
 		panic(fmt.Sprintf("KeyGen: unsupported PublicKeyType %v", pkt))
 	}
 }
+
+func (sk *PrivateKey) Save(file string, passphrase []byte) error {
+	out := &strings.Builder{}
+	if len(passphrase) == 0 {
+		fmt.Fprintln(out, sk.String())
+	} else {
+		w0, err := armor.Encode(out, "PGP MESSAGE", nil)
+		if err != nil {
+			return err
+		}
+		w, err := openpgp.SymmetricallyEncrypt(w0, passphrase, nil,
+			&packet.Config{
+				DefaultCipher: packet.CipherAES256,
+				DefaultCompressionAlgo: packet.CompressionNone,
+				S2KCount: 65011712,
+			})
+		if err != nil {
+			w0.Close()
+			return err
+		}
+		fmt.Fprintln(w, sk.String())
+		w.Close()
+		w0.Close()
+	}
+	return SafeWriteFile(file, out.String(), 0600)
+}
+
+/*
+func PrivateKeyFromFile(file string, passphrase []byte) (*PrivateKey, error) {
+	input, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	ret = &PrivateKey{}
+	if _, err = fmt.Fscanf(bytes.NewBuffer(input), ret); err == nil {
+		return ret
+	}
+
+	block, err := armor.Decode(bytes.NewBuffer(input))
+	if err != nil {
+		return nil
+	}
+	md, err := openpgp.ReadMessage(block.Body, )
+}
+*/
