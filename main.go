@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
-	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -83,14 +82,12 @@ func doKeyGen(outfile string) {
 			fmt.Fprintf(os.Stderr, "%s: file already exists\n", outfile)
 			return
 		}
-		fmt.Print("Passphrase: ")
-		bytePassword, err := terminal.ReadPassword(0)
-		fmt.Println("")
+		bytePassword := GetPass("Passphrase: ")
 		if FileExists(outfile) {
 			fmt.Fprintf(os.Stderr, "%s: file already exists\n", outfile)
 			return
 		}
-		if err == nil { err = sk.Save(outfile, bytePassword) }
+		err := sk.Save(outfile, bytePassword)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 		} else {
@@ -101,34 +98,18 @@ func doKeyGen(outfile string) {
 }
 
 func getSecKey(file string) *PrivateKey {
+	var sk *PrivateKey
+	var err error
 	if file == "" {
-		fmt.Print("Secret Key: ")
-	} else if FileExists(file) {
-		fmt.Printf("Passphrase for %s: ", file)
+		sk, err = PrivateKeyFromInput("Secret key: ")
 	} else {
-		fmt.Fprintf(os.Stderr, "%s: no such file", file)
-		return nil
+		sk, err = PrivateKeyFromFile(file)
 	}
-	bytePassword, err := terminal.ReadPassword(0)
-	fmt.Println("")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return nil
-	}
-
-	if file == "" {
-		var sk PrivateKey
-		if n, err := fmt.Sscan(string(bytePassword), &sk); n != 1 {
-			fmt.Fprintln(os.Stderr, err.Error())
-			return nil
-		}
-		return &sk
-	} else if sk, err := PrivateKeyFromFile(file, bytePassword); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return nil
-	} else {
-		return sk
 	}
+	return sk
 }
 
 func doSec2pub(file string) {

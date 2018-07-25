@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/packet"
+	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"io/ioutil"
 	"os"
@@ -131,6 +132,57 @@ func KeyGen(pkt PublicKeyType) PrivateKey {
 	}
 }
 
+type InputLine []byte
+func (il *InputLine) Scan(ss fmt.ScanState, _ rune) error {
+	if line, err := ss.Token(false, func (r rune) bool {
+		return r != '\n'
+	}); err != nil {
+		return err
+	} else {
+		if len(line) > 0 && line[len(line)-1] == '\r' {
+			line = line[:len(line)-1]
+		}
+		*il = InputLine(line)
+		return nil
+	}
+}
+
+var PassphraseFile io.Reader = os.Stdin
+var PassphrasePrompt io.Writer = os.Stderr
+
+func getTtyFd(f interface{}) int {
+	if file, ok := f.(*os.File); ok && terminal.IsTerminal(int(file.Fd())) {
+		return int(file.Fd())
+	}
+	return -1
+}
+
+func GetPass(prompt string) []byte {
+	if PassphraseFile == nil {
+		var err error
+		tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+		if err == nil {
+			PassphraseFile = tty
+			PassphrasePrompt = tty
+		} else {
+			fmt.Fprintln(os.Stderr, err.Error())
+			PassphraseFile = io.MultiReader()
+			PassphrasePrompt = ioutil.Discard
+		}
+	}
+
+	if fd := getTtyFd(PassphraseFile); fd >= 0 {
+		fmt.Fprint(PassphrasePrompt, prompt)
+		bytePassword, _ := terminal.ReadPassword(fd)
+		fmt.Fprintln(PassphrasePrompt, "")
+		return bytePassword
+	} else {
+		var line InputLine
+		fmt.Fscanln(PassphraseFile, &line)
+		return []byte(line)
+	}
+}
+
 func (sk *PrivateKey) Save(file string, passphrase []byte) error {
 	out := &strings.Builder{}
 	if len(passphrase) == 0 {
@@ -159,8 +211,9 @@ func (sk *PrivateKey) Save(file string, passphrase []byte) error {
 }
 
 var InvalidPassphrase = errors.New("Invalid passphrase")
+var InvalidKeyFile = errors.New("Invalid private key file")
 
-func PrivateKeyFromFile(file string, passphrase []byte) (*PrivateKey, error) {
+func PrivateKeyFromFile(file string) (*PrivateKey, error) {
 	input, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err
@@ -172,17 +225,15 @@ func PrivateKeyFromFile(file string, passphrase []byte) (*PrivateKey, error) {
 
 	block, err := armor.Decode(bytes.NewBuffer(input))
 	if err != nil {
-		return nil, err
+		return nil, InvalidKeyFile
 	}
 	md, err := openpgp.ReadMessage(block.Body, nil,
-		func(keys []openpgp.Key, symmetric bool) (ret []byte, err error) {
+		func(keys []openpgp.Key, symmetric bool) ([]byte, error) {
+			passphrase := GetPass(fmt.Sprintf("Passphrase for %s: ", file))
 			if len(passphrase) > 0 {
-				ret = passphrase
-				passphrase = []byte{}
-			} else {
-				err = InvalidPassphrase
+				return passphrase, nil
 			}
-			return
+			return nil, InvalidPassphrase
 		}, nil)
 	if err != nil {
 		return nil, err
@@ -193,4 +244,13 @@ func PrivateKeyFromFile(file string, passphrase []byte) (*PrivateKey, error) {
 		return nil, md.SignatureError
 	}
 	return ret, nil
+}
+
+func PrivateKeyFromInput(prompt string) (*PrivateKey, error) {
+	key := GetPass(prompt)
+	var sk PrivateKey
+	if _, err := fmt.Fscan(bytes.NewBuffer(key), &sk); err != nil {
+		return nil, err
+	}
+	return &sk, nil
 }
