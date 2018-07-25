@@ -2,14 +2,12 @@
 package main
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 )
 
 func get(net *StellarNet, query string) []byte {
@@ -56,14 +54,7 @@ func GetAccountEntry(net *StellarNet, acct string) *HorizonAccountEntry {
 	return nil
 }
 
-func GetLedgerHeader(net *StellarNet) (ret *LedgerHeader) {
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			ret = nil
-		}
-	}()
-
+func GetLedgerHeader(net *StellarNet) *LedgerHeader {
 	body := get(net, "ledgers?limit=1&order=desc")
 	if body == nil {
 		return nil
@@ -76,16 +67,20 @@ func GetLedgerHeader(net *StellarNet) (ret *LedgerHeader) {
 			}
 		} `json:"_embedded"`
 	}
-	if err := json.Unmarshal(body, &lhx);
-	err != nil || len(lhx.Embedded.Records) == 0 {
-		panic(err)
+	if err := json.Unmarshal(body, &lhx); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return nil
+	} else if len(lhx.Embedded.Records) == 0 {
+		fmt.Fprintln(os.Stderr, "Horizon returned no ledgers")
+		return nil
 	}
 
-	ret = &LedgerHeader{}
-	b64i := base64.NewDecoder(base64.StdEncoding,
-		strings.NewReader(lhx.Embedded.Records[0].Header_xdr))
-	ret.XdrMarshal(&XdrIn{b64i}, "")
-	return
+	ret := &LedgerHeader{}
+	if err := txIn(ret, lhx.Embedded.Records[0].Header_xdr); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return nil
+	}
+	return ret
 }
 
 func PostTransaction(net *StellarNet,

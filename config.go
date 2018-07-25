@@ -246,13 +246,15 @@ func FileExists(path string) bool {
 	}
 }
 
-func PrintErr() {
+func PrintErr() bool {
 	i := recover()
 	if err, ok := i.(error); ok {
 		fmt.Fprintln(os.Stderr, err.Error())
+		return true
 	} else if i != nil {
 		panic(i)
 	}
+	return false
 }
 
 func CreateIfMissing(path string, contents string) {
