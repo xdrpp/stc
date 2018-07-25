@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -82,7 +83,7 @@ func doKeyGen(outfile string) {
 			fmt.Fprintf(os.Stderr, "%s: file already exists\n", outfile)
 			return
 		}
-		bytePassword := GetPass("Passphrase: ")
+		bytePassword := GetPass2("Passphrase: ")
 		if FileExists(outfile) {
 			fmt.Fprintf(os.Stderr, "%s: file already exists\n", outfile)
 			return
@@ -92,7 +93,7 @@ func doKeyGen(outfile string) {
 			fmt.Fprintln(os.Stderr, err.Error())
 		} else {
 			fmt.Println(sk.Public())
-			fmt.Printf("%x\n", sk.Public().Hint())
+			//fmt.Printf("%x\n", sk.Public().Hint())
 		}
 	}
 }
@@ -236,6 +237,7 @@ func main() {
 	opt_help := flag.Bool("help", false, "Print usage information")
 	opt_post := flag.Bool("post", false,
 		"Post transaction instead of editing it")
+	opt_nopass := flag.Bool("nopass", false, "Never prompt for passwords")
 	opt_edit := flag.Bool("edit", false,
 		"keep editing the file until it doesn't change")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
@@ -263,6 +265,9 @@ func main() {
 
 	if *opt_signwith != "" && !*opt_sec2pub {
 		*opt_sign = true
+	}
+	if *opt_nopass {
+		PassphraseFile = io.MultiReader()
 	}
 
 	if len(flag.Args()) == 0 {

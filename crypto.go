@@ -183,6 +183,20 @@ func GetPass(prompt string) []byte {
 	}
 }
 
+func GetPass2(prompt string) []byte {
+	for {
+		pw1 := GetPass(prompt)
+		if len(pw1) == 0 || getTtyFd(PassphraseFile) < 0 {
+			return pw1
+		}
+		pw2 := GetPass("Again: ")
+		if bytes.Compare(pw1, pw2) == 0 {
+			return pw1
+		}
+		fmt.Fprintln(PassphrasePrompt, "The two do not match.")
+	}
+}
+
 func (sk *PrivateKey) Save(file string, passphrase []byte) error {
 	out := &strings.Builder{}
 	if len(passphrase) == 0 {
