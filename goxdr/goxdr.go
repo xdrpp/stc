@@ -123,6 +123,15 @@ func (e *emitter) decltype(context string, d *rpc_decl) string {
 	}
 }
 
+// With line-ending comment showing bound
+func (e *emitter) decltypeb(context string, d *rpc_decl) string {
+	ret := e.decltype(context, d)
+	if (d.qual == VEC || d.typ == "string") && d.bound != "" {
+		return fmt.Sprintf("%s // bound %s", ret, d.bound)
+	}
+	return ret
+}
+
 func (e *emitter) gen_ptr(typ string) string {
 	ptrtyp := "XdrPtr_" + typ
 	if typ[0] == '_' {
@@ -341,15 +350,17 @@ func (r *rpc_const) emit(e *emitter) {
 	e.printf("const %s = %s\n", r.id, r.val)
 }
 
+/*
 func (r *rpc_decl) emit(e *emitter) {
 	e.printf("type %s %s\n", r.id, e.decltype("", r))
 	e.xprintf("func XDR_%s(x XDR, name string, v *%s) {\n%s}\n",
 		r.id, r.id, e.xdrgen("v", "name", "", r))
 }
+*/
 
 func (r0 *rpc_typedef) emit(e *emitter) {
 	r := (*rpc_decl)(r0)
-	e.printf("type %s = %s\n", r.id, e.decltype("", r))
+	e.printf("type %s = %s\n", r.id, e.decltypeb("", r))
 	e.xprintf("func XDR_%s(x XDR, name string, v *%s) {\n%s}\n",
 		r.id, r.id, e.xdrgen("v", "name", "", r))
 }
@@ -418,7 +429,7 @@ func (r *rpc_struct) emit(e *emitter) {
 	fmt.Fprintf(out, "type %s struct {\n", r.id)
 	for i := range r.decls {
 		fmt.Fprintf(out, "\t%s %s\n", r.decls[i].id,
-			e.decltype(r.id, &r.decls[i]))
+			e.decltypeb(r.id, &r.decls[i]))
 	}
 	fmt.Fprintf(out, "}\n")
 	e.append(out)
@@ -457,7 +468,7 @@ func (r *rpc_union) emit(e *emitter) {
 			fmt.Fprintf(out, "\t// %s:\n", strings.Join(u.cases, ","))
 		}
 		fmt.Fprintf(out, "\t//    %s() *%s\n", u.decl.id,
-			e.decltype(r.id, &u.decl))
+			e.decltypeb(r.id, &u.decl))
 	}
 	fmt.Fprintf(out, "\t_u interface{}\n" +
 		"}\n")
@@ -622,7 +633,9 @@ func emitAll(syms *rpc_syms) string {
 	}
 
 	e.append(`
+//
 // Data types defined in XDR file
+//
 `)
 
 	for _, s := range syms.Symbols  {
@@ -630,7 +643,9 @@ func emitAll(syms *rpc_syms) string {
 		e.emit(s)
 	}
 	e.append(`
+//
 // Helper types and generated marshaling functions
+//
 
 `)
 	e.append(e.footer.String())
