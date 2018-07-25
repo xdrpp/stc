@@ -271,23 +271,26 @@ func netInit() {
 	os.Symlink(defaultNets[0].Name, filepath.Join(ConfigRoot, "default"))
 }
 
-func head(path string) string {
+func head(path string) (string, error) {
 	input, err := ioutil.ReadFile(path)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		return ""
+		return "", err
 	}
 	if pos := bytes.IndexByte(input, '\n'); pos >= 0 {
 		input = input[:pos]
 	}
-	return string(input)
+	return string(input), nil
 }
 
 func GetStellarNet(name string) *StellarNet {
 	netInit()
 	net := &StellarNet{ Name: name }
-	net.NetworkId = head(net.ConfigPath("network_id"))
-	net.Horizon = head(net.ConfigPath("horizon"))
+	var err error
+	net.NetworkId, err = head(net.ConfigPath("network_id"))
+	if err != nil {
+		return nil
+	}
+	net.Horizon, _ = head(net.ConfigPath("horizon"))
 	net.Signers.Load(net.ConfigPath("signers"))
 	net.Accounts.Load(net.ConfigPath("accounts"))
 	return net

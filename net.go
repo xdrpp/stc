@@ -13,6 +13,10 @@ import (
 )
 
 func get(net *StellarNet, query string) []byte {
+	if net.Horizon == "" {
+		fmt.Fprintln(os.Stderr, "Missing or invalid horizon config file\n")
+		return nil
+	}
 	resp, err := http.Get(net.Horizon + query)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -84,8 +88,12 @@ func GetLedgerHeader(net *StellarNet) (ret *LedgerHeader) {
 	return
 }
 
-func PostTransaction(
-	net *StellarNet, e *TransactionEnvelope) *TransactionResult {
+func PostTransaction(net *StellarNet,
+	e *TransactionEnvelope) *TransactionResult {
+	if net.Horizon == "" {
+		fmt.Fprintln(os.Stderr, "Missing or invalid horizon config file\n")
+		return nil
+	}
 	tx := txOut(e)
 	resp, err := http.PostForm(net.Horizon + "/transactions",
 		url.Values{"tx": {tx}})
