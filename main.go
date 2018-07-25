@@ -72,31 +72,70 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 	}
 }
 
-func doKeyGen() {
+func doKeyGen(outfile string) {
 	sk := KeyGen(PUBLIC_KEY_TYPE_ED25519)
-	fmt.Println(sk)
-	fmt.Println(sk.Public())
-	fmt.Printf("%x\n", sk.Public().Hint())
+	if outfile == "" {
+		fmt.Println(sk)
+		fmt.Println(sk.Public())
+		fmt.Printf("%x\n", sk.Public().Hint())
+	} else {
+		if FileExists(outfile) {
+			fmt.Fprintf(os.Stderr, "%s: file already exists\n", outfile)
+			return
+		}
+		fmt.Print("Passphrase: ")
+		bytePassword, err := terminal.ReadPassword(0)
+		fmt.Println("")
+		if FileExists(outfile) {
+			fmt.Fprintf(os.Stderr, "%s: file already exists\n", outfile)
+			return
+		}
+		if err == nil { err = sk.Save(outfile, bytePassword) }
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+		} else {
+			fmt.Println(sk.Public())
+			fmt.Printf("%x\n", sk.Public().Hint())
+		}
+	}
 }
 
-func getSecKey() *PrivateKey {
-	fmt.Print("Secret Key: ")
+func getSecKey(file string) *PrivateKey {
+	if file == "" {
+		fmt.Print("Secret Key: ")
+	} else if FileExists(file) {
+		fmt.Printf("Passphrase for %s: ", file)
+	} else {
+		fmt.Fprintf(os.Stderr, "%s: no such file", file)
+		return nil
+	}
 	bytePassword, err := terminal.ReadPassword(0)
+	fmt.Println("")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return nil
 	}
-	var sk PrivateKey
-	if n, err := fmt.Sscan(string(bytePassword), &sk); n != 1 {
-		fmt.Fprintln(os.Stderr, err)
+
+	if file == "" {
+		var sk PrivateKey
+		if n, err := fmt.Sscan(string(bytePassword), &sk); n != 1 {
+			fmt.Fprintln(os.Stderr, err.Error())
+			return nil
+		}
+		return &sk
+	} else if sk, err := PrivateKeyFromFile(file, bytePassword); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
 		return nil
+	} else {
+		return sk
 	}
-	return &sk
 }
 
-func doSec2pub() {
-	sk := getSecKey()
-	fmt.Println(sk.Public().String())
+func doSec2pub(file string) {
+	sk := getSecKey(file)
+	if sk != nil {
+		fmt.Println(sk.Public().String())
+	}
 }
 
 func fixTx(net *StellarNet, e *TransactionEnvelope) {
@@ -207,6 +246,7 @@ func main() {
 		"Hash transaction for pre-auth use")
 	opt_inplace := flag.Bool("i", false, "Edit the input file in place")
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
+	opt_signwith := flag.String("key", "", "File containing signing key")
 	opt_netname := flag.String("net", "default",
 		`Network ID ("main" or "test")`)
 	opt_update := flag.Bool("u", false,
@@ -240,6 +280,10 @@ func main() {
 		return
 	}
 
+	if *opt_signwith != "" && !*opt_sec2pub {
+		*opt_sign = true
+	}
+
 	if len(flag.Args()) == 0 {
 		if *opt_sign || *opt_compile || *opt_preauth ||
 			*opt_post || *opt_learn || *opt_update || *opt_inplace ||
@@ -248,9 +292,9 @@ func main() {
 			os.Exit(1)
 		}
 		if (*opt_keygen) {
-			doKeyGen()
+			doKeyGen(*opt_output)
 		} else if (*opt_sec2pub) {
-			doSec2pub()
+			doSec2pub(*opt_signwith)
 		}
 		return
 	}
@@ -319,7 +363,10 @@ edit_loop:
 	getAccounts(net, e, *opt_learn)
 
 	if *opt_sign {
-		sk := getSecKey()
+		sk := getSecKey(*opt_signwith)
+		if sk == nil {
+			os.Exit(1)
+		}
 		net.Signers.Add(sk.Public().String(), "")
 		if sk == nil {
 			os.Exit(1)

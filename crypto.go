@@ -6,12 +6,14 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/packet"
-	//"io/ioutil"
+	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -151,25 +153,44 @@ func (sk *PrivateKey) Save(file string, passphrase []byte) error {
 		fmt.Fprintln(w, sk.String())
 		w.Close()
 		w0.Close()
+		out.WriteString("\n")
 	}
 	return SafeWriteFile(file, out.String(), 0600)
 }
 
-/*
+var InvalidPassphrase = errors.New("Invalid passphrase")
+
 func PrivateKeyFromFile(file string, passphrase []byte) (*PrivateKey, error) {
 	input, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
-	ret = &PrivateKey{}
-	if _, err = fmt.Fscanf(bytes.NewBuffer(input), ret); err == nil {
-		return ret
+	ret := &PrivateKey{}
+	if _, err = fmt.Fscan(bytes.NewBuffer(input), ret); err == nil {
+		return ret, nil
 	}
 
 	block, err := armor.Decode(bytes.NewBuffer(input))
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	md, err := openpgp.ReadMessage(block.Body, )
+	md, err := openpgp.ReadMessage(block.Body, nil,
+		func(keys []openpgp.Key, symmetric bool) (ret []byte, err error) {
+			if len(passphrase) > 0 {
+				ret = passphrase
+				passphrase = []byte{}
+			} else {
+				err = InvalidPassphrase
+			}
+			return
+		}, nil)
+	if err != nil {
+		return nil, err
+	} else if _, err = fmt.Fscan(md.UnverifiedBody, ret); err != nil {
+		return nil, err
+	} else if io.Copy(ioutil.Discard, md.UnverifiedBody);
+	md.SignatureError != nil {
+		return nil, md.SignatureError
+	}
+	return ret, nil
 }
-*/
