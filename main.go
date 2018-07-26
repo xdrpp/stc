@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -98,7 +97,7 @@ func doKeyGen(outfile string) {
 	}
 }
 
-func getSecKey(file string) *PrivateKey {
+func getSecKey(file string) (*PrivateKey, error) {
 	var sk *PrivateKey
 	var err error
 	if file == "" {
@@ -108,13 +107,12 @@ func getSecKey(file string) *PrivateKey {
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
-		return nil
 	}
-	return sk
+	return sk, err
 }
 
 func doSec2pub(file string) {
-	sk := getSecKey(file)
+	sk, _ := getSecKey(file)
 	if sk != nil {
 		fmt.Println(sk.Public().String())
 	}
@@ -188,6 +186,18 @@ func readTx(infile string) (txe *TransactionEnvelope, help XdrHelp, err error) {
 	return
 }
 
+func mustReadTx(infile string) (*TransactionEnvelope, XdrHelp) {
+	e, help, err := readTx(infile)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+	if help == nil {
+		help = make(XdrHelp)
+	}
+	return e, help
+}
+
 func writeTx(outfile string, e *TransactionEnvelope, net *StellarNet,
 	help XdrHelp) error {
 	var output string
@@ -210,11 +220,123 @@ func writeTx(outfile string, e *TransactionEnvelope, net *StellarNet,
 	return nil
 }
 
-func b2i(b bool) int {
-	if b {
-		return 1
+func mustWriteTx(outfile string, e *TransactionEnvelope, net *StellarNet,
+	help XdrHelp) {
+	if err := writeTx(outfile, e, net, help); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
 	}
-	return 0
+}
+
+func signTx(net *StellarNet, key string, e *TransactionEnvelope) error {
+	sk, err := getSecKey(key)
+	if err != nil {
+		return err
+	}
+	net.Signers.Add(sk.Public().String(), "")
+	if err = sk.SignTx(net.NetworkId, e); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return err
+	}
+	return nil
+}
+
+func editor(file string) {
+	ed, ok := os.LookupEnv("EDITOR")
+	if !ok {
+		ed = "vi"
+	}
+	if path, err := exec.LookPath(ed); err == nil {
+		ed = path
+	}
+
+	proc, err := os.StartProcess(ed,
+		[]string{ed, file}, &os.ProcAttr{
+			Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
+		})
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	proc.Wait()
+}
+
+func doEdit(net *StellarNet, arg string) {
+	if arg == "" || arg == "-" {
+		fmt.Fprintln(os.Stderr, "Must supply file name to edit")
+		os.Exit(1)
+	}
+
+	e, help, err := readTx(arg)
+	compiled := help == nil
+	if os.IsNotExist(err) {
+		e = &TransactionEnvelope{}
+	} else if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+	getAccounts(net, e, false)
+	if help == nil {
+		help = make(XdrHelp)
+	}
+
+	f, err := ioutil.TempFile("", progname)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+	path := f.Name()
+	f.Close()
+	defer os.Remove(path + "~")
+	defer os.Remove(path)
+
+	for {
+		if err == nil {
+			mustWriteTx(path, e, net, help)
+		}
+
+		fi1, staterr := os.Stat(path)
+		if staterr != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			fmt.Printf("Press return to run editor.")
+			var li InputLine
+			fmt.Scanln(&li)
+		}
+		editor(path)
+
+		if err == nil {
+			fi2, staterr := os.Stat(path)
+			if staterr != nil {
+				fmt.Println(err.Error())
+				os.Exit(1)
+			}
+			if fi1.Size() == fi2.Size() && fi1.ModTime() == fi2.ModTime() {
+				break
+			}
+		}
+
+		e, help, err = readTx(path)
+	}
+
+	if compiled {
+		help = nil
+	}
+	mustWriteTx(arg, e, net, help)
+}
+
+func b2i(bs ...bool) int {
+	ret := 0
+	for _, b := range bs {
+		if b {
+			ret++
+		}
+	}
+	return ret
 }
 
 var progname string
@@ -228,7 +350,7 @@ func main() {
 		"Hash transaction for pre-auth use")
 	opt_inplace := flag.Bool("i", false, "Edit the input file in place")
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
-	opt_signwith := flag.String("key", "", "File containing signing key")
+	opt_key := flag.String("key", "", "File containing signing key")
 	opt_netname := flag.String("net", "default",
 		`Network ID ("main" or "test")`)
 	opt_update := flag.Bool("u", false,
@@ -247,10 +369,10 @@ func main() {
 	}
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
-			`Usage: %[1]s [-sign] [-net=ID] [-c|-v] [-l] [-u] [-i | -o FILE] INPUT-FILE
+`Usage: %[1]s [-net=ID] [-sign] [-c] [-l] [-u] [-i | -o FILE] INPUT-FILE
        %[1]s -preauth [-net=ID] INPUT-FILE
-       %[1]s -post [-sign] [-net=ID] [-u] INPUT-FILE
-       %[1]s -edit FILE
+       %[1]s -post [-net=ID] INPUT-FILE
+       %[1]s -edit [-net=ID] FILE
        %[1]s -keygen
        %[1]s -sec2pub
 `, progname)
@@ -263,60 +385,40 @@ func main() {
 		return
 	}
 
-	if *opt_signwith != "" && !*opt_sec2pub {
-		*opt_sign = true
+	if n := b2i(*opt_preauth, *opt_post, *opt_edit, *opt_keygen, *opt_sec2pub);
+	n > 1 || len(flag.Args()) > 1 ||
+		(len(flag.Args()) == 0 && !(*opt_keygen || *opt_sec2pub)) {
+		flag.Usage()
+		os.Exit(2)
 	}
+
+	var arg string
+	if len(flag.Args()) == 1 {
+		arg = flag.Args()[0]
+	}
+
 	if *opt_nopass {
 		PassphraseFile = io.MultiReader()
+	} else if arg == "-" {
+		PassphraseFile = nil
 	}
 
-	if len(flag.Args()) == 0 {
-		if *opt_sign || *opt_compile || *opt_preauth ||
-			*opt_post || *opt_learn || *opt_update || *opt_inplace ||
-			b2i(*opt_sec2pub) + b2i(*opt_keygen) != 1 {
-			flag.Usage()
-			os.Exit(1)
+	if *opt_keygen {
+		if b2i(*opt_learn, *opt_output != "", *opt_inplace,
+			*opt_key != "", *opt_sign, *opt_update, *opt_compile) > 0 {
+			fmt.Fprintln(os.Stderr, "Options incompatible with --keygen")
+			os.Exit(2)
 		}
-		if (*opt_keygen) {
-			doKeyGen(*opt_output)
-		} else if (*opt_sec2pub) {
-			doSec2pub(*opt_signwith)
-		}
+		doKeyGen(arg)
 		return
-	}
-
-	if len(flag.Args()) != 1 {
-		flag.Usage()
-		os.Exit(1)
-	}
-
-	infile := flag.Args()[0]
-
-	if *opt_keygen || *opt_sec2pub ||
-		(*opt_inplace && (*opt_preauth || *opt_output != "")) ||
-		((*opt_inplace || *opt_edit) && infile == "-") ||
-		(b2i(*opt_preauth) + b2i(*opt_post) + b2i(*opt_compile) +
-		b2i(*opt_edit) > 1) ||
-		*opt_edit && (*opt_sign || *opt_inplace || infile == "-") {
-		flag.Usage()
-		os.Exit(1)
-	}
-
-	if *opt_edit {
-/*
-		f, err := ioutil.TempFile("", progname)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
+	} else if *opt_sec2pub {
+		if b2i(*opt_learn, *opt_output != "", *opt_inplace,
+			*opt_key != "", *opt_sign, *opt_update, *opt_compile) > 0 {
+			fmt.Fprintln(os.Stderr, "Options incompatible with --sec2pub")
+			os.Exit(2)
 		}
-		path := f.Name()
-		defer os.Remove(path)
-		*opt_output = path
-*/
-		*opt_inplace = true
-	}
-	if *opt_inplace {
-		*opt_output = infile
+		doSec2pub(arg)
+		return
 	}
 
 	net := GetStellarNet(*opt_netname)
@@ -325,50 +427,24 @@ func main() {
 		os.Exit(1)
 	}
 
-edit_loop:
-	e, help, err := readTx(infile)
-
-	var pause bool
-	if err != nil {
-		if *opt_edit && os.IsNotExist(err) {
-			e = &TransactionEnvelope{}
-		} else {
-			fmt.Fprintln(os.Stderr, err.Error())
-			if (*opt_edit) {
-				pause = true
-			} else {
-				os.Exit(1)
-			}
+	if *opt_edit {
+		if b2i(*opt_learn, *opt_output != "", *opt_inplace,
+			*opt_key != "", *opt_sign, *opt_update) > 0 {
+			fmt.Fprintln(os.Stderr, "Options incompatible with --edit")
+			os.Exit(2)
 		}
+		doEdit(net, arg)
+		return
 	}
 
-	if *opt_update {
-		fixTx(net, e)
-	}
-
-	getAccounts(net, e, *opt_learn)
-
-	if *opt_sign {
-		sk := getSecKey(*opt_signwith)
-		if sk == nil {
-			os.Exit(1)
+	e, help := mustReadTx(arg)
+	switch {
+	case *opt_post:
+		if b2i(*opt_learn, *opt_output != "", *opt_inplace,
+			*opt_key != "", *opt_sign, *opt_update, *opt_compile) > 0 {
+			fmt.Fprintln(os.Stderr, "Options incompatible with --post")
+			os.Exit(2)
 		}
-		net.Signers.Add(sk.Public().String(), "")
-		if sk == nil {
-			os.Exit(1)
-		}
-		fmt.Println(sk.Public())
-		if err = sk.SignTx(net.NetworkId, e); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-	}
-
-	if *opt_learn {
-		net.SaveSigners()
-	}
-
-	if (*opt_post) {
 		res := PostTransaction(net, e)
 		if res != nil {
 			fmt.Print(XdrToString(res))
@@ -377,66 +453,23 @@ edit_loop:
 			fmt.Fprint(os.Stderr, "Post transaction failed\n")
 			os.Exit(1)
 		}
-		return
-	}
-
-	if (*opt_preauth) {
+	case *opt_preauth:
+		if b2i(*opt_learn, *opt_output != "", *opt_inplace,
+			*opt_key != "", *opt_sign, *opt_update, *opt_compile) > 0 {
+			fmt.Fprintln(os.Stderr, "Options incompatible with --preauth")
+			os.Exit(2)
+		}
 		sk := SignerKey{ Type: SIGNER_KEY_TYPE_PRE_AUTH_TX }
 		copy(sk.PreAuthTx()[:], TxPayloadHash(net.NetworkId, e))
 		fmt.Printf("%x\n", *sk.PreAuthTx())
-		fmt.Println(&sk)
-		return
-	}
-
-
-	if *opt_compile {
-		help = nil
-	} else if help == nil {
-		help = make(XdrHelp)
-	}
-	if err = writeTx(*opt_output, e, net, help); err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
-
-	if *opt_edit {
-		fi, err := os.Stat(*opt_output)
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
-		}
-
-		ed, ok := os.LookupEnv("EDITOR")
-		if !ok {
-			ed = "vi"
-		}
-		if path, err := exec.LookPath(ed); err == nil {
-			ed = path
-		}
-
-		if pause {
-			fmt.Printf("Press return to run editor.")
-			bufio.NewReader(os.Stdin).ReadBytes('\n')
-		}
-
-		proc, err := os.StartProcess(ed,
-			[]string{ed, *opt_output}, &os.ProcAttr{
-				Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
-			})
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
-		}
-		proc.Wait()
-
-		fi2, err := os.Stat(*opt_output)
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
-		}
-
-		if fi.Size() != fi2.Size() || fi.ModTime() != fi2.ModTime() {
-			goto edit_loop
-		}
+		// fmt.Println(&sk)
+	default:
+		getAccounts(net, e, *opt_learn)
+		if *opt_update { fixTx(net, e) }
+		if *opt_sign || *opt_key != "" { signTx(net, *opt_key, e) }
+		if *opt_learn { net.SaveSigners() }
+		if *opt_compile { help = nil }
+		if *opt_inplace { *opt_output = arg }
+		mustWriteTx(*opt_output, e, net, help)
 	}
 }
