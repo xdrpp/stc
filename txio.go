@@ -285,8 +285,14 @@ func txScan(t XdrAggregate, in string) (help XdrHelp, err error) {
 	lineno := 0
 	for _, line := range strings.Split(in, "\n") {
 		lineno++
+		if line == "" {
+			continue
+		}
 		kv := strings.SplitN(line, ":", 2)
 		if len(kv) != 2 {
+			if err == nil {
+				err = XdrError(fmt.Sprintf("Syntax error on line %d", lineno))
+			}
 			continue
 		}
 		kvs[kv[0]] = kv[1]

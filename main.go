@@ -351,8 +351,7 @@ func main() {
 	opt_inplace := flag.Bool("i", false, "Edit the input file in place")
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
 	opt_key := flag.String("key", "", "File containing signing key")
-	opt_netname := flag.String("net", "default",
-		`Network ID ("main" or "test")`)
+	opt_netname := flag.String("net", "", `Network ID ("main" or "test")`)
 	opt_update := flag.Bool("u", false,
 		"Query network to update fee and sequence number")
 	opt_learn := flag.Bool("l", false, "Learn new signers")
@@ -421,6 +420,8 @@ func main() {
 		return
 	}
 
+	if *opt_netname == "" { *opt_netname = os.Getenv("STCNET") }
+	if *opt_netname == "" { *opt_netname = "default" }
 	net := GetStellarNet(*opt_netname)
 	if net == nil {
 		fmt.Fprintf(os.Stderr, "unknown network %q\n", *opt_netname)
@@ -461,8 +462,8 @@ func main() {
 		}
 		sk := SignerKey{ Type: SIGNER_KEY_TYPE_PRE_AUTH_TX }
 		copy(sk.PreAuthTx()[:], TxPayloadHash(net.NetworkId, e))
-		fmt.Printf("%x\n", *sk.PreAuthTx())
-		// fmt.Println(&sk)
+		// fmt.Printf("%x\n", *sk.PreAuthTx())
+		fmt.Println(&sk)
 	default:
 		getAccounts(net, e, *opt_learn)
 		if *opt_update { fixTx(net, e) }
