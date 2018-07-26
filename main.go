@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -242,7 +243,7 @@ func signTx(net *StellarNet, key string, e *TransactionEnvelope) error {
 	return nil
 }
 
-func editor(file string) {
+func editor(args ...string) {
 	ed, ok := os.LookupEnv("EDITOR")
 	if !ok {
 		ed = "vi"
@@ -251,15 +252,29 @@ func editor(file string) {
 		ed = path
 	}
 
-	proc, err := os.StartProcess(ed,
-		[]string{ed, file}, &os.ProcAttr{
-			Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
-		})
+	argv := append([]string{ed}, args...)
+	proc, err := os.StartProcess(ed, argv, &os.ProcAttr{
+		Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
+	})
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 	proc.Wait()
+}
+
+func firstDifferentLine(a []byte, b []byte) (lineno int) {
+	n := len(a)
+	if n > len(b) {
+		n = len(b)
+	}
+	lineno = 1
+	for i := 0; i < n && a[i] == b[i]; i++ {
+		if a[i] == '\n' {
+			lineno++
+		}
+	}
+	return
 }
 
 func doEdit(net *StellarNet, arg string) {
@@ -291,9 +306,13 @@ func doEdit(net *StellarNet, arg string) {
 	defer os.Remove(path + "~")
 	defer os.Remove(path)
 
+	var contents, lastcontents []byte
 	for {
 		if err == nil {
-			mustWriteTx(path, e, net, help)
+			buf := &bytes.Buffer{}
+			TxStringCtx{ Out: buf, Env: e, Net: net, Help: help }.Exec()
+			lastcontents = buf.Bytes()
+			ioutil.WriteFile(path, lastcontents, 0600)
 		}
 
 		fi1, staterr := os.Stat(path)
@@ -308,7 +327,8 @@ func doEdit(net *StellarNet, arg string) {
 			var li InputLine
 			fmt.Scanln(&li)
 		}
-		editor(path)
+		editor(fmt.Sprintf("+%d", firstDifferentLine(contents, lastcontents)),
+			path)
 
 		if err == nil {
 			fi2, staterr := os.Stat(path)
@@ -321,7 +341,13 @@ func doEdit(net *StellarNet, arg string) {
 			}
 		}
 
-		e, help, err = readTx(path)
+		contents, err = ioutil.ReadFile(path)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+		e = &TransactionEnvelope{}
+		help, err = txScan(e, string(contents))
 	}
 
 	if compiled {
