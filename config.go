@@ -54,7 +54,7 @@ func (net *StellarNet) ConfigPath(names ...string) string {
 
 func SafeWriteFile(filename string, data string, perm os.FileMode) error {
 	tmp := fmt.Sprintf("%s#%d#", filename, os.Getpid())
-	f, err := os.Create(tmp)
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY, perm)
 	if err != nil {
 		return err
 	}
@@ -302,4 +302,26 @@ func GetStellarNet(name string) *StellarNet {
 
 func (net *StellarNet) SaveSigners() error {
 	return net.Signers.Save(net.ConfigPath("signers"))
+}
+
+func AdjustKeyName(key string) string {
+	if key == "" {
+		fmt.Fprintln(os.Stderr, "missing private key name")
+		os.Exit(1)
+	}
+	if dir, _ := filepath.Split(key); dir != "" {
+		return key
+	}
+	keydir := filepath.Join(ConfigRoot, "keys")
+	os.MkdirAll(keydir, 0700)
+	return filepath.Join(keydir, key)
+}
+
+func GetKeyNames() []string {
+	d, err := os.Open(filepath.Join(ConfigRoot, "keys"))
+	if err != nil {
+		return nil
+	}
+	names, _ := d.Readdirnames(-1)
+	return names
 }

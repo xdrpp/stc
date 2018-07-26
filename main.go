@@ -229,6 +229,7 @@ func mustWriteTx(outfile string, e *TransactionEnvelope, net *StellarNet,
 }
 
 func signTx(net *StellarNet, key string, e *TransactionEnvelope) error {
+	key = AdjustKeyName(key)
 	sk, err := getSecKey(key)
 	if err != nil {
 		return err
@@ -361,6 +362,12 @@ func main() {
 	opt_nopass := flag.Bool("nopass", false, "Never prompt for passwords")
 	opt_edit := flag.Bool("edit", false,
 		"keep editing the file until it doesn't change")
+	opt_import_key := flag.Bool("import-key", false,
+		"Import signing key to your $STCDIR directory")
+	opt_export_key := flag.Bool("export-key", false,
+		"Export signing key from your $STCDIR directory")
+	opt_list_keys := flag.Bool("list-keys", false,
+		"List keys that have been stored in $STCDIR")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
 	} else {
@@ -373,7 +380,10 @@ func main() {
        %[1]s -post [-net=ID] INPUT-FILE
        %[1]s -edit [-net=ID] FILE
        %[1]s -keygen
-       %[1]s -sec2pub
+       %[1]s -sec2pub [NAME]
+       %[1]s -import-key NAME
+       %[1]s -export-key NAME
+       %[1]s -list-keys
 `, progname)
 		flag.PrintDefaults()
 	}
@@ -384,11 +394,35 @@ func main() {
 		return
 	}
 
-	if n := b2i(*opt_preauth, *opt_post, *opt_edit, *opt_keygen, *opt_sec2pub);
+	if n := b2i(*opt_preauth, *opt_post, *opt_edit, *opt_keygen,
+		*opt_sec2pub, *opt_import_key, *opt_export_key, *opt_list_keys);
 	n > 1 || len(flag.Args()) > 1 ||
-		(len(flag.Args()) == 0 && !(*opt_keygen || *opt_sec2pub)) {
+		(len(flag.Args()) == 0 &&
+		!(*opt_keygen || *opt_sec2pub || *opt_list_keys)) {
 		flag.Usage()
 		os.Exit(2)
+	} else if n == 1 {
+		bail := false
+		if *opt_sign || *opt_key != "" {
+			fmt.Fprintln(os.Stderr,
+				"--sign and --key only availble in default mode")
+			bail = true
+		}
+		if *opt_learn || *opt_update {
+			fmt.Fprintln(os.Stderr, "-l and -u only availble in default mode")
+			bail = true
+		}
+		if *opt_inplace || *opt_output != "" {
+			fmt.Fprintln(os.Stderr, "-i and -o only availble in default mode")
+			bail = true
+		}
+		if *opt_compile {
+			fmt.Fprintln(os.Stderr, "-c o only availble in default mode")
+			bail = true
+		}
+		if bail {
+			os.Exit(2)
+		}
 	}
 
 	var arg string
@@ -402,21 +436,37 @@ func main() {
 		PassphraseFile = nil
 	}
 
-	if *opt_keygen {
-		if b2i(*opt_learn, *opt_output != "", *opt_inplace,
-			*opt_key != "", *opt_sign, *opt_update, *opt_compile) > 0 {
-			fmt.Fprintln(os.Stderr, "Options incompatible with --keygen")
-			os.Exit(2)
-		}
+	switch {
+	case *opt_keygen:
+		arg = AdjustKeyName(arg)
 		doKeyGen(arg)
 		return
-	} else if *opt_sec2pub {
-		if b2i(*opt_learn, *opt_output != "", *opt_inplace,
-			*opt_key != "", *opt_sign, *opt_update, *opt_compile) > 0 {
-			fmt.Fprintln(os.Stderr, "Options incompatible with --sec2pub")
-			os.Exit(2)
-		}
+	case *opt_sec2pub:
+		arg = AdjustKeyName(arg)
 		doSec2pub(arg)
+		return
+	case *opt_import_key:
+		arg = AdjustKeyName(arg)
+		sk, err := PrivateKeyFromInput("Secret key: ")
+		if err == nil { err = sk.Save(arg, GetPass2("Passphrase: ")) }
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+		return
+	case *opt_export_key:
+		arg = AdjustKeyName(arg)
+		sk, err := PrivateKeyFromFile(arg)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+		fmt.Println(sk)
+		return
+	case *opt_list_keys:
+		for _, k := range GetKeyNames() {
+			fmt.Println(k)
+		}
 		return
 	}
 
@@ -429,11 +479,6 @@ func main() {
 	}
 
 	if *opt_edit {
-		if b2i(*opt_learn, *opt_output != "", *opt_inplace,
-			*opt_key != "", *opt_sign, *opt_update) > 0 {
-			fmt.Fprintln(os.Stderr, "Options incompatible with --edit")
-			os.Exit(2)
-		}
 		doEdit(net, arg)
 		return
 	}
@@ -441,11 +486,6 @@ func main() {
 	e, help := mustReadTx(arg)
 	switch {
 	case *opt_post:
-		if b2i(*opt_learn, *opt_output != "", *opt_inplace,
-			*opt_key != "", *opt_sign, *opt_update, *opt_compile) > 0 {
-			fmt.Fprintln(os.Stderr, "Options incompatible with --post")
-			os.Exit(2)
-		}
 		res := PostTransaction(net, e)
 		if res != nil {
 			fmt.Print(XdrToString(res))
@@ -455,11 +495,6 @@ func main() {
 			os.Exit(1)
 		}
 	case *opt_preauth:
-		if b2i(*opt_learn, *opt_output != "", *opt_inplace,
-			*opt_key != "", *opt_sign, *opt_update, *opt_compile) > 0 {
-			fmt.Fprintln(os.Stderr, "Options incompatible with --preauth")
-			os.Exit(2)
-		}
 		sk := SignerKey{ Type: SIGNER_KEY_TYPE_PRE_AUTH_TX }
 		copy(sk.PreAuthTx()[:], TxPayloadHash(net.NetworkId, e))
 		// fmt.Printf("%x\n", *sk.PreAuthTx())
@@ -467,7 +502,11 @@ func main() {
 	default:
 		getAccounts(net, e, *opt_learn)
 		if *opt_update { fixTx(net, e) }
-		if *opt_sign || *opt_key != "" { signTx(net, *opt_key, e) }
+		if *opt_sign || *opt_key != "" {
+			if err := signTx(net, *opt_key, e); err != nil {
+				os.Exit(1)
+			}
+		}
 		if *opt_learn { net.SaveSigners() }
 		if *opt_compile { help = nil }
 		if *opt_inplace { *opt_output = arg }
