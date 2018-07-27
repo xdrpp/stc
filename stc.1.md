@@ -27,15 +27,15 @@ transactions without the ambiguity of higher-layer wallet
 abstractions.  It can also be useful in non-graphical environments,
 such as a single-board computer implementing cold storage.
 
-The tool can runs in one of several modes.  The default mode processes
-a transaction in a single shot, potentially translating it, updating
-the sequence numbers or fees, or translating it to or from
-human-readable, and/or signing it.  In edit mode, stc repeatedly
-invokes a text editor to allow somewhat interactive editing of
-transactions.  In preauth mode, stc hashes a transactions to
-facilitate creation of pre-signed transactions.  In post mode, stc
-posts a transaction to the network.  Finally, key management mode
-allows one to maintain a set of signing keys.
+The tool runs in one of several modes.  The default mode processes a
+transaction in a single shot, optionally updating the sequence numbers
+and fees, translating the transaction to/from human-readable form, or
+signing it.  In edit mode, stc repeatedly invokes a text editor to
+allow somewhat interactive editing of transactions.  In preauth mode,
+stc hashes a transactions to facilitate creation of pre-signed
+transactions.  In post mode, stc posts a transaction to the network.
+Finally, key management mode allows one to maintain a set of signing
+keys.
 
 ## Default mode
 
@@ -47,14 +47,15 @@ the `-c` flag, it will be output in base64-encoded binary XDR format.
 Various options modify the transaction as it is being processed,
 notably `-sign`, `-key` (which implies `-sign`), and `-u`.
 
-The human-readable Textual form of the transaction is automatically
+The human-readable text form of the transaction is automatically
 derived from the XDR, with just a few special-cased types.  The format
-of key line is "`Field-Name: Value Comment`".  The field name is the
-XDR field name but with each component capitalized.  There must be no
-space between the field name and the colon.  After the colon comes the
-value for that field.  Anything after the value is ignored.  stc
-sometimes places a comment there, such as when an account ID has been
-configured to have a comment (see the FILES section below).
+of is a series of lines of the form "`Field-Name: Value Comment`".
+The field name is the XDR field name but with each component
+capitalized.  There must be no space between the field name and the
+colon.  After the colon comes the value for that field.  Anything
+after the value is ignored.  stc sometimes places a comment there,
+such as when an account ID has been configured to have a comment (see
+the FILES section below).
 
 The fields with specially formatted values are as follows:
 
@@ -72,9 +73,9 @@ The fields with specially formatted values are as follows:
 
 Edit mode is selected whenever stc is invoked with the `-edit` flag.
 In this mode, whether the transaction is originally in base64 binary
-or text, it is output in text format to a temporary file, and stc is
-repeatedly invoked to edit the file.  In this way, you can change
-union discriminant values or array sizes, quit the editor, and
+or text, it is output in text format to a temporary file, and your
+editor is repeatedly invoked to edit the file.  In this way, you can
+change union discriminant values or array sizes, quit the editor, and
 automatically re-enter the editor with any new fields appropriately
 populated.
 
@@ -130,8 +131,8 @@ directory and then accessed from any directory in which stc runs.
 
 The `-keygen` and `-sec2pub` options can be run with no key name, in
 which case `-keygen` will output both the secret and public key to
-standard output, and `-sec2pub` will prompt for a secret key to be
-pasted into the terminal.
+standard output, and `-sec2pub` will read a key from standard input or
+prompt for one to be pasted into the terminal.
 
 Keys are generally stored encrypted, but if you supply an empty
 passphrase, they will be stored in plaintext.  If you use the
@@ -154,13 +155,13 @@ is to output in text mode.  Only available in default mode.
 :	Print usage information.
 
 `-i`
-:	Edit in place--overwrite the input file with the tools output.
-Only available in default mode.
+:	Edit in place--overwrite the input file with the stc's output.  Only
+available in default mode.
 
 `-import-key`
-:	Read a private key from the terminal (or standard input) and write
-it (optionally encrypted) into a file (if the name as a slash) or into
-the configuration directory.
+: Read a private key from the terminal (or standard input) and write
+it (optionally encrypted) into a file (if the name has a slash) or
+into the configuration directory.
 
 `-key` _name_
 :	Specifies the name of a key to sign with.  Implies the `-sign`
@@ -180,10 +181,10 @@ account.  Only available in default mode.
 transactions, as well as for querying signers with the `-l` option.
 
 `-nopass`
-:	Never prompt for a password, so assume an empty password anyone is
-required.
+:	Never prompt for a passphrase, so assume an empty passphrase
+anytime one is required.
 
-`-o` _file`
+`-o` _file_
 :	Specify a file in which to write the output.  The default is to
 send the transaction to standard output unless `-i` has been
 supplied.  `-i` and `-o` are mutually exclusive, and can only be used
@@ -260,8 +261,7 @@ encrypted by gpg.  These are the key names supplied to options such as
 
 Within the `networks` directory are a bunch of subdirectories whose
 names correspond to the _id_ argument to the `-net` option.  Within
-each subdirectory directory there are four files, described as
-follows:
+each subdirectory directory there are four files:
 
 * `network_id` corresponds to the Stellar network ID that permutes
   signatures and pre-signed-transaction hashes (which prevents
@@ -302,6 +302,7 @@ stellar-core(1), gpg(1)
 stc uses a potentially imperfect heuristic to decide whether a file
 contains a base64-encoded binary transaction or a textual one.
 
-various forms of malformed textual input will surely cause stc to
+Various forms of malformed textual input will surely cause stc to
 panic, though the binary parser should be pretty robust.
 
+The tool does not report line numbers for parse errors.
