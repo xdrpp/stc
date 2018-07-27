@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -152,6 +153,12 @@ func ScalePrint(val int64, exp int) string {
 	return out + "e" + fmt.Sprintf("%d", exp)
 }
 
+func dateComment(ut uint64) string {
+	it := int64(ut)
+	if it <= 0 { return "" }
+	return fmt.Sprintf(" (%s)", time.Unix(it, 0).Format(time.UnixDate))
+}
+
 type xdrEnumNames interface {
 	fmt.Stringer
 	fmt.Scanner
@@ -160,6 +167,10 @@ type xdrEnumNames interface {
 
 func (xp *TxStringCtx) Marshal(name string, i interface{}) {
 	switch v := i.(type) {
+	case *TimeBounds:
+		fmt.Fprintf(xp.Out, "%s.MinTime: %d%s\n%s.MaxTime: %d%s\n",
+			name, v.MinTime, dateComment(v.MinTime),
+			name, v.MaxTime, dateComment(v.MaxTime))
 	case *AccountID:
 		ac := v.String()
 		if hint := xp.Net.Accounts[ac]; hint != "" {
