@@ -6,6 +6,10 @@ blockchain.
 
 # Building `stc`
 
+[Note for go developers, this program is not intended to be build in
+your $GOPATH--it is intended to be compiled with make like an ordinary
+Unix application.]
+
 To compile this program, you need `stringer`, `goyacc` and the Go
 extra `crypto` library installed.  If you don't already have these
 installed, run the following command:
@@ -17,7 +21,12 @@ That will install these build dependencies under `$GOPATH` or
 
     make
 
-to build the tool.
+to build the tool.  If that doesn't work, you may have an old version
+of the extra `crypto` library.  You can upgrade it by running:
+
+    make update-depend
+
+before trying `make` again.
 
 To install the tool, you will also need [pandoc](https://pandoc.org/)
 to format the man page.
