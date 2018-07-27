@@ -1,3 +1,7 @@
+DESTDIR =
+PREFIX = /usr/local
+MANDIR = $(PREFIX)/share/man
+
 BUILT_SOURCES = xdr_generated.go
 EXTRA_CLEAN =
 XDRS = xdr/Stellar-SCP.x xdr/Stellar-ledger-entries.x			\
@@ -9,6 +13,12 @@ golang.org/x/tools/cmd/stringer
 
 all: $(BUILT_SOURCES)
 	go build -o stc
+
+install: stc stc.1
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	cp stc $(DESTDIR)$(PREFIX)/bin/stc
+	mkdir -p $(DESTDIR)$(MANDIR)/man1
+	cp stc.1 $(DESTDIR)$(MANDIR)/man1/stc.1
 
 build-depend:
 	go get $(GO_DEPENDS)
@@ -47,4 +57,5 @@ maintainer-clean: clean
 stc.1: stc.1.md
 	pandoc -s -w man stc.1.md -o stc.1
 
-.PHONY: all build-depend update-depend clean maintainer-clean goxdr/goxdr
+.PHONY: all install clean maintainer-clean
+.PHONY: build-depend update-depend goxdr/goxdr
