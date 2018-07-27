@@ -230,7 +230,7 @@ func mustWriteTx(outfile string, e *TransactionEnvelope, net *StellarNet,
 }
 
 func signTx(net *StellarNet, key string, e *TransactionEnvelope) error {
-	key = AdjustKeyName(key)
+	if key != "" { key = AdjustKeyName(key) }
 	sk, err := getSecKey(key)
 	if err != nil {
 		return err
