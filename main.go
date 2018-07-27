@@ -77,7 +77,7 @@ func doKeyGen(outfile string) {
 	if outfile == "" {
 		fmt.Println(sk)
 		fmt.Println(sk.Public())
-		fmt.Printf("%x\n", sk.Public().Hint())
+		// fmt.Printf("%x\n", sk.Public().Hint())
 	} else {
 		if FileExists(outfile) {
 			fmt.Fprintf(os.Stderr, "%s: file already exists\n", outfile)
@@ -402,10 +402,10 @@ func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
 `Usage: %[1]s [-net=ID] [-sign] [-c] [-l] [-u] [-i | -o FILE] INPUT-FILE
-       %[1]s -preauth [-net=ID] INPUT-FILE
-       %[1]s -post [-net=ID] INPUT-FILE
        %[1]s -edit [-net=ID] FILE
-       %[1]s -keygen
+       %[1]s -post [-net=ID] INPUT-FILE
+       %[1]s -preauth [-net=ID] INPUT-FILE
+       %[1]s -keygen [NAME]
        %[1]s -sec2pub [NAME]
        %[1]s -import-key NAME
        %[1]s -export-key NAME
@@ -464,11 +464,11 @@ func main() {
 
 	switch {
 	case *opt_keygen:
-		arg = AdjustKeyName(arg)
+		if arg != "" { arg = AdjustKeyName(arg) }
 		doKeyGen(arg)
 		return
 	case *opt_sec2pub:
-		arg = AdjustKeyName(arg)
+		if arg != "" { arg = AdjustKeyName(arg) }
 		doSec2pub(arg)
 		return
 	case *opt_import_key:

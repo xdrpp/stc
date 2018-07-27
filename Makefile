@@ -44,4 +44,7 @@ maintainer-clean: clean
 	echo xdr >> .gitignore~
 	mv -f .gitignore~ .gitignore
 
+stc.1: stc.1.md
+	pandoc -s -w man stc.1.md -o stc.1
+
 .PHONY: all build-depend update-depend clean maintainer-clean goxdr/goxdr
