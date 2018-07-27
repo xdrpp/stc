@@ -6,9 +6,11 @@ blockchain.
 
 # Building `stc`
 
-[Note for go developers, this program is not intended to be build in
+[Note for go developers, this program is not intended to be built in
 your $GOPATH--it is intended to be compiled with make like an ordinary
-Unix application.]
+Unix application.  If there is demand, I could break the included new
+XDR compiler goxdr into a separate package to play better with go
+get.]
 
 To compile this program, you need `stringer`, `goyacc` and the Go
 extra `crypto` library installed.  If you don't already have these
