@@ -23,6 +23,11 @@ import (
 
 
 // The interface through which values are serialized, printed, etc.
+// Note that in addition to the Marshal method, if you have a method
+// Marshal_Type(string, *Type) and Type is a typedef (and only a
+// typedef), then Marshal_Type will get called instead of Marshal.
+// (For non-typedefs, you don't need this feature because the Marshal
+// function can do a type switch on the interface it receives.)
 type XDR interface {
 	// A function that gets called for each value to be marshalled.
 	// The ptr interface{} will be one of the following:

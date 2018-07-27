@@ -112,8 +112,44 @@ func (xp *TxStringCtx) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
 
+func (xp *TxStringCtx) Marshal_SequenceNumber(name string, v *SequenceNumber) {
+	fmt.Fprintf(xp.Out, "%s: %d\n", name, *v)
+}
+
 type xdrPointer interface {
 	XdrPointer() interface{}
+}
+
+var exp10 [20]uint64
+func init() {
+	val := uint64(1)
+	for i := 0; i < len(exp10); i++ {
+		exp10[i] = val
+		val *= 10
+	}
+}
+
+func ScalePrint(val int64, exp int) string {
+	mag := uint64(val)
+	if val < 0 { mag = uint64(-val) }
+	unit := exp10[exp]
+
+	out := ""
+	for tmag := mag/unit;; tmag /= 1000 {
+		if out != "" { out = "," + out }
+		if tmag < 1000 {
+			out = fmt.Sprintf("%d", tmag) + out
+			break
+		}
+		out = fmt.Sprintf("%03d", tmag % 1000) + out
+	}
+	if val < 0 { out = "-" + out }
+
+	mag %= unit
+	if mag > 0 {
+		out += strings.TrimRight(fmt.Sprintf(".%0*d", exp, mag), "0")
+	}
+	return out + "e" + fmt.Sprintf("%d", exp)
 }
 
 type xdrEnumNames interface {
@@ -153,6 +189,9 @@ func (xp *TxStringCtx) Marshal(name string, i interface{}) {
 		} else {
 			fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
 		}
+	case *XdrInt64:
+		fmt.Fprintf(xp.Out, "%s: %s (%s)\n", name, v.String(),
+			ScalePrint(int64(*v), 7))
 	case fmt.Stringer:
 		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
 	case XdrPtr:

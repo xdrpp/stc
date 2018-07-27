@@ -361,8 +361,16 @@ func (r *rpc_decl) emit(e *emitter) {
 func (r0 *rpc_typedef) emit(e *emitter) {
 	r := (*rpc_decl)(r0)
 	e.printf("type %s = %s\n", r.id, e.decltypeb("", r))
-	e.xprintf("func XDR_%s(x XDR, name string, v *%s) {\n%s}\n",
-		r.id, r.id, e.xdrgen("v", "name", "", r))
+	e.xprintf(
+`func XDR_%[1]s(x XDR, name string, v *%[1]s) {
+	if xs, ok := x.(interface{
+		Marshal_%[1]s(string, *%[1]s)
+	}); ok {
+		xs.Marshal_%[1]s(name, v)
+	} else {
+	%[2]s	}
+}
+`, r.id, e.xdrgen("v", "name", "", r))
 }
 
 func (r *rpc_enum) emit(e *emitter) {
