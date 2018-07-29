@@ -20,7 +20,7 @@ stc -list-keys
 
 # DESCRIPTION
 
-The Stellar transaction compiler is a command-line for creating,
+The Stellar transaction compiler is a command-line tool for creating,
 viewing, editing, signing, and posting Stellar network transactions.
 It is intended to be integrated into shell-scripts, or to create test
 transactions without the ambiguity of higher-layer wallet
@@ -113,11 +113,11 @@ fee is high enough.  You may wish to increase the fee above what is
 currently required in case the fee has increased at the time you need
 to execute the pre-authorized transaction.
 
-Another potentially source of error is that the pre-authorized
+Another potential source of error is that the pre-authorized
 transaction hash depends on the network name, so make absolutely sure
-the `-net` option is correct.
+the `-net` option is correct when using `-preauth`.
 
-## Key management modes
+## Key management mode
 
 stc runs in key management mode when one of the following flags is
 selected:  `-keygen`, `-sec2pub`, `import-key`, `-export-key`, and
@@ -136,7 +136,7 @@ prompt for one to be pasted into the terminal.
 
 Keys are generally stored encrypted, but if you supply an empty
 passphrase, they will be stored in plaintext.  If you use the
-`-nopass` option, stc will never prompt for a password and always
+`-nopass` option, stc will never prompt for a passphrase and always
 assume you do not encrypt your private keys.
 
 # OPTIONS
@@ -174,7 +174,7 @@ that it can verify signatures from all keys associated with the
 account.  Only available in default mode.
 
 `-list-keys`
-:	List all keys stored under the configuration directory.
+:	List all private keys stored under the configuration directory.
 
 `-net` _name_
 :	Specify which network to use for hashing, signing, and posting
@@ -228,9 +228,9 @@ transaction must previously have been signed.
 standard output, one per line (private key first).
 
 `stc -keygen mykey`
-:	Generate a new private/public key pair.  Prompt for a password.
+:	Generate a new private/public key pair.  Prompt for a passphrase.
 Print the public key to standard output.  Write the private key to
-`$HOME/.config/stc/keys/mykey` encrypted with the password.
+`$HOME/.config/stc/keys/mykey` encrypted with the passphrase.
 
 # ENVIRONMENT
 
@@ -256,12 +256,12 @@ subdirectories: `keys` and `networks`.
 Each file in `key` contains a signing key, which is either a single
 line of text representing a Stellar signing key in strkey format
 (starting with the letter "S"), or such a line of text symmetrically
-encrypted by gpg.  These are the key names supplied to options such as
-`-key` and `-export-key`.
+encrypted and ASCII armored by gpg.  These are the key names supplied
+to options such as `-key` and `-export-key`.
 
 Within the `networks` directory are a bunch of subdirectories whose
 names correspond to the _id_ argument to the `-net` option.  Within
-each subdirectory directory there are four files:
+each subdirectory of `networks` there are four files:
 
 * `network_id` corresponds to the Stellar network ID that permutes
   signatures and pre-signed-transaction hashes (which prevents
