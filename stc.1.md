@@ -69,6 +69,15 @@ The fields with specially formatted values are as follows:
   escapes (e.g., `\x1f`), with no surrounding quotes.  Backslash must
   be escaped with itself (e.g., `\\`).
 
+Note the text-format of transactions is subject to change, while the
+base-64 XDR version should be backwards compatible.  If you want to
+preserve transactions that you can later read or re-use, compile the
+transaction with `-c`.  XDR is also compatible with other tools.  You
+can also XDR transactions with `stellar-core` itself, using the
+command "`stellar-core --base64 --printtxn FILE`", or by using the
+web-based Stellar XDR viewer at:
+<https://www.stellar.org/laboratory/#xdr-viewer>
+
 ## Edit mode
 
 Edit mode is selected whenever stc is invoked with the `-edit` flag.
@@ -306,3 +315,8 @@ Various forms of malformed textual input will surely cause stc to
 panic, though the binary parser should be pretty robust.
 
 The tool does not report line numbers for parse errors.
+
+The textual format for transactions is subject to change.  In
+particular, it might not make sense to capitalize all field
+names--this is mostly an artifact of the go language the tool was
+written it.
