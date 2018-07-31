@@ -231,8 +231,8 @@ func (ctx TxStringCtx) Exec() {
 			hint = fmt.Sprintf("%x (%s)", ctx.Env.Signatures[i].Hint, *ski)
 		} else {
 			hint = fmt.Sprintf(
-				"%x (bad signature, unknown key, or wrong network)",
-				ctx.Env.Signatures[i].Hint)
+				"%x (bad signature/unknown key/-net=%s is wrong)",
+				ctx.Env.Signatures[i].Hint, ctx.Net.Name)
 		}
 		fmt.Fprintf(ctx.Out,
 			`Signatures[%d].Hint: %s
