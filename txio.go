@@ -230,7 +230,9 @@ func (ctx TxStringCtx) Exec() {
 		if ski := ctx.Net.Signers.Lookup(ctx.Net, ctx.Env, i); ski != nil {
 			hint = fmt.Sprintf("%x (%s)", ctx.Env.Signatures[i].Hint, *ski)
 		} else {
-			hint = fmt.Sprintf("%x BAD SIGNATURE", ctx.Env.Signatures[i].Hint)
+			hint = fmt.Sprintf(
+				"%x (bad signature, unknown key, or wrong network)",
+				ctx.Env.Signatures[i].Hint)
 		}
 		fmt.Fprintf(ctx.Out,
 			`Signatures[%d].Hint: %s
