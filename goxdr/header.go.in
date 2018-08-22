@@ -25,9 +25,10 @@ import (
 // The interface through which values are serialized, printed, etc.
 // Note that in addition to the Marshal method, if you have a method
 // Marshal_Type(string, *Type) and Type is a typedef (and only a
-// typedef), then Marshal_Type will get called instead of Marshal.
-// (For non-typedefs, you don't need this feature because the Marshal
-// function can do a type switch on the interface it receives.)
+// typedef), then Marshal_Type will get called instead of Marshal for
+// fields of type Type.  (For non-typedefs, you don't need this
+// feature because the Marshal function can do a type switch on the
+// interface it receives.)
 type XDR interface {
 	// A function that gets called for each value to be marshalled.
 	// The ptr interface{} will be one of the following:
@@ -37,9 +38,9 @@ type XDR interface {
 	//   and opaque, and enums.  In the case of enums, that instance
 	//   will just be a pointer to the enum.  In the case of the other
 	//   types, it will be a pointer to a defined type that implements
-	//   the XdrUint32 interface (since plan go types cannot implement
-	//   methods).  Variable array sizes are passed as *XdrSize, which
-	//   enforces the bound.
+	//   the XdrNum32 interface (since plain go types cannot implement
+	//   methods)--e.g., XdrUint32 for unsigned int.  Variable array
+	//   sizes are passed as *XdrSize, which enforces the bound.
 	//
 	// * A pointer type implementing XdrNum64 for hyper, unsigned
 	//   hyper, and double.  These are user-defined versions of int64,
@@ -66,9 +67,9 @@ type XDR interface {
 	//
 	// Note that the Marshal method is responsible for recursing into
 	// XdrAggregate instance by calling the XdrMarshal method.
-	// Requiring the Marshal method to recurse manually allows it not
-	// to recurse in cases where it needs to special-case the handling
-	// of specific types.
+	// Requiring the Marshal method to recurse manually allows it to
+	// refrain from recursing in cases where it needs to special-case
+	// the handling of specific types.
 	Marshal(name string, ptr interface{})
 
 	// This method should just be fmt.Sprintf for XDRs that use name.
@@ -154,19 +155,28 @@ type XdrAggregate interface {
 }
 
 // Any pointer type is passed to XDR.Marshal as a struct implementing
-// the XdrPtr interface.  Note this is a superset of XdrAggregate, so
-// when Marshal function that does nothing and calls XdrMarshal, it
-// will then get called twice, once with an XdrNum32 (to marshal the
-// non-NULL bit) and then again with the underlying value if the
-// pointer is non-nil.  An XDR.Marshal function that wants to special
-// case pointers get get the present bit from the GetPresent and
-// SetPresent methods, then bypass marshaling of the bit by calling
-// XdrMarshalValue instead of XdrMarshal.
+// the XdrPtr interface.  Note XdrPtr is a superset of XdrAggregate.
+// When a Marshal function does nothing special for XdrPtr and treats
+// the XdrPtr like any other XdrAggregate (calling XdrMarshal), the
+// Marshal function will then get called one or two more times, first
+// with an XdrNum32 (to marshal the non-NULL bit) and then again with
+// the underlying value if the pointer is non-NULL.  An XDR.Marshal
+// function that wants to special case pointers can access the present
+// bit from the GetPresent and SetPresent methods, then bypass
+// marshaling of the bit by calling XdrMarshalValue instead of
+// XdrMarshal.
 type XdrPtr interface {
+	// Marshals first the present/not-present bool, then if true, the
+	// underlying value.
 	XdrAggregate
+
 	GetPresent() bool
 	SetPresent(bool)
+
+	// If the present/not-present bool is false, this function does
+	// nothing.  Otherwise, it marshals just the value, not the bit.
 	XdrMarshalValue(XDR, string)
+
 	XdrPointer() interface{}
 	XdrValue() interface{}
 }
@@ -177,9 +187,11 @@ type XdrPtr interface {
 // call XDR.Marshal first on the size (of type XdrSize), then on each
 // element of the slice.  An XDR.Marshal function can manually marshal
 // the size and then call XdrMarshalN to marshal n vector elements.
-// (It is advisable *not* to call SetVecLen before calling
-// XdrMarshalN, as XdrMarshalN gradually grows the slice size to N so
-// as to avoid exhausting memory if bad input contains a huge size.)
+// (When deserializing, it is advisable *not* to call SetVecLen before
+// calling XdrMarshalN in case the length is huge and would exhaust
+// memory; XdrMarshalN gradually grows the slice size as needed so as
+// to throw a premature EOF error if N is larger than the actual input
+// data.)
 type XdrVec interface {
 	XdrAggregate
 	XdrBound() uint32
