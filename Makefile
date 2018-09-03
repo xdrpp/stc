@@ -34,8 +34,7 @@ goxdr/goxdr:
 	GOARCH=$$(go env GOHOSTARCH) $(MAKE) -C goxdr
 
 xdr_generated.go: goxdr/goxdr $(XDRS)
-	goxdr/goxdr -o $@~ $(XDRS)
-	mv -f $@~ $@
+	goxdr/goxdr -o $@ $(XDRS)
 
 clean:
 	$(MAKE) -C goxdr $@
