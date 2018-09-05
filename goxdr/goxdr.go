@@ -452,7 +452,7 @@ func (r *rpc_struct) emit(e *emitter) {
 `, r.id)
 	for i := range r.decls {
 		out.WriteString(e.xdrgen("&v." + r.decls[i].id.getgo(),
-			`x.Sprintf("%s` + r.decls[i].id.getgo() + `", name)`,
+			`x.Sprintf("%s` + r.decls[i].id.getx() + `", name)`,
 			r.id, &r.decls[i]))
 	}
 	fmt.Fprintf(out, "}\n")
@@ -619,9 +619,9 @@ func (r *rpc_union) emit(e *emitter) {
 	if name != "" {
 		name = x.Sprintf("%%s.", name)
 	}
-	XDR_%s(x, x.Sprintf("%%s%[3]s", name), &v.%[3]s)
+	XDR_%s(x, x.Sprintf("%%s%[4]s", name), &v.%[3]s)
 	switch v.%[3]s {
-`, r.id, r.tagtype, r.tagid)
+`, r.id, r.tagtype, r.tagid, r.tagid.getx())
 	for i := range r.fields {
 		u := &r.fields[i]
 		if u.hasdefault {
@@ -631,7 +631,7 @@ func (r *rpc_union) emit(e *emitter) {
 		}
 		if !u.isVoid() {
 			out.WriteString(e.xdrgen("v." + u.decl.id.getgo() + "()",
-				`x.Sprintf("%s` + u.decl.id.getgo() + `", name)`,
+				`x.Sprintf("%s` + u.decl.id.getx() + `", name)`,
 				r.id, &u.decl))
 		}
 	}

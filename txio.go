@@ -223,8 +223,8 @@ func (xp *TxStringCtx) Marshal(name string, i interface{}) {
 }
 
 func (ctx TxStringCtx) Exec() {
-	ctx.Env.Tx.XdrMarshal(&ctx, "Tx")
-	fmt.Fprintf(ctx.Out, "Signatures.len: %d\n", len(ctx.Env.Signatures))
+	ctx.Env.Tx.XdrMarshal(&ctx, "tx")
+	fmt.Fprintf(ctx.Out, "signatures.len: %d\n", len(ctx.Env.Signatures))
 	for i := range(ctx.Env.Signatures) {
 		var hint string
 		if ski := ctx.Net.Signers.Lookup(ctx.Net, ctx.Env, i); ski != nil {
@@ -235,8 +235,8 @@ func (ctx TxStringCtx) Exec() {
 				ctx.Env.Signatures[i].Hint, ctx.Net.Name)
 		}
 		fmt.Fprintf(ctx.Out,
-			`Signatures[%d].Hint: %s
-Signatures[%[1]d].Signature: %[3]x
+			`signatures[%d].hint: %s
+signatures[%[1]d].signature: %[3]x
 `, i, hint, ctx.Env.Signatures[i].Signature)
 	}
 }
