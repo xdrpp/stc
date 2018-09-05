@@ -12,6 +12,8 @@ $(BUILT_SOURCES): header.go.in parse.y syms.go goxdr.go
 #		test -n "$$(command -v stringer)" || \
 #		go get golang.org/x/tools/cmd/stringer
 	PATH="$$PATH:$$(go env GOPATH)/bin" go generate
+	sed -e 's|^[ 	]*//line|//line|' parse.go > parse.go~ \
+		&& mv -f parse.go~ parse.go
 
 clean:
 	go clean

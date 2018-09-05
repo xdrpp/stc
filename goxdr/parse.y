@@ -8,6 +8,7 @@ import "strconv"
 
 %union {
 	str string
+	idval idval
 	num uint32
 	symlist []rpc_sym
 	def rpc_sym
@@ -17,7 +18,7 @@ import "strconv"
 	decllist []rpc_decl
 	ufield rpc_ufield
 	ubody rpc_union
-	arrayqual struct{ qual qual_t; bound string }
+	arrayqual struct{ qual qual_t; bound idval }
 	prog rpc_program
 	vers rpc_vers
 	proc rpc_proc
@@ -48,8 +49,8 @@ import "strconv"
 %token T_CASE
 %token T_DEFAULT
 
-%token<str> T_OPAQUE
-%token<str> T_STRING
+%token T_OPAQUE
+%token T_STRING
 
 %type <def> definition def_enum def_const def_namespace def_type
 %type <def> def_struct def_union def_program
@@ -63,7 +64,7 @@ import "strconv"
 %type <proc> proc_decl void_or_arg_list arg_list
 %type <ubody> union_case_spec_list union_body
 %type <ufield> union_case_list union_case_spec
-%type <str> id newid qid value vec_len type base_type union_case type_or_void
+%type <idval> id newid qid value vec_len type base_type union_case type_or_void
 %type <num> number
 %type <arrayqual> vec_qual array_qual any_qual
 
@@ -76,7 +77,7 @@ file:
 		if $2 != nil {
 			syms := yylex.(*Lexer).output
 			syms.Symbols = append(syms.Symbols, $2)
-			syms.SymbolMap[*$2.symid()] = $2
+			syms.SymbolMap[$2.getsym().getx()] = $2
 		}
 	}
 	;
@@ -123,13 +124,13 @@ enum_tag_list: enum_tag
 enum_tag: newid '=' value
 	{
 		tag := rpc_const{$1, $3}
-		yylex.(*Lexer).output.SymbolMap[$1] = &tag
+		yylex.(*Lexer).output.SymbolMap[$1.getx()] = &tag
 		$$ = tag
 	}
 | newid
 	{
-	  yylex.(*Lexer).Warn("RFC4506 requires a value for each enum tag");
-		$$ = rpc_const{$1, "iota"}
+		yylex.(*Lexer).Warn("RFC4506 requires a value for each enum tag");
+		$$ = rpc_const{$1, lid("iota")}
 	};
 
 comma_warn: /* empty */
@@ -203,17 +204,17 @@ union_case_spec: union_case_list union_decl
 union_case_list: union_case
 	{
 		$$ = rpc_ufield{}
-		if $1 == "" {
+		if $1.getx() == "" {
 			$$.hasdefault = true
-			$$.cases = []string{}
+			$$.cases = []idval{}
 		} else {
-			$$.cases = []string{$1}
+			$$.cases = []idval{$1}
 		}
 	}
 | union_case_list union_case
 	{
 		$$ = $1
-		if $2 != "" {
+		if $2.getx() != "" {
 			$$.cases = append($$.cases, $2)
 		} else if !$$.hasdefault {
 			$$.hasdefault = true
@@ -223,12 +224,12 @@ union_case_list: union_case
 	};
 
 union_case: T_CASE value ':' { $$ = $2 }
-| T_DEFAULT ':' { $$ = "" }
+| T_DEFAULT ':' { $$.setlocal("") }
 
 union_decl: declaration
 | T_VOID ';'
 	{
-		$$ = rpc_decl{qual: SCALAR, typ: "void"}
+		$$ = rpc_decl{qual: SCALAR, typ: lid("void")}
 	};
 
 def_type: T_TYPEDEF declaration
@@ -253,14 +254,14 @@ declaration: type_specifier id any_qual ';'
 | T_OPAQUE id array_qual ';'
 	{
 		$$.id = $2
-		$$.typ = "byte"
+		$$.typ.setlocal("byte")
 		$$.qual = $3.qual
 		$$.bound = $3.bound
 	}
 | T_STRING id vec_qual ';'
 	{
 		$$.id = $2
-		$$.typ = "string"
+		$$.typ.setlocal("string")
 		$$.qual = SCALAR
 		$$.bound = $3.bound
 	}
@@ -345,13 +346,13 @@ proc_decl: type_or_void newid '(' void_or_arg_list ')' '=' number ';'
 		$$.val = $7
 	};
 
-type_or_void: type | T_VOID { $$ = "xdr.Void" };
+type_or_void: type | T_VOID { $$.setglobal("XdrVoid") };
 
 void_or_arg_list: T_VOID { $$ = rpc_proc{} } | arg_list;
 
 arg_list: type
 	{
-		$$ = rpc_proc{arg: []string{$1}}
+		$$ = rpc_proc{arg: []idval{$1}}
 	}
 | arg_list ',' type
 	{
@@ -360,25 +361,26 @@ arg_list: type
 
 type: base_type | qid;
 
-base_type: T_INT { $$ = "int32" }
-| T_BOOL { $$ = "bool" }
-| T_UNSIGNED T_INT { $$ = "uint32" }
+base_type: T_INT { $$.setlocal("int32") }
+| T_BOOL { $$.setlocal("bool") }
+| T_UNSIGNED T_INT { $$.setlocal("uint32") }
 | T_UNSIGNED {
 		yylex.(*Lexer).
 			Warn("RFC4506 requires \"int\" after \"unsigned\"")
-		$$ = "uint32"
+		$$.setlocal("uint32")
 	}
-| T_HYPER { $$ = "int64" }
-| T_UNSIGNED T_HYPER { $$ = "uint64" }
-| T_FLOAT { $$ = "float32" }
-| T_DOUBLE { $$ = "float64" }
-| T_QUADRUPLE { $$ = "float128" }
+| T_HYPER { $$.setlocal("int64") }
+| T_UNSIGNED T_HYPER { $$.setlocal("uint64") }
+| T_FLOAT { $$.setlocal("float32") }
+| T_DOUBLE { $$.setlocal("float64") }
+| T_QUADRUPLE { $$.setlocal("float128") }
   ;
 
 vec_len: value
-| /* empty */ { $$ = "" };
+| /* empty */ { $$.setlocal("") };
 
-value: qid | T_NUM;
+value: qid
+| T_NUM { $$ = gid($1) };
 
 number: T_NUM
 	{
@@ -392,10 +394,10 @@ number: T_NUM
 newid: T_ID
 	{
 		yylex.(*Lexer).Checkdup($1)
-		$$ = capitalize($1)
+		$$ = gid($1)
 	};
 
 qid: id;	// might make sense for qid to allow package-qualified
-id: T_ID { $$ = capitalize($1) };
+id: T_ID { $$ = gid($1) };
 
 %%

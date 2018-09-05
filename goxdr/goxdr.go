@@ -100,20 +100,20 @@ func (e *emitter) xprintf(str string, args ...interface{}) {
 	fmt.Fprintf(&e.footer, str, args...)
 }
 
-func (e *emitter) get_typ(context string, d *rpc_decl) string {
-	if d.typ == "" {
-		d.typ = underscore(context) + "_" + d.id
-		*d.inline_decl.symid() = d.typ
+func (e *emitter) get_typ(context idval, d *rpc_decl) idval {
+	if d.typ.getgo() == "" {
+		d.typ.setlocal(underscore(context.getgo()) + "_" + d.id.getgo())
+		*d.inline_decl.getsym() = d.typ
 		e.emit(d.inline_decl)
 	}
 	return d.typ
 }
 
-func (e *emitter) decltype(context string, d *rpc_decl) string {
+func (e *emitter) decltype(context idval, d *rpc_decl) string {
 	typ := e.get_typ(context, d)
 	switch d.qual {
 	case SCALAR:
-		return typ
+		return typ.getgo()
 	case PTR:
 		return fmt.Sprintf("*%s", typ)
 	case ARRAY:
@@ -126,18 +126,18 @@ func (e *emitter) decltype(context string, d *rpc_decl) string {
 }
 
 // With line-ending comment showing bound
-func (e *emitter) decltypeb(context string, d *rpc_decl) string {
+func (e *emitter) decltypeb(context idval, d *rpc_decl) string {
 	ret := e.decltype(context, d)
-	if (d.qual == VEC || d.typ == "string") && d.bound != "" {
-		return fmt.Sprintf("%s // bound %s", ret, d.bound)
+	if (d.qual == VEC || d.typ.getgo() == "string") && d.bound.getgo() != "" {
+		return fmt.Sprintf("%s // bound %s", ret, d.bound.getgo())
 	}
 	return ret
 }
 
-func (e *emitter) gen_ptr(typ string) string {
-	ptrtyp := "XdrPtr_" + typ
-	if typ[0] == '_' {
-		ptrtyp = "_XdrPtr" + typ
+func (e *emitter) gen_ptr(typ idval) string {
+	ptrtyp := "XdrPtr_" + typ.getgo()
+	if typ.getgo()[0] == '_' {
+		ptrtyp = "_XdrPtr" + typ.getgo()
 	}
 	if e.done(ptrtyp) {
 		return ptrtyp
@@ -195,16 +195,19 @@ func (v $PTR) XdrPointer() interface{} { return v.p }
 func (v $PTR) XdrValue() interface{} { return *v.p }
 `
 	frag = strings.Replace(frag, "$PTR", ptrtyp, -1)
-	frag = strings.Replace(frag, "$TYPE", typ, -1)
+	frag = strings.Replace(frag, "$TYPE", typ.getgo(), -1)
 	e.footer.WriteString(frag)
 	return ptrtyp
 }
 
-func (e *emitter) get_bound(b0 string) (string, string) {
+// Return (bound, sbound) where bound is just the normalized bound,
+// and sbound is a name suitable for embedding in strings (contains
+// the more readable "unbounded" rather than 4294967295).
+func (e *emitter) get_bound(b0 idval) (string, string) {
 	b := b0
-	for loop := map[string]bool{}; !loop[b]; {
-		loop[b] = true
-		if s, ok := e.syms.SymbolMap[b]; !ok {
+	for loop := map[string]bool{}; !loop[b.getx()]; {
+		loop[b.getx()] = true
+		if s, ok := e.syms.SymbolMap[b.getx()]; !ok {
 			break
 		} else if d2, ok := s.(*rpc_const); !ok {
 			break
@@ -212,27 +215,27 @@ func (e *emitter) get_bound(b0 string) (string, string) {
 			b = d2.val
 		}
 	}
-	if b == "" {
-		b = "0xffffffff"
+	if b.getx() == "" {
+		b.setlocal("0xffffffff")
 	}
-	if i32, err := strconv.ParseUint(b, 0, 32); err == nil {
-		b = fmt.Sprintf("%d", i32)
-	} else if b[0] == '-' {
+	if i32, err := strconv.ParseUint(b.getx(), 0, 32); err == nil {
+		b.setlocal(fmt.Sprintf("%d", i32))
+	} else if b.getx()[0] == '-' {
 		// will make go compiler report the error
-		return b0, b0
+		return b0.getx(), b0.getx()
 	}
-	if b == "4294967295" {
-		return b, "unbounded"
+	if b.getx() == "4294967295" {
+		return b.getx(), "unbounded"
 	}
-	return b, b
+	return b.getx(), b.getx()
 }
 
-func (e *emitter) gen_vec(typ, bound string) string {
-	bound, sbound := e.get_bound(bound)
-	vectyp := "XdrVec_" + sbound + "_" + typ
-	if typ[0] == '_' {
+func (e *emitter) gen_vec(typ, bound0 idval) string {
+	bound, sbound := e.get_bound(bound0)
+	vectyp := "XdrVec_" + sbound + "_" + typ.getgo()
+	if typ.getgo()[0] == '_' {
 		// '_' starts inline declarations, so only one size
-		vectyp = "_XdrVec" + typ
+		vectyp = "_XdrVec" + typ.getgo()
 	}
 	if e.done(vectyp) {
 		return vectyp
@@ -293,18 +296,19 @@ func (v *$VEC) XdrPointer() interface{} { return (*[]$TYPE)(v) }
 func (v *$VEC) XdrValue() interface{} { return ([]$TYPE)(*v) }
 `
 	frag = strings.Replace(frag, "$VEC", vectyp, -1)
-	frag = strings.Replace(frag, "$TYPE", typ, -1)
+	frag = strings.Replace(frag, "$TYPE", typ.getgo(), -1)
 	frag = strings.Replace(frag, "$BOUND", bound, -1)
 	e.footer.WriteString(frag)
 	return vectyp
 }
 
-func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
+func (e *emitter) xdrgen(target, name string, context idval,
+	d *rpc_decl) string {
 	typ := e.get_typ(context, d)
 	var frag string
 	switch d.qual {
 	case SCALAR:
-		if typ == "string" {
+		if typ.getgo() == "string" {
 			frag = "\tx.Marshal($NAME, XdrString{$TARGET, $BOUND})\n"
 		} else {
 			frag = "\tXDR_$TYPE(x, $NAME, $TARGET)\n"
@@ -313,7 +317,7 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 		ptrtype := e.gen_ptr(typ)
 		frag = fmt.Sprintf("\tx.Marshal($NAME, %s{$TARGET})\n", ptrtype)
 	case ARRAY:
-		if typ == "byte" {
+		if typ.getgo() == "byte" {
 			frag = "\tx.Marshal($NAME, XdrArrayOpaque((*$TARGET)[:]))\n"
 			break;
 		}
@@ -323,14 +327,14 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 	}
 `
 	case VEC:
-		if typ == "byte" {
+		if typ.getgo() == "byte" {
 			frag = "\tx.Marshal($NAME, XdrVecOpaque{$TARGET, $BOUND})\n"
 			break;
 		}
 		vectyp := e.gen_vec(typ, d.bound)
 		frag = fmt.Sprintf("\tx.Marshal($NAME, (*%s)($TARGET))\n", vectyp)
 	}
-	normbound := d.bound
+	normbound := d.bound.getgo()
 	if normbound == "" {
 		normbound = "0xffffffff"
 	}
@@ -340,7 +344,7 @@ func (e *emitter) xdrgen(target, name, context string, d *rpc_decl) string {
 	frag = strings.Replace(frag, "$TARGET", target, -1)
 	frag = strings.Replace(frag, "$NAME", name, -1)
 	frag = strings.Replace(frag, "$BOUND", normbound, -1)
-	frag = strings.Replace(frag, "$TYPE", typ, -1)
+	frag = strings.Replace(frag, "$TYPE", typ.getgo(), -1)
 	return frag
 }
 
@@ -362,7 +366,7 @@ func (r *rpc_decl) emit(e *emitter) {
 
 func (r0 *rpc_typedef) emit(e *emitter) {
 	r := (*rpc_decl)(r0)
-	e.printf("type %s = %s\n", r.id, e.decltypeb("", r))
+	e.printf("type %s = %s\n", r.id, e.decltypeb(gid(""), r))
 	e.xprintf(
 `func XDR_%[1]s(x XDR, name string, v *%[1]s) {
 	if xs, ok := x.(interface{
@@ -372,7 +376,7 @@ func (r0 *rpc_typedef) emit(e *emitter) {
 	} else {
 	%[2]s	}
 }
-`, r.id, e.xdrgen("v", "name", "", r))
+`, r.id, e.xdrgen("v", "name", gid(""), r))
 }
 
 func (r *rpc_enum) emit(e *emitter) {
@@ -452,8 +456,8 @@ func (r *rpc_struct) emit(e *emitter) {
 	}
 `, r.id)
 	for i := range r.decls {
-		out.WriteString(e.xdrgen("&v." + r.decls[i].id,
-			`x.Sprintf("%s` + r.decls[i].id + `", name)`,
+		out.WriteString(e.xdrgen("&v." + r.decls[i].id.getgo(),
+			`x.Sprintf("%s` + r.decls[i].id.getgo() + `", name)`,
 			r.id, &r.decls[i]))
 	}
 	fmt.Fprintf(out, "}\n")
@@ -463,19 +467,32 @@ func (r *rpc_struct) emit(e *emitter) {
 	e.xappend(out)
 }
 
+func (u *rpc_ufield) joinedCases() string {
+	ret := u.cases[0].getgo()
+	for i := 1; i < len(u.cases); i++ {
+		ret += ", "
+		ret += u.cases[i].getgo()
+	}
+	return ret
+}
+
+func (u *rpc_ufield) isVoid() bool {
+	return u.decl.id.getx() == "" || u.decl.typ.getx() == "void"
+}
+
 func (r *rpc_union) emit(e *emitter) {
 	out := &strings.Builder{}
 	fmt.Fprintf(out, "type %s struct {\n", r.id)
 	fmt.Fprintf(out, "\t%s %s\n", r.tagid, r.tagtype)
 	for i := range r.fields {
 		u := &r.fields[i]
-		if u.decl.id == "" || u.decl.typ == "void" {
+		if u.isVoid() {
 			continue
 		}
 		if (u.hasdefault) {
 			fmt.Fprintf(out, "\t// default:\n")
 		} else {
-			fmt.Fprintf(out, "\t// %s:\n", strings.Join(u.cases, ","))
+			fmt.Fprintf(out, "\t// %s:\n", u.joinedCases())
 		}
 		fmt.Fprintf(out, "\t//    %s() *%s\n", u.decl.id,
 			e.decltypeb(r.id, &u.decl))
@@ -486,7 +503,7 @@ func (r *rpc_union) emit(e *emitter) {
 	out.Reset()
 	for i := range r.fields {
 		u := &r.fields[i]
-		if u.decl.id == "" || u.decl.typ == "void" {
+		if u.isVoid() {
 			continue
 		}
 		ret := e.decltype(r.id, &u.decl)
@@ -518,14 +535,14 @@ func (r *rpc_union) emit(e *emitter) {
 				} else {
 					needcomma = true
 				}
-				fmt.Fprintf(out, "%s", strings.Join(u1.cases, ","))
+				fmt.Fprintf(out, "%s", u1.joinedCases())
 			}
 			fmt.Fprintf(out, ":\n%s\tdefault:\n%s", badcase, goodcase)
 		} else {
 			if u.hasdefault {
 				fmt.Fprintf(out, "default:\n")
 			} else {
-				fmt.Fprintf(out, "\tcase %s:\n", strings.Join(u.cases, ","))
+				fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases())
 			}
 			fmt.Fprintf(out, "%s", goodcase)
 			if !u.hasdefault {
@@ -549,7 +566,7 @@ func (r *rpc_union) emit(e *emitter) {
 			} else {
 				needcomma = true
 			}
-			fmt.Fprintf(out, "%s", strings.Join(u1.cases, ","))
+			fmt.Fprintf(out, "%s", u1.joinedCases())
 		}
 		fmt.Fprintf(out, ":\n\t\treturn true\n\t}\n\treturn false\n")
 	}
@@ -567,9 +584,9 @@ func (r *rpc_union) emit(e *emitter) {
 		if u.hasdefault {
 			fmt.Fprintf(out, "\tdefault:\n")
 		} else {
-			fmt.Fprintf(out, "\tcase %s:\n", strings.Join(u.cases, ","))
+			fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases())
 		}
-		if u.decl.id == "" || u.decl.typ == "void" {
+		if u.isVoid() {
 			fmt.Fprintf(out, "\t\treturn nil\n")
 		} else {
 			fmt.Fprintf(out, "\t\treturn u.%s()\n", u.decl.id)
@@ -588,9 +605,9 @@ func (r *rpc_union) emit(e *emitter) {
 		if u.hasdefault {
 			fmt.Fprintf(out, "\tdefault:\n")
 		} else {
-			fmt.Fprintf(out, "\tcase %s:\n", strings.Join(u.cases, ","))
+			fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases())
 		}
-		if u.decl.id == "" || u.decl.typ == "void" {
+		if u.isVoid() {
 			fmt.Fprintf(out, "\t\treturn \"\"\n")
 		} else {
 			fmt.Fprintf(out, "\t\treturn \"%s\"\n", u.decl.id)
@@ -615,11 +632,11 @@ func (r *rpc_union) emit(e *emitter) {
 		if u.hasdefault {
 			fmt.Fprintf(out, "\tdefault:\n")
 		} else {
-			fmt.Fprintf(out, "\tcase %s:\n", strings.Join(u.cases, ","))
+			fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases())
 		}
-		if u.decl.id != "" && u.decl.typ != "void" {
-			out.WriteString(e.xdrgen("v." + u.decl.id + "()",
-				`x.Sprintf("%s` + u.decl.id + `", name)`,
+		if !u.isVoid() {
+			out.WriteString(e.xdrgen("v." + u.decl.id.getgo() + "()",
+				`x.Sprintf("%s` + u.decl.id.getgo() + `", name)`,
 				r.id, &u.decl))
 		}
 	}

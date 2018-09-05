@@ -1,6 +1,6 @@
 package main
 
-//go:generate stringer -type qual_t syms.go
+////go:generate stringer -type qual_t syms.go
 type qual_t int
 const (
 	SCALAR qual_t = iota
@@ -9,72 +9,84 @@ const (
 	VEC
 )
 
-type rpc_decl struct {
-	id string
-	qual qual_t
-	bound string
+type idval struct {
+	xid string					// The symbol in the xdr file
+	goid string					// The name we should use in go
+}
+func (iv *idval) getx() string { return iv.xid }
+func (iv *idval) getgo() string { return iv.goid }
+func (iv *idval) setglobal(s string) { iv.xid = s; iv.goid = capitalize(s) }
+func (iv *idval) setlocal(s string) { iv.xid = s; iv.goid = s }
+func (iv idval) String() string { return iv.getgo() }
+func gid(s string) (iv idval) { iv.setglobal(s); return }
+func lid(s string) (iv idval) { iv.setlocal(s); return }
 
-	typ string
+type rpc_decl struct {
+	id idval
+	qual qual_t
+	bound idval
+
+	typ idval
 	inline_decl rpc_sym
 }
 
 type rpc_typedef rpc_decl
 
 type rpc_const struct {
-	id, val string
+	id, val idval
 }
 
 type rpc_struct struct {
-	id string
+	id idval
 	decls []rpc_decl
 }
 
 type rpc_enum struct {
-	id string
+	id idval
 	tags []rpc_const
 }
 
 type rpc_ufield struct {
-	cases []string
+	cases []idval
 	decl rpc_decl
 	hasdefault bool
 }
 
 type rpc_union struct {
-	id, tagtype, tagid string
+	id, tagtype, tagid idval
 	fields []rpc_ufield
 	hasdefault bool
 }
 
 type rpc_proc struct {
-	id string
+	id idval
 	val uint32
-	arg []string
-	res string
+	arg []idval
+	res idval
 }
 
 type rpc_vers struct {
-	id string
+	id idval
 	val uint32
 	procs []rpc_proc
 }
 
 type rpc_program struct {
-	id string
+	id idval
 	val uint32
 	vers []rpc_vers
 }
 
-func (r *rpc_decl) symid() *string { return &r.id }
-func (r *rpc_typedef) symid() *string { return &r.id }
-func (r *rpc_const) symid() *string { return &r.id }
-func (r *rpc_struct) symid() *string { return &r.id }
-func (r *rpc_enum) symid() *string { return &r.id }
-func (r *rpc_union) symid() *string { return &r.id }
-func (r *rpc_program) symid() *string { return &r.id }
+func (r *rpc_decl) getsym() *idval { return &r.id }
+func (r *rpc_typedef) getsym() *idval { return &r.id }
+func (r *rpc_const) getsym() *idval { return &r.id }
+func (r *rpc_struct) getsym() *idval { return &r.id }
+func (r *rpc_enum) getsym() *idval { return &r.id }
+func (r *rpc_union) getsym() *idval { return &r.id }
+func (r *rpc_program) getsym() *idval { return &r.id }
 
 type rpc_sym interface {
-	symid() *string
+	getsym() *idval
 }
 
 type rpc_syms struct {
