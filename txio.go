@@ -11,6 +11,12 @@ import (
 	"unicode"
 )
 
+// pseudo-selectors
+const (
+	ps_len = "#len"
+	ps_present = "#present"
+)
+
 func renderByte(b byte) string {
 	if b <= ' ' || b >= '\x7f' {
 		return fmt.Sprintf("\\x%02x", b)
@@ -206,10 +212,10 @@ func (xp *TxStringCtx) Marshal(name string, i interface{}) {
 	case fmt.Stringer:
 		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
 	case XdrPtr:
-		fmt.Fprintf(xp.Out, "%s.present: %v\n", name, v.GetPresent())
+		fmt.Fprintf(xp.Out, "%s%s: %v\n", name, ps_present, v.GetPresent())
 		v.XdrMarshalValue(xp, name)
 	case XdrVec:
-		fmt.Fprintf(xp.Out, "%s.len: %d\n", name, v.GetVecLen())
+		fmt.Fprintf(xp.Out, "%s%s: %d\n", name, ps_len, v.GetVecLen())
 		v.XdrMarshalN(xp, name, v.GetVecLen())
 	case *Asset:
 		xp.inAsset = true
@@ -224,7 +230,7 @@ func (xp *TxStringCtx) Marshal(name string, i interface{}) {
 
 func (ctx TxStringCtx) Exec() {
 	ctx.Env.Tx.XdrMarshal(&ctx, "tx")
-	fmt.Fprintf(ctx.Out, "signatures.len: %d\n", len(ctx.Env.Signatures))
+	fmt.Fprintf(ctx.Out, "signatures%s: %d\n", ps_len, len(ctx.Env.Signatures))
 	for i := range(ctx.Env.Signatures) {
 		var hint string
 		if ski := ctx.Net.Signers.Lookup(ctx.Net, ctx.Env, i); ski != nil {
@@ -283,7 +289,7 @@ func (xs *XdrScan) Marshal(name string, i interface{}) {
 		}
 	case XdrPtr:
 		val = "false"
-		fmt.Sscanf(xs.kvs[name + ".present"], "%s", &val)
+		fmt.Sscanf(xs.kvs[name + ps_present], "%s", &val)
 		switch val {
 		case "false":
 			v.SetPresent(false)
@@ -293,20 +299,20 @@ func (xs *XdrScan) Marshal(name string, i interface{}) {
 			// We are throwing error anyway, so also try parsing any fields
 			v.SetPresent(true)
 			xs.err = true
-			fmt.Fprintf(os.Stderr, "%s.present (%s) must be true or false\n",
-				name, val)
+			fmt.Fprintf(os.Stderr, "%s%s (%s) must be true or false\n",
+				name, ps_present, val)
 		}
 		v.XdrMarshalValue(xs, name)
 	case *XdrSize:
 		var size uint32
-		fmt.Sscan(xs.kvs[name + ".len"], &size)
+		fmt.Sscan(xs.kvs[name + ps_len], &size)
 		if size <= v.XdrBound() {
 			v.SetU32(size)
 		} else {
 			v.SetU32(v.XdrBound())
 			xs.err = true
-			fmt.Fprintf(os.Stderr, "%s.len (%d) exceeds maximum size %d.\n",
-				name, size, v.XdrBound())
+			fmt.Fprintf(os.Stderr, "%s%s (%d) exceeds maximum size %d.\n",
+				name, ps_len, size, v.XdrBound())
 		}
 	case *Asset:
 		xs.inAsset = true
