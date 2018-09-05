@@ -29,5 +29,8 @@ maintainer-clean: clean
 	done
 	mv -f .gitignore~ .gitignore
 
+goxdr.1: goxdr.1.md
+	pandoc -s -w man goxdr.1.md -o goxdr.1
+
 .PHONY: all clean maintainer-clean
 .NOTPARALLEL:
