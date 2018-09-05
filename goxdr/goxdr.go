@@ -356,14 +356,6 @@ func (r *rpc_const) emit(e *emitter) {
 	e.printf("const %s = %s\n", r.id, r.val)
 }
 
-/*
-func (r *rpc_decl) emit(e *emitter) {
-	e.printf("type %s %s\n", r.id, e.decltype("", r))
-	e.xprintf("func XDR_%s(x XDR, name string, v *%s) {\n%s}\n",
-		r.id, r.id, e.xdrgen("v", "name", "", r))
-}
-*/
-
 func (r0 *rpc_typedef) emit(e *emitter) {
 	r := (*rpc_decl)(r0)
 	e.printf("type %s = %s\n", r.id, e.decltypeb(gid(""), r))
@@ -395,7 +387,12 @@ func (r *rpc_enum) emit(e *emitter) {
 `, r.id)
 	fmt.Fprintf(out, "var _XdrNames_%s = map[int32]string{\n", r.id)
 	for _, tag := range r.tags {
-		fmt.Fprintf(out, "\tint32(%s): \"%s\",\n", tag.id, tag.id)
+		fmt.Fprintf(out, "\tint32(%s): \"%s\",\n", tag.id, tag.id.getx())
+	}
+	fmt.Fprintf(out, "}\n")
+	fmt.Fprintf(out, "var _XdrValues_%s = map[string]int32{\n", r.id)
+	for _, tag := range r.tags {
+		fmt.Fprintf(out, "\t\"%s\": int32(%s),\n", tag.id.getx(), tag.id)
 	}
 	fmt.Fprintf(out, "}\n")
 	fmt.Fprintf(out,
@@ -413,13 +410,11 @@ func (v *%[1]s) Scan(ss fmt.ScanState, _ rune) error {
 		return err
 	} else {
 		stok := string(tok)
-		for val, name := range _XdrNames_%[1]s {
-			if name == stok {
-				*v = %[1]s(val)
-				return nil
-			}
+		if val, ok := _XdrValues_%[1]s[stok]; ok {
+			*v = %[1]s(val)
+			return nil
 		}
-		return XdrError(fmt.Sprintf("%%s is not a valid %[1]s.", tok))
+		return XdrError(fmt.Sprintf("%%s is not a valid %[1]s.", stok))
 	}
 }
 func (v *%[1]s) GetU32() uint32 {

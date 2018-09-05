@@ -282,13 +282,16 @@ func (xs *XdrScan) Marshal(name string, i interface{}) {
 			xs.help[name] = true
 		}
 	case XdrPtr:
+		val = "false"
 		fmt.Sscanf(xs.kvs[name + ".present"], "%s", &val)
 		switch val {
-		case "false", "":
+		case "false":
 			v.SetPresent(false)
 		case "true":
 			v.SetPresent(true)
 		default:
+			// We are throwing error anyway, so also try parsing any fields
+			v.SetPresent(true)
 			xs.err = true
 			fmt.Fprintf(os.Stderr, "%s.present (%s) must be true or false\n",
 				name, val)
