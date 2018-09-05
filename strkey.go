@@ -9,11 +9,6 @@ import (
 type StrKeyError string
 func (e StrKeyError) Error() string { return string(e) }
 
-const (
-	MainNet = "Public Global Stellar Network ; September 2015"
-	TestNet = "Test SDF Network ; September 2015"
-)
-
 type StrKeyVersionByte byte
 
 const (
@@ -178,4 +173,3 @@ func (pk *SignerKey) Hint() SignatureHint {
 		panic(StrKeyError("Invalid signer key type"))
 	}
 }
-
