@@ -22,7 +22,7 @@ represent identical go types.
 goxdr-compiled XDR types map to the most intuitive go equivalent:
 strings map to strings, pointers map to pointers, fixed-size arrays
 map to arrays, and variable-length arrays map to slices, without new
-type declarations would complicating assignment.  E.g., the XDR
+type declarations that might complicating assignment.  E.g., the XDR
 `typedef string mystring<32>` is just a string, and so can be assigned
 from a string.  This does mean you can assign a string longer than 32
 bytes, but length limits are rigorously enforced during both
@@ -30,10 +30,10 @@ marshaling and unmarshaling.
 
 ## Type representations
 
-To be consistent with go's symbol policy, all types, enum constants,
-and struct/union fields defined in an XDR file are capitalized in the
-corresponding go representation.  Base XDR types are mapped to their
-equivalent go types as follows:
+To be consistent with go's symbol export policy, all types, enum
+constants, and struct/union fields defined in an XDR file are
+capitalized in the corresponding go representation.  Base XDR types
+are mapped to their equivalent go types as follows:
 
     XDR type        Go type     notes
     --------------  ---------   ------------------------------
@@ -52,7 +52,8 @@ equivalent go types as follows:
     T<n>            []T         for any XDR type T
     T[n]            [n]T        for any XDR type T
 
-Each XDR `typedef` is compiled to a go type alias.
+Each XDR `typedef` is compiled to a go type alias (`type Alias =
+Original`).
 
 Each XDR `enum` declaration compiles to a defined type whose
 representation is an `int32`.  The constants of the enum are defined
@@ -164,12 +165,12 @@ func (xp *MyXDR2) Sprintf(f string, args ...interface{}) string {
 
 `Marshal` is the method that actually does whatever work will be
 applied to the data structure.  The second argument, `val`, will be
-called with generated go value that must be traversed.  To simplify
-data structure traversal, the value is not always just a pointer to
-the value to be marshaled--in some cases the value is cast to or
-wrapped in a defined type that allows handling of many different types
-to be collapsed together.  Specifically, here is the type of `val`
-depending on what is being marshaled:
+the go value that must be marshaled/unmarshaled.  To simplify data
+structure traversal, the value is not always just a pointer to the
+value to be marshaled--in some cases the value is cast to or wrapped
+in a defined type that allows handling of many different types to be
+collapsed together.  Specifically, here is the type of `val` depending
+on what is being marshaled:
 
 * For bool and all 32-bit numeric types (including the size of
   variable-length arrays), `val` is passed as a pointer implementing
@@ -183,8 +184,8 @@ depending on what is being marshaled:
 * For `struct` and `union` types, `val` is just a pointer to the type
   being marshaled.  However, these types implement the `XdrAggregate`
   interface, which allows the `Marshal` method of `XDR` to call the
-  `XdrMarshal(x XDR, name string)` method of the data structure to
-  recurse through all fields.
+  `XdrMarshal(x XDR, name string)` method on `val` to recurse through
+  all fields of `val`.
 
 * `enum` types are also passed as a simple pointer to the underlying
   field, but `enum` types implement `XdrNum32` instead of
@@ -192,7 +193,7 @@ depending on what is being marshaled:
 
 * Fixed-length arrays (other than `opaque[]`) are passed to `Marshal`
   one element at a time, so `Marshal` is never called on the whole
-  array (or a pointer to the whole array).
+  array (or on a pointer to the whole array).
 
 * Variable-length arrays (other than `opaque<>`) are passed first as a
   pointer to a defined type implementing the `XdrVec` and
@@ -232,7 +233,7 @@ For each (capitalized) type `T` defined in goxdr's output, there is
 also a function `XDR_T` with the following type:
 
 ~~~~{.go}
-func XDR_Myunion(x XDR, name string, v *T) {...}
+func XDR_T(x XDR, name string, v *T) {...}
 ~~~~
 
 For types that are instances of `XdrAggregate` (that is `struct` and
@@ -240,7 +241,7 @@ For types that are instances of `XdrAggregate` (that is `struct` and
 function is a simple wrapper around the `Marshal` method:
 
 ~~~~{.go}
-func XDR_Myunion(x XDR, name string, v *T) {
+func XDR_T(x XDR, name string, v *T) {
     x.Marshal(name, v)
 }
 ~~~~
@@ -397,8 +398,8 @@ rpcgen(1), xdrc(1)
 # BUGS
 
 goxdr ignores program and version declarations, and should instead
-compile them to something that can be used with to implement RFC5531
-RPC interfaces.
+compile them to something that can be used to implement RFC5531 RPC
+interfaces.
 
 goxdr is not hygienic.  Because it capitalizes symbols, it could
 produce a name clash if two symbols differ only in the capitalization
