@@ -1,6 +1,5 @@
 package main
 
-////go:generate stringer -type qual_t syms.go
 type qual_t int
 const (
 	SCALAR qual_t = iota

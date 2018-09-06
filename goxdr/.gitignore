@@ -1,6 +1,5 @@
-*~
+goxdr
+goxdr.1
 header.go
 parse.go
-qual_t_string.go
 y.output
-goxdr

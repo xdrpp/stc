@@ -1,4 +1,4 @@
-BUILT_SOURCES = header.go parse.go qual_t_string.go
+BUILT_SOURCES = header.go parse.go
 EXTRA_CLEAN = y.output
 
 all: $(BUILT_SOURCES)

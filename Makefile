@@ -56,5 +56,8 @@ maintainer-clean: clean
 stc.1: stc.1.md
 	pandoc -s -w man stc.1.md -o stc.1
 
-.PHONY: all install clean maintainer-clean
+go1:
+	./make-go1
+
+.PHONY: all install clean maintainer-clean go1
 .PHONY: build-depend update-depend goxdr/goxdr
