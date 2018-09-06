@@ -13,9 +13,10 @@ location of `~/go`):
     rm -rf ~/go/src/github.com/xdrpp/stc/
     go get github.com/xdrpp/stc/
 
-The `rm` command is necessary when upgrading because some `go get`
-limitation leaves your tree in a detached state, so that `go get -u`
-cannot pull from the remote `go1` branch.
+The `rm` command is necessary when upgrading because [some `go get`
+limitation](https://github.com/golang/go/issues/27526) leaves your
+tree in a detached state, so that `go get -u` cannot pull from the
+remote `go1` branch.
 
 Once this completes, put the `~/go/bin` directory on your path and you
 should be able to run `stc`.
