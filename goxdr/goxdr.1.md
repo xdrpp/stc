@@ -13,26 +13,27 @@ goxdr [-b] [-o _output.go_] [-p _package_] [_file1.x_ [_file2.x_ ...]]
 # DESCRIPTION
 
 goxdr compiles an RFC4506 XDR interface file to a set of go data
-structures that can be either marshaled to standard XDR binary format
-or traversed for other purposes such as pretty-pringing.  It does not
-rely on go's reflection facilities, and so can be used to special-case
-handling of XDR typedefs that yield identical go types.
+structures that can be either marshaled to or unmarshaled from
+standard XDR binary format or traversed for other purposes such as
+pretty-printing.  It does not rely on go's reflection facilities, and
+so can be used to special-case handling of different XDR typedefs that
+represent identical go types.
 
-goxdr-compiled XDR types map to the most intuitive go data structures.
-In particular, strings map to strings, pointers map to pointers,
-fixed-size arrays map to arrays, and variable-length arrays map to
-slices, without new type declarations would complicating assignment.
-E.g., the XDR `typedef string mystring<32>` is just a string, and so
-can be assigned from a string.  This means you can assign a string
-longer than 32 bytes, but length limits rigorously enforced during
-both marshaling and unmarshaling.
+goxdr-compiled XDR types map to the most intuitive go equivalent:
+strings map to strings, pointers map to pointers, fixed-size arrays
+map to arrays, and variable-length arrays map to slices, without new
+type declarations would complicating assignment.  E.g., the XDR
+`typedef string mystring<32>` is just a string, and so can be assigned
+from a string.  This does mean you can assign a string longer than 32
+bytes, but length limits are rigorously enforced during both
+marshaling and unmarshaling.
 
 ## Type representations
 
 To be consistent with go's symbol policy, all types, enum constants,
 and struct/union fields defined in an XDR file are capitalized in the
 corresponding go representation.  Base XDR types are mapped to their
-equivalent go types:
+equivalent go types as follows:
 
     XDR type        Go type     notes
     --------------  ---------   ------------------------------
@@ -55,21 +56,27 @@ Each XDR `typedef` is compiled to a go type alias.
 
 Each XDR `enum` declaration compiles to a defined type whose
 representation is an `int32`.  The constants of the enum are defined
-as go constants of the new defined type.  XDR defines bools as
-equivalent to an `enum` with name identifiers `TRUE` and `FALSE`.
-Hence, goxdr introduces these aliases for go's `true` and `false`.  Be
-sure to use the capitalized versions in case statements of XDR source
-files so as to maintain compatibility with other languages and
-implementations.
+as go constants of the new defined type.
 
-An XDR `struct` is compiled to a defined type represented as a go
-struct containing each field of the XDR struct.
+XDR defines bools as equivalent to an `enum` with name identifiers
+`TRUE` and `FALSE`.  Hence, goxdr introduces these names as aliases
+for go's `true` and `false`.  Be sure to use the capitalized versions
+in case statements of XDR source files so as to maintain compatibility
+with other languages and implementations.
+
+An XDR `struct` is compiled to a defined type represented a go struct
+containing each field of the XDR struct.
 
 An XDR `union` is compiled to a data structure with one public field
 for the discriminant and one method for each non-void "arm
 declaration" (i.e., declaration in a case statement) that returns a
-pointer to a value of the appropriate type.  As an example, the
-following XDR:
+pointer to a value of the appropriate type.  There is no need to
+initialize the union when setting the discriminant; changing its value
+just causes the appropriate method to return a non-nil pointer.
+Invoking the wrong method for the current discriminant value calls
+panic.
+
+As an example, the following XDR:
 
 ~~~~{.c}
 enum myenum {
@@ -128,8 +135,13 @@ XDR_T actually does (i.e., marshal or unmarshal).  It has the
 following interface:
 
 ~~~~{.go}
+type XdrType interface {
+	XdrValue() interface{}
+	XdrPointer() interface{}
+}
+
 type XDR interface {
-	Marshal(name string, ptr interface{})
+	Marshal(name string, val XdrType)
 	Sprintf(string, ...interface{}) string
 }
 ~~~~
@@ -151,11 +163,128 @@ func (xp *MyXDR2) Sprintf(f string, args ...interface{}) string {
 ~~~~
 
 `Marshal` is the method that actually does whatever work will be
-applied to the data structure.  The second argument, `ptr`, will be
-called with generated go value that must be traversed.  However, to
-simplify traversal code, the value will be
+applied to the data structure.  The second argument, `val`, will be
+called with generated go value that must be traversed.  To simplify
+data structure traversal, the value is not always just a pointer to
+the value to be marshaled--in some cases the value is cast to or
+wrapped in a defined type that allows handling of many different types
+to be collapsed together.  Specifically, here is the type of `val`
+depending on what is being marshaled:
 
-## Generated code
+* For bool and all 32-bit numeric types (including the size of
+  variable-length arrays), `val` is passed as a pointer implementing
+  `XdrNum32`, which allows the value to be extracted and set as a
+  `uint32`.
+
+* For all 64-bit numeric types, `val` is passed as a pointer
+  implementing `XdrNum64`, which allows the value to be extracted and
+  set as a `uint64`.
+
+* For `struct` and `union` types, `val` is just a pointer to the type
+  being marshaled.  However, these types implement the `XdrAggregate`
+  interface, which allows the `Marshal` method of `XDR` to call the
+  `XdrMarshal(x XDR, name string)` method of the data structure to
+  recurse through all fields.
+
+* `enum` types are also passed as a simple pointer to the underlying
+  field, but `enum` types implement `XdrNum32` instead of
+  `XdrAggregate`.
+
+* Fixed-length arrays (other than `opaque[]`) are passed to `Marshal`
+  one element at a time, so `Marshal` is never called on the whole
+  array (or a pointer to the whole array).
+
+* Variable-length arrays (other than `opaque<>`) are passed first as a
+  pointer to a defined type implementing the `XdrVec` and
+  `XdrAggregate` interfaces.  If `Marshal` calls the `XdrMarshal`
+  function (as for a `struct` or `union`), it recurses, first calling
+  `Marshal` on a value of `XdrSize`, then on each element of the
+  vector.
+
+* Similar to variable-length arrays, pointers use a defined type that
+  implements the `XdrPtr` and `XdrAggregate` interfaces.  When
+  recursing, `Marshal` is called first on another defined type that
+  implements `XdrUint32` (capable of containing the value 0 or 1 to
+  indicate nil or value-present), then, if the pointer is non-nil, on
+  the underlying value.
+
+* `string` is passed as an `XdrString`, which also encodes the size
+  bound of the string and implements the `XdrVarBytes` and `XdrBytes`
+  interfaces.
+
+* `opaque<>` is passed as an `XdrVecOpaque` structure, which also
+  implements the `XdrVarBytes` and `XdrBytes` interfaces.
+
+* `opaque[]` is passed as an `XdrArrayOpaque` (user-defined slice type
+  pointing to the entire array).  This type implements `XdrBytes` but
+  not `XdrVarBytes`.
+
+For most types, the original type or a pointer to it can be retrieved
+via the `XdrPointer()` and `XdrValue()` methods, which return an
+`interface{}`.  Two exceptions are `XdrArrayOpaque` (for which
+`XdrValue()` returns a slice and `XdrPointer` returns `nil`), and the
+fake `bool` on which `Marshal` is called for a pointer type (which
+bool supports `XdrValue()`, but returns `nil` from `XdrPointer()`).
+
+## XDR functions
+
+For each (capitalized) type `T` defined in goxdr's output, there is
+also a function `XDR_T` with the following type:
+
+~~~~{.go}
+func XDR_Myunion(x XDR, name string, v *T) {...}
+~~~~
+
+For types that are instances of `XdrAggregate` (that is `struct` and
+`union` types, as well as pointers and variable-length arrays), this
+function is a simple wrapper around the `Marshal` method:
+
+~~~~{.go}
+func XDR_Myunion(x XDR, name string, v *T) {
+    x.Marshal(name, v)
+}
+~~~~
+
+For other types, however, this generated function casts `v` to a more
+convenient alternate type implementing the methods above.  For
+instance, this function in the pre-defined boilerplate casts an
+ordinary `*int32` into the defined type `*XdrInt32` which implements
+the `XdrNum32` interface:
+
+~~~~{.go}
+func XDR_int32(x XDR, name string, v *int32) {
+        x.Marshal(name, (*XdrInt32)(v))
+}
+~~~~
+
+Note that an XDR `Marshal` method can use a type switch to special
+case certain types.  However, this does not work for `typedefs`, which
+goxdr emits as type aliases--i.e. `type Alias = Original` and not
+`type Alias Original`.  However, the `XDR_Alias` functions for such a
+typedef checks for a method called `x.Marshal_Alias(x XDR, name
+string, v *Alias)` and calls it instead of `x.Marshal` if it exists,
+allowing code to differentiate type aliases.
+
+XDR functions panic with type `XdrError` (a user-defined string) if
+the input is invalid or a value is out of range.
+
+## Pre-defined XDR types
+
+The predefined types `XdrOut`, `XdrIn`, and `XdrPrint` implement the
+`XDR` interface and perform RFC4506 binary marshaling, RFC4506 binary
+unmarshaling, and pretty-printing, respectively.
+
+~~~~{.go}
+type XdrOut struct {
+	Out io.Writer
+}
+type XdrIn struct {
+	In io.Reader
+}
+type XdrPrint struct {
+	Out io.Writer
+}
+~~~~
 
 # OPTIONS
 
@@ -184,12 +313,80 @@ default is for the generated code to declare `package main`.
 
 # EXAMPLES
 
+To serialize a data structure of type `MyType`:
 
-# ENVIRONMENT
+~~~~{.go}
+func serialize_Mytype(val *MyType) []byte {
+	buf := &bytes.Buffer{}
+	XDR_MyType(&XdrOut{ buf }, "", val)
+	return buf.Bytes()
+}
+~~~~
 
+To serialize/unserialize an arbitrary instance of `XdrAggregate` (any
+struct or union, but not simpler types such as integers and strings):
 
-# FILES
+~~~~{.go}
+func serialize(val XdrAggregate) []byte {
+	buf := &bytes.Buffer{}
+	val.XdrMarshal(&XdrOut{ buf }, "")
+	return buf.Bytes()
+}
 
+func deserialize(val XdrAggregate, in []byte) (e error) {
+	defer func() {
+		switch i := recover().(type) {
+		case nil:
+		case XdrError:
+			e = i
+		default:
+			panic(i)
+		}
+	}()
+	val.XdrMarshal(&XdrIn{ bytes.NewBuffer(in) }, "")
+	return nil
+}
+~~~~
+
+To pretty-print an arbitrary XDR-defined data structure, but
+special-case any fields of type `MySpecialStruct` by formatting them
+with a function called `MySpecialString(*MySpecialStruct)`, you can do
+the following:
+
+~~~~{.go}
+type XdrMyPrint struct {
+	Out io.Writer
+}
+
+func (xp *XdrMyPrint) Sprintf(f string, args ...interface{}) string {
+	return fmt.Sprintf(f, args...)
+}
+
+func (xp *XdrMyPrint) Marshal(name string, i XdrType) {
+	switch v := i.(type) {
+	case *MySpecialStruct:
+		fmt.Fprintf(xp.Out, "%s: %s\n", name, MySpecialString(v))
+	case fmt.Stringer:
+		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
+	case XdrPtr:
+		fmt.Fprintf(xp.Out, "%s.present: %v\n", name, v.GetPresent())
+		v.XdrMarshalValue(xp, name)
+	case XdrVec:
+		fmt.Fprintf(xp.Out, "%s.len: %d\n", name, v.GetVecLen())
+		v.XdrMarshalN(xp, name, v.GetVecLen())
+	case XdrAggregate:
+		v.XdrMarshal(xp, name)
+	default:
+		fmt.Fprintf(xp.Out, "%s: %v\n", name, i)
+	}
+}
+
+func MyXdrToString(t XdrAggregate) string {
+	out := &strings.Builder{}
+	t.XdrMarshal(&XdrMyPrint{out}, "")
+	return out.String()
+}
+~~~~
 
 # SEE ALSO
 

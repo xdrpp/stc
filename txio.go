@@ -93,7 +93,7 @@ func txOut(e XdrAggregate) string {
 func txIn(e XdrAggregate, input string) (err error) {
 	defer func() {
 		if i := recover(); i != nil {
-			if xe, ok := recover().(XdrError); ok {
+			if xe, ok := i.(XdrError); ok {
 				err = xe
 				fmt.Fprintln(os.Stderr, xe)
 				return
