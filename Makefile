@@ -54,7 +54,7 @@ maintainer-clean: clean
 	mv -f .gitignore~ .gitignore
 
 stc.1: stc.1.md
-	pandoc -s -w man stc.1.md -o stc.1
+	-pandoc -s -w man stc.1.md -o stc.1
 
 go1:
 	./make-go1

@@ -4,6 +4,12 @@ EXTRA_CLEAN = y.output
 all: $(BUILT_SOURCES)
 	go build
 
+install: goxdr goxdr.1
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	cp goxdr $(DESTDIR)$(PREFIX)/bin/goxdr
+	mkdir -p $(DESTDIR)$(MANDIR)/man1
+	cp goxdr.1 $(DESTDIR)$(MANDIR)/man1/goxdr.1
+
 $(BUILT_SOURCES): header.go.in parse.y syms.go goxdr.go
 #	PATH="$$PATH:$$(go env GOPATH)/bin" \
 #		test -n "$$(command -v goyacc)" || \
@@ -30,7 +36,7 @@ maintainer-clean: clean
 	mv -f .gitignore~ .gitignore
 
 goxdr.1: goxdr.1.md
-	pandoc -s -w man goxdr.1.md -o goxdr.1
+	-pandoc -s -w man goxdr.1.md -o goxdr.1
 
-.PHONY: all clean maintainer-clean
+.PHONY: all install clean maintainer-clean
 .NOTPARALLEL:
