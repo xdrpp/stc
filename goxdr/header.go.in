@@ -21,6 +21,31 @@ import (
 	"strings"
 )
 
+// Types passed to the XDR Marshal method are cast into or wrapped by
+// helper types that help collapse similar cases (e.g., all 32-bit
+// numbers are cast to a pointer implementing XdrNum32).  However, the
+// XdrValue and XdrPointer methods give you access to a value or
+// pointer to the original underlying type.
+//
+// There are two exceptions:
+//
+//   - opaque[] (fixed-length arrays of bytes) are returned as
+//     XdrArrayOpaque (by XdrValue()) or nil (by XdrPointer()).  This
+//     is because XdrArrayOpaque wraps a byte slice rather than an
+//     actual array.  One generally doesn't want to pass arrays
+//     around; moreover, getting a pointer to the actual array
+//     provides less information, because one can't test for arrays in
+//     a type switch without knowing the exact length of the array,
+//     while one can always dynamically test the length of a slice.
+//
+//   - Pointer types, in their XdrMarshal methods, marshal a special
+//     XdrNum32 type of 0 or 1 to record whether the pointer is nil or
+//     the value is present.  Since this bool does not exist,
+//     XdrPointer() returns nil (while XdrValue returns a bool).
+//
+// Note that arrays of types other than opaque are never passed to the
+// Marshal method.  Rather, the XDR_Type function loops over the array
+// and calls Marshal for each element of the array.
 type XdrType interface {
 	XdrValue() interface{}
 	XdrPointer() interface{}
@@ -35,7 +60,7 @@ type XdrType interface {
 // interface it receives.)
 type XDR interface {
 	// A function that gets called for each value to be marshalled.
-	// The ptr interface{} will be one of the following:
+	// The val XdrType argument will be one of the following:
 	//
 	// * A pointer type implementing XdrNum32 for bool, int, unsigned
 	//   int, float, the size of variable-length arrays except string
@@ -43,7 +68,7 @@ type XDR interface {
 	//   will just be a pointer to the enum.  In the case of the other
 	//   types, it will be a pointer to a defined type that implements
 	//   the XdrNum32 interface (since plain go types cannot implement
-	//   methods)--e.g., XdrUint32 for unsigned int.  Variable array
+	//   methods)--e.g., *XdrUint32 for unsigned int.  Variable array
 	//   sizes are passed as *XdrSize, which enforces the bound.
 	//
 	// * A pointer type implementing XdrNum64 for hyper, unsigned
@@ -54,9 +79,11 @@ type XDR interface {
 	// * An instance of XdrBytes for strings and opaque.
 	//   Specifically, strings are passed as XdrString, and
 	//   variable-length opaque<> vectors are passed as XdrVecOpaque,
-	//   both of which implement XdrVarBytes.  Fixed-length opaque[]
-	//   arrays are passed as XdrArrayOpaque which only implements
-	//   XdrBytes, not XdrVarBytes.
+	//   both of which implement XdrVarBytes.
+	//
+	// * An XdrArrayOpaque containing a slice referencing a byte array
+	//   for fixed-length opaque[].  XdrArrayOpaque implements
+	//   XdrBytes, but not XdrVarBytes.
 	//
 	// * An instance of XdrAggregate for structs, unions, and
 	//   pointers.  Note that structs and unions are just passed as
@@ -65,16 +92,12 @@ type XDR interface {
 	//   implemented by a defined pointer type (since plain pointers
 	//   cannot have methods).
 	//
-	// For most cases, you can get a pointer to the underlying type
-	// via the XdrPointer() method, and get the raw value via the
-	// XdrValue() method, both of which return interface{}.
-	//
 	// Note that the Marshal method is responsible for recursing into
 	// XdrAggregate instance by calling the XdrMarshal method.
 	// Requiring the Marshal method to recurse manually allows it to
 	// refrain from recursing in cases where it needs to special-case
 	// the handling of specific types.
-	Marshal(name string, ptr XdrType)
+	Marshal(name string, val XdrType)
 
 	// This method should just be fmt.Sprintf for XDRs that use name.
 	// Those that don't use name can use a trivial method returning ""
@@ -358,7 +381,7 @@ func (v XdrVecOpaque) XdrValue() interface{} { return *v.Bytes }
 type XdrArrayOpaque []byte
 func (v XdrArrayOpaque) GetByteSlice() []byte { return ([]byte)(v) }
 func (v XdrArrayOpaque) XdrValue() interface{} { return v }
-func (v XdrArrayOpaque) XdrPointer() interface{} { return nil } // XXX
+func (v XdrArrayOpaque) XdrPointer() interface{} { return nil }
 func (v XdrArrayOpaque) String() string { return fmt.Sprintf("%x", []byte(v)) }
 func (v XdrArrayOpaque) Scan(ss fmt.ScanState, _ rune) error {
 	var bs []byte
