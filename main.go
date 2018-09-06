@@ -24,7 +24,7 @@ type xdrGetAccounts struct {
 func (xp *xdrGetAccounts) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
-func (xp *xdrGetAccounts) Marshal(field string, i interface{}) {
+func (xp *xdrGetAccounts) Marshal(field string, i XdrType) {
 	switch v := i.(type) {
 	case *AccountID:
 		if _, ok := xp.accounts[*v]; !ok {

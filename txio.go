@@ -171,7 +171,7 @@ type xdrEnumNames interface {
 	XdrEnumNames() map[int32]string
 }
 
-func (xp *TxStringCtx) Marshal(name string, i interface{}) {
+func (xp *TxStringCtx) Marshal(name string, i XdrType) {
 	switch v := i.(type) {
 	case *TimeBounds:
 		fmt.Fprintf(xp.Out, "%s.MinTime: %d%s\n%s.MaxTime: %d%s\n",
@@ -260,7 +260,7 @@ func (*XdrScan) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
 
-func (xs *XdrScan) Marshal(name string, i interface{}) {
+func (xs *XdrScan) Marshal(name string, i XdrType) {
 	val, ok := xs.kvs[name]
 	switch v := i.(type) {
 	case XdrArrayOpaque:

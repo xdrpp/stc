@@ -21,6 +21,10 @@ import (
 	"strings"
 )
 
+type XdrType interface {
+	XdrValue() interface{}
+	XdrPointer() interface{}
+}
 
 // The interface through which values are serialized, printed, etc.
 // Note that in addition to the Marshal method, if you have a method
@@ -70,7 +74,7 @@ type XDR interface {
 	// Requiring the Marshal method to recurse manually allows it to
 	// refrain from recursing in cases where it needs to special-case
 	// the handling of specific types.
-	Marshal(name string, ptr interface{})
+	Marshal(name string, ptr XdrType)
 
 	// This method should just be fmt.Sprintf for XDRs that use name.
 	// Those that don't use name can use a trivial method returning ""
@@ -106,27 +110,25 @@ const (
 // and opaque<>, for which it is the job of XDR.Marshal to serialize
 // the 32-bit length.
 type XdrNum32 interface {
+	XdrType
 	GetU32() uint32
 	SetU32(uint32)
-	XdrPointer() interface{}
-	XdrValue() interface{}
 }
 
 // All 64-bit numbers (hyper, unsigned hyper, and double) are passed
 // to XDR.Marshal as a pointer to a defined type implementing
 // XdrNum64.
 type XdrNum64 interface {
+	XdrType
 	GetU64() uint64
 	SetU64(uint64)
-	XdrPointer() interface{}
-	XdrValue() interface{}
 }
 
 // opaque[] are passed to XDR.Marshal as quantities implementing the
 // XdrBytes interface.
 type XdrBytes interface {
+	XdrType
 	GetByteSlice() []byte
-	XdrValue() interface{}
 }
 
 // opaque<> and string<> are passed to XDR.Marshal as quantities
@@ -139,7 +141,6 @@ type XdrVarBytes interface {
 	XdrBytes
 	XdrBound() uint32
 	SetByteSlice([]byte)
-	XdrPointer() interface{}
 }
 
 // Any struct, union, pointer, or variable-length array type (except
@@ -151,6 +152,7 @@ type XdrVarBytes interface {
 // serialization at particular types (e.g., for pretty-printing a
 // partucular struct in a non-standard way).
 type XdrAggregate interface {
+	XdrType
 	XdrMarshal(XDR, string)
 }
 
@@ -176,9 +178,6 @@ type XdrPtr interface {
 	// If the present/not-present bool is false, this function does
 	// nothing.  Otherwise, it marshals just the value, not the bit.
 	XdrMarshalValue(XDR, string)
-
-	XdrPointer() interface{}
-	XdrValue() interface{}
 }
 
 // Any vector type is passed as a pointer to a user-defined alias
@@ -198,8 +197,6 @@ type XdrVec interface {
 	GetVecLen() uint32
 	SetVecLen(uint32)
 	XdrMarshalN(XDR, string, uint32)
-	XdrPointer() interface{}
-	XdrValue() interface{}
 }
 
 func xdrSymChar(r rune) bool {
@@ -361,6 +358,7 @@ func (v XdrVecOpaque) XdrValue() interface{} { return *v.Bytes }
 type XdrArrayOpaque []byte
 func (v XdrArrayOpaque) GetByteSlice() []byte { return ([]byte)(v) }
 func (v XdrArrayOpaque) XdrValue() interface{} { return v }
+func (v XdrArrayOpaque) XdrPointer() interface{} { return nil } // XXX
 func (v XdrArrayOpaque) String() string { return fmt.Sprintf("%x", []byte(v)) }
 func (v XdrArrayOpaque) Scan(ss fmt.ScanState, _ rune) error {
 	var bs []byte
@@ -401,7 +399,7 @@ func (xp *XdrPrint) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
 
-func (xp *XdrPrint) Marshal(name string, i interface{}) {
+func (xp *XdrPrint) Marshal(name string, i XdrType) {
 	switch v := i.(type) {
 	case fmt.Stringer:
 		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
@@ -449,7 +447,7 @@ func (xp *XdrOut) Sprintf(f string, args ...interface{}) string {
 	return ""
 }
 
-func (xo *XdrOut) Marshal(name string, i interface{}) {
+func (xo *XdrOut) Marshal(name string, i XdrType) {
 	switch v := i.(type) {
 	case XdrNum32:
 		xdrPut32(xo.Out, v.GetU32())
@@ -511,7 +509,7 @@ func (xp *XdrIn) Sprintf(f string, args ...interface{}) string {
 	return ""
 }
 
-func (xi *XdrIn) Marshal(name string, i interface{}) {
+func (xi *XdrIn) Marshal(name string, i XdrType) {
 	switch v := i.(type) {
 	case XdrNum32:
 		v.SetU32(xdrGet32(xi.In))

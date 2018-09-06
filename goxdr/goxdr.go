@@ -445,7 +445,13 @@ func (r *rpc_struct) emit(e *emitter) {
 	out.Reset()
 
 	fmt.Fprintf(out,
-`func (v *%s) XdrMarshal(x XDR, name string) {
+`func (v *%[1]s) XdrPointer() interface{} {
+	return v
+}
+func (v *%[1]s) XdrValue() interface{} {
+	return *v
+}
+func (v *%[1]s) XdrMarshal(x XDR, name string) {
 	if name != "" {
 		name = x.Sprintf("%%s.", name)
 	}
@@ -615,11 +621,17 @@ func (r *rpc_union) emit(e *emitter) {
 	fmt.Fprintf(out, "}\n")
 
 	fmt.Fprintf(out,
-`func (v *%s) XdrMarshal(x XDR, name string) {
+`func (v *%[1]s) XdrPointer() interface{} {
+	return v
+}
+func (v *%[1]s) XdrValue() interface{} {
+	return *v
+}
+func (v *%[1]s) XdrMarshal(x XDR, name string) {
 	if name != "" {
 		name = x.Sprintf("%%s.", name)
 	}
-	XDR_%s(x, x.Sprintf("%%s%[4]s", name), &v.%[3]s)
+	XDR_%[2]s(x, x.Sprintf("%%s%[4]s", name), &v.%[3]s)
 	switch v.%[3]s {
 `, r.id, r.tagtype, r.tagid, r.tagid.getx())
 	for i := range r.fields {
