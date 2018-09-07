@@ -174,7 +174,7 @@ type xdrEnumNames interface {
 func (xp *TxStringCtx) Marshal(name string, i XdrType) {
 	switch v := i.(type) {
 	case *TimeBounds:
-		fmt.Fprintf(xp.Out, "%s.MinTime: %d%s\n%s.MaxTime: %d%s\n",
+		fmt.Fprintf(xp.Out, "%s.minTime: %d%s\n%s.maxTime: %d%s\n",
 			name, v.MinTime, dateComment(v.MinTime),
 			name, v.MaxTime, dateComment(v.MaxTime))
 	case *AccountID:
