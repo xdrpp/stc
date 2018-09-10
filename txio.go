@@ -13,8 +13,8 @@ import (
 
 // pseudo-selectors
 const (
-	ps_len = "#len"
-	ps_present = "#present"
+	ps_len = ".len"
+	ps_present = ".present?"
 )
 
 func renderByte(b byte) string {
@@ -107,12 +107,33 @@ func txIn(e XdrAggregate, input string) (err error) {
 	return nil
 }
 
+type fixXdrName struct {
+	inPtr bool
+}
+
+func nop() {}
+func (x *fixXdrName) reset() { x.inPtr = false }
+func (x *fixXdrName) fixName(name string, i XdrType) (
+	newname string, cleanup func()) {
+	newname, cleanup = name, nop
+	if _, ok := i.(XdrPtr); ok {
+		if x.inPtr {
+			newname = fmt.Sprintf("(*%s)", name)
+		} else {
+			x.inPtr = true
+			cleanup = x.reset
+		}
+	}
+	return
+}
+
 type TxStringCtx struct {
 	Out io.Writer
 	Env *TransactionEnvelope
 	Net *StellarNet
 	Help XdrHelp
 	inAsset bool
+	fixXdrName
 }
 
 func (xp *TxStringCtx) Sprintf(f string, args ...interface{}) string {
@@ -212,6 +233,8 @@ func (xp *TxStringCtx) Marshal(name string, i XdrType) {
 	case fmt.Stringer:
 		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
 	case XdrPtr:
+		name, cleanup := xp.fixName(name, v)
+		defer cleanup()
 		fmt.Fprintf(xp.Out, "%s%s: %v\n", name, ps_present, v.GetPresent())
 		v.XdrMarshalValue(xp, name)
 	case XdrVec:
@@ -250,6 +273,7 @@ signatures[%[1]d].signature: %[3]x
 type XdrHelp map[string]bool
 
 type XdrScan struct {
+	fixXdrName
 	kvs map[string]string
 	help XdrHelp
 	err bool
@@ -288,6 +312,8 @@ func (xs *XdrScan) Marshal(name string, i XdrType) {
 			xs.help[name] = true
 		}
 	case XdrPtr:
+		name, cleanup := xs.fixName(name, v)
+		defer cleanup()
 		val = "false"
 		fmt.Sscanf(xs.kvs[name + ps_present], "%s", &val)
 		switch val {

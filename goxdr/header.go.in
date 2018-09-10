@@ -428,7 +428,7 @@ func (xp *XdrPrint) Marshal(name string, i XdrType) {
 		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
 	case XdrPtr:
 		fmt.Fprintf(xp.Out, "%s.present: %v\n", name, v.GetPresent())
-		v.XdrMarshalValue(xp, name)
+		v.XdrMarshalValue(xp, fmt.Sprintf("(*%s)", name))
 	case XdrVec:
 		fmt.Fprintf(xp.Out, "%s.len: %d\n", name, v.GetVecLen())
 		v.XdrMarshalN(xp, name, v.GetVecLen())
