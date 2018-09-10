@@ -374,7 +374,8 @@ func main() {
 	opt_sec2pub := flag.Bool("sec2pub", false, "Get public key from private")
 	opt_output := flag.String("o", "", "Output to file instead of stdout")
 	opt_preauth := flag.Bool("preauth", false,
-		"Hash transaction for pre-auth use")
+		"Hash transaction to strkey for use as a pre-auth transaction signer")
+	opt_txhash := flag.Bool("txhash", false, "Hash transaction to hex format")
 	opt_inplace := flag.Bool("i", false, "Edit the input file in place")
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
 	opt_key := flag.String("key", "", "File containing signing key")
@@ -420,7 +421,7 @@ func main() {
 		return
 	}
 
-	if n := b2i(*opt_preauth, *opt_post, *opt_edit, *opt_keygen,
+	if n := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit, *opt_keygen,
 		*opt_sec2pub, *opt_import_key, *opt_export_key, *opt_list_keys);
 	n > 1 || len(flag.Args()) > 1 ||
 		(len(flag.Args()) == 0 &&
@@ -520,11 +521,11 @@ func main() {
 			fmt.Fprint(os.Stderr, "Post transaction failed\n")
 			os.Exit(1)
 		}
-	case *opt_preauth:
+	case *opt_preauth, *opt_txhash:
 		sk := SignerKey{ Type: SIGNER_KEY_TYPE_PRE_AUTH_TX }
 		copy(sk.PreAuthTx()[:], TxPayloadHash(net.NetworkId, e))
-		// fmt.Printf("%x\n", *sk.PreAuthTx())
-		fmt.Println(&sk)
+		if *opt_txhash { fmt.Printf("%x\n", *sk.PreAuthTx()) }
+		if *opt_preauth { fmt.Println(&sk) }
 	default:
 		getAccounts(net, e, *opt_learn)
 		if *opt_update { fixTx(net, e) }
