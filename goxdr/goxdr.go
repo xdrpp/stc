@@ -646,8 +646,15 @@ func (v *%[1]s) XdrMarshal(x XDR, name string) {
 				`x.Sprintf("%s` + u.decl.id.getx() + `", name)`,
 				r.id, &u.decl))
 		}
+		out.WriteString("\t\treturn\n")
 	}
-	fmt.Fprintf(out, "\t}\n}\n")
+	fmt.Fprintf(out, "\t}\n")
+	if !r.hasdefault {
+		fmt.Fprintf(out,
+`	xdrPanic(fmt.Sprintf("invalid %[1]s (%%v) in %[2]s", v.%[1]s))
+`, r.tagid, r.id)
+	}
+	fmt.Fprintf(out, "}\n")
 
 	fmt.Fprintf(out, "func XDR_%s(x XDR, name string, v *%s) {\n" +
 		"\tx.Marshal(name, v)\n" +
