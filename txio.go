@@ -95,7 +95,7 @@ func txIn(e XdrAggregate, input string) (err error) {
 		if i := recover(); i != nil {
 			if xe, ok := i.(XdrError); ok {
 				err = xe
-				fmt.Fprintln(os.Stderr, xe)
+				//fmt.Fprintln(os.Stderr, xe)
 				return
 			}
 			panic(i)
@@ -361,7 +361,7 @@ func txScan(t XdrAggregate, in string) (help XdrHelp, err error) {
 			switch i.(type) {
 			case XdrError, StrKeyError:
 				err = i.(error)
-				fmt.Fprintln(os.Stderr, err)
+				//fmt.Fprintln(os.Stderr, err)
 				return
 			}
 			panic(i)
