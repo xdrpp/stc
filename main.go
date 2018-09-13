@@ -379,7 +379,8 @@ func main() {
 	opt_inplace := flag.Bool("i", false, "Edit the input file in place")
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
 	opt_key := flag.String("key", "", "File containing signing key")
-	opt_netname := flag.String("net", "", `Network ID ("main" or "test")`)
+	opt_netname := flag.String("net", "",
+		`Network ID (e.g., "test"); default: $STCNET, otherwise "main"`)
 	opt_update := flag.Bool("u", false,
 		"Query network to update fee and sequence number")
 	opt_learn := flag.Bool("l", false, "Learn new signers")
