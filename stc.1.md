@@ -52,13 +52,13 @@ The human-readable text form of the transaction is automatically
 derived from the XDR, with just a few special-cased types.  The format
 of is a series of lines of the form "`Field-Name: Value Comment`".
 The field name is the XDR field name, or one of two pseudo-fields.
-Pointers have a boolean pseudofield called `#present` that true when
+Pointers have a boolean pseudofield called `_present` that true when
 the pointer is non-null.  Variable-length arrays have an integer
-pseudofield `#len` specifying the array length.  There must be no
-space between a field name and the colon.  After the colon comes the
-value for that field.  Anything after the value is ignored.  stc
-sometimes places a comment there, such as when an account ID has been
-configured to have a comment (see the FILES section below).
+pseudofield `len` specifying the array length.  There must be no space
+between a field name and the colon.  After the colon comes the value
+for that field.  Anything after the value is ignored.  stc sometimes
+places a comment there, such as when an account ID has been configured
+to have a comment (see the FILES section below).
 
 Two field types have specially formatted values:
 
