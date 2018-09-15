@@ -331,8 +331,15 @@ type XdrString struct {
 }
 func (v XdrString) String() string { return fmt.Sprintf("%q", *v.Str) }
 func (v XdrString) Scan(ss fmt.ScanState, _ rune) error {
-	_, err := fmt.Fscanf(ss, "%q", v.Str)
-	return err
+	var s string
+	if _, err := fmt.Fscanf(ss, "%q", &s); err != nil {
+		return err
+	} else if int64(len(s)) > int64(v.Bound) {
+		return XdrError(fmt.Sprintf("Cannot store %d bytes in string<%d>",
+			len(s), v.Bound))
+	}
+	*v.Str = s
+	return nil
 }
 func (v XdrString) XdrBound() uint32 { return v.Bound }
 func (v XdrString) GetString() string { return *v.Str }

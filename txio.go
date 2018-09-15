@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 	"unicode"
@@ -13,8 +12,8 @@ import (
 
 // pseudo-selectors
 const (
-	ps_len = ".len"
-	ps_present = ".present?"
+	ps_len = "len"
+	ps_present = "_present"
 )
 
 func renderByte(b byte) string {
@@ -107,24 +106,25 @@ func txIn(e XdrAggregate, input string) (err error) {
 	return nil
 }
 
-type fixXdrName struct {
-	inPtr bool
+type trackTypes struct {
+	ptrDepth int
+	inAsset bool
 }
 
-func nop() {}
-func (x *fixXdrName) reset() { x.inPtr = false }
-func (x *fixXdrName) fixName(name string, i XdrType) (
-	newname string, cleanup func()) {
-	newname, cleanup = name, nop
-	if _, ok := i.(XdrPtr); ok {
-		if x.inPtr {
-			newname = fmt.Sprintf("(*%s)", name)
-		} else {
-			x.inPtr = true
-			cleanup = x.reset
-		}
+func (x *trackTypes) present() string {
+	return "." + strings.Repeat("_inner", x.ptrDepth-1) + ps_present;
+}
+func (x *trackTypes) track(i XdrType) (cleanup func()) {
+	oldx := *x
+	switch i.(type) {
+	case XdrPtr:
+		x.ptrDepth++
+	case *Asset:
+		x.inAsset = true
+	default:
+		return func() {}
 	}
-	return
+	return func() { *x = oldx }
 }
 
 type TxStringCtx struct {
@@ -132,8 +132,7 @@ type TxStringCtx struct {
 	Env *TransactionEnvelope
 	Net *StellarNet
 	Help XdrHelp
-	inAsset bool
-	fixXdrName
+	trackTypes
 }
 
 func (xp *TxStringCtx) Sprintf(f string, args ...interface{}) string {
@@ -193,6 +192,7 @@ type xdrEnumNames interface {
 }
 
 func (xp *TxStringCtx) Marshal(name string, i XdrType) {
+	defer xp.track(i)()
 	switch v := i.(type) {
 	case *TimeBounds:
 		fmt.Fprintf(xp.Out, "%s.minTime: %d%s\n%s.maxTime: %d%s\n",
@@ -233,17 +233,11 @@ func (xp *TxStringCtx) Marshal(name string, i XdrType) {
 	case fmt.Stringer:
 		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
 	case XdrPtr:
-		name, cleanup := xp.fixName(name, v)
-		defer cleanup()
-		fmt.Fprintf(xp.Out, "%s%s: %v\n", name, ps_present, v.GetPresent())
+		fmt.Fprintf(xp.Out, "%s%s: %v\n", name, xp.present(), v.GetPresent())
 		v.XdrMarshalValue(xp, name)
 	case XdrVec:
-		fmt.Fprintf(xp.Out, "%s%s: %d\n", name, ps_len, v.GetVecLen())
+		fmt.Fprintf(xp.Out, "%s.%s: %d\n", name, ps_len, v.GetVecLen())
 		v.XdrMarshalN(xp, name, v.GetVecLen())
-	case *Asset:
-		xp.inAsset = true
-		defer func() { xp.inAsset = false }()
-		v.XdrMarshal(xp, name)
 	case XdrAggregate:
 		v.XdrMarshal(xp, name)
 	default:
@@ -253,7 +247,7 @@ func (xp *TxStringCtx) Marshal(name string, i XdrType) {
 
 func (ctx TxStringCtx) Exec() {
 	ctx.Env.Tx.XdrMarshal(&ctx, "tx")
-	fmt.Fprintf(ctx.Out, "signatures%s: %d\n", ps_len, len(ctx.Env.Signatures))
+	fmt.Fprintf(ctx.Out, "signatures.%s: %d\n", ps_len, len(ctx.Env.Signatures))
 	for i := range(ctx.Env.Signatures) {
 		var hint string
 		if ski := ctx.Net.Signers.Lookup(ctx.Net, ctx.Env, i); ski != nil {
@@ -272,20 +266,34 @@ signatures[%[1]d].signature: %[3]x
 
 type XdrHelp map[string]bool
 
+type lineval struct {
+	line int
+	val string
+}
+
 type XdrScan struct {
-	fixXdrName
-	kvs map[string]string
+	kvs map[string]lineval
 	help XdrHelp
 	err bool
-	inAsset bool
+	errmsg strings.Builder
+	file string
+	trackTypes
 }
 
 func (*XdrScan) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
 
+func (xs *XdrScan) report(line int, fmtstr string, args...interface{}) {
+	xs.err = true
+	fmt.Fprintf(&xs.errmsg, "%s:%d: ", xs.file, line)
+	fmt.Fprintf(&xs.errmsg, fmtstr, args...)
+}
+
 func (xs *XdrScan) Marshal(name string, i XdrType) {
-	val, ok := xs.kvs[name]
+	defer xs.track(i)()
+	lv, ok := xs.kvs[name]
+	val := lv.val
 	switch v := i.(type) {
 	case XdrArrayOpaque:
 		var err error
@@ -297,25 +305,22 @@ func (xs *XdrScan) Marshal(name string, i XdrType) {
 			_, err = fmt.Sscan(val, v)
 		}
 		if err != nil {
-			xs.err = true
-			fmt.Fprintln(os.Stderr, err.Error())
 			xs.help[name] = true
+			xs.report(lv.line, "%s\n", err.Error())
 		}
 	case fmt.Scanner:
 		if !ok { return }
 		_, err := fmt.Sscan(val, v)
 		if err != nil {
-			xs.err = true
-			fmt.Fprintln(os.Stderr, err.Error())
 			xs.help[name] = true
+			xs.report(lv.line, "%s\n", err.Error())
 		} else if len(val) > 0 && val[len(val)-1] == '?' {
 			xs.help[name] = true
 		}
 	case XdrPtr:
-		name, cleanup := xs.fixName(name, v)
-		defer cleanup()
 		val = "false"
-		fmt.Sscanf(xs.kvs[name + ps_present], "%s", &val)
+		field := name + xs.present()
+		fmt.Sscanf(xs.kvs[field].val, "%s", &val)
 		switch val {
 		case "false":
 			v.SetPresent(false)
@@ -324,38 +329,35 @@ func (xs *XdrScan) Marshal(name string, i XdrType) {
 		default:
 			// We are throwing error anyway, so also try parsing any fields
 			v.SetPresent(true)
-			xs.err = true
-			fmt.Fprintf(os.Stderr, "%s%s (%s) must be true or false\n",
-				name, ps_present, val)
+			xs.report(xs.kvs[field].line,
+				"%s (%s) must be true or false\n", field, val)
 		}
 		v.XdrMarshalValue(xs, name)
 	case *XdrSize:
 		var size uint32
-		fmt.Sscan(xs.kvs[name + ps_len], &size)
+		lv = xs.kvs[name + "." + ps_len]
+		fmt.Sscan(lv.val, &size)
 		if size <= v.XdrBound() {
 			v.SetU32(size)
 		} else {
 			v.SetU32(v.XdrBound())
 			xs.err = true
-			fmt.Fprintf(os.Stderr, "%s%s (%d) exceeds maximum size %d.\n",
+			xs.report(lv.line, "%s.%s (%d) exceeds maximum size %d.\n",
 				name, ps_len, size, v.XdrBound())
 		}
-	case *Asset:
-		xs.inAsset = true
-		defer func() { xs.inAsset = false }()
-		v.XdrMarshal(xs, name)
 	case XdrAggregate:
 		v.XdrMarshal(xs, name)
 	case xdrPointer:
 		if !ok { return }
 		fmt.Sscan(val, v.XdrPointer())
 	default:
-		xdrPanic("XdrScan: Don't know how to parse %s.\n", name)
+		xdrPanic("XdrScan: Don't know how to parse %s (%T).\n", name, i)
 	}
 	delete(xs.kvs, name)
 }
 
-func txScan(t XdrAggregate, in string) (help XdrHelp, err error) {
+func txScan(t XdrAggregate, in string, filename string) (
+	help XdrHelp, err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			switch i.(type) {
@@ -367,8 +369,9 @@ func txScan(t XdrAggregate, in string) (help XdrHelp, err error) {
 			panic(i)
 		}
 	}()
-	kvs := map[string]string{}
+	kvs := map[string]lineval{}
 	help = make(XdrHelp)
+	x := XdrScan{kvs: kvs, help: help, file: filename}
 	lineno := 0
 	for _, line := range strings.Split(in, "\n") {
 		lineno++
@@ -377,17 +380,14 @@ func txScan(t XdrAggregate, in string) (help XdrHelp, err error) {
 		}
 		kv := strings.SplitN(line, ":", 2)
 		if len(kv) != 2 {
-			if err == nil {
-				err = XdrError(fmt.Sprintf("Syntax error on line %d", lineno))
-			}
+			x.report(lineno, "syntax error\n")
 			continue
 		}
-		kvs[kv[0]] = kv[1]
+		kvs[kv[0]] = lineval{lineno, kv[1]}
 	}
-	x := XdrScan{kvs: kvs, help: help}
 	t.XdrMarshal(&x, "")
 	if x.err {
-		err = XdrError("Some fields could not be parsed")
+		err = XdrError(x.errmsg.String())
 	}
 	return
 }

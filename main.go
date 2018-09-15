@@ -167,6 +167,7 @@ func readTx(infile string) (txe *TransactionEnvelope, help XdrHelp, err error) {
 	var input []byte
 	if infile == "-" {
 		input, err = ioutil.ReadAll(os.Stdin)
+		infile = "(stdin)"
 	} else {
 		input, err = ioutil.ReadFile(infile)
 	}
@@ -179,7 +180,7 @@ func readTx(infile string) (txe *TransactionEnvelope, help XdrHelp, err error) {
 	if isCompiled(sinput) {
 		err = txIn(&e, sinput)
 	} else {
-		help, err = txScan(&e, sinput)
+		help, err = txScan(&e, sinput, infile)
 	}
 	if err == nil {
 		txe = &e
@@ -190,7 +191,7 @@ func readTx(infile string) (txe *TransactionEnvelope, help XdrHelp, err error) {
 func mustReadTx(infile string) (*TransactionEnvelope, XdrHelp) {
 	e, help, err := readTx(infile)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		fmt.Fprint(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	if help == nil {
@@ -288,7 +289,7 @@ func doEdit(net *StellarNet, arg string) {
 	if os.IsNotExist(err) {
 		e = &TransactionEnvelope{}
 	} else if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		fmt.Fprint(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	getAccounts(net, e, false)
@@ -322,7 +323,7 @@ func doEdit(net *StellarNet, arg string) {
 		}
 
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
+			fmt.Fprint(os.Stderr, err.Error())
 			fmt.Printf("Press return to run editor.")
 			var li InputLine
 			fmt.Scanln(&li)
@@ -347,7 +348,7 @@ func doEdit(net *StellarNet, arg string) {
 			os.Exit(1)
 		}
 		e = &TransactionEnvelope{}
-		help, err = txScan(e, string(contents))
+		help, err = txScan(e, string(contents), path)
 	}
 
 	if compiled {
