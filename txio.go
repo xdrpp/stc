@@ -238,6 +238,17 @@ func (xp *TxStringCtx) Marshal(name string, i XdrType) {
 	case XdrVec:
 		fmt.Fprintf(xp.Out, "%s.%s: %d\n", name, ps_len, v.GetVecLen())
 		v.XdrMarshalN(xp, name, v.GetVecLen())
+	case *DecoratedSignature:
+		var hint string
+		if ski := xp.Net.Signers.Lookup(xp.Net, xp.Env, v); ski != nil {
+			hint = fmt.Sprintf("%x (%s)", v.Hint, *ski)
+		} else {
+			hint = fmt.Sprintf(
+				"%x (bad signature/unknown key/-net=%s is wrong)",
+				v.Hint, xp.Net.Name)
+		}
+		fmt.Fprintf(xp.Out, "%[1]s.hint: %[2]s\n%[1]s.signature: %[3]x\n",
+			name, hint, v.Signature)
 	case XdrAggregate:
 		v.XdrMarshal(xp, name)
 	default:
@@ -246,22 +257,7 @@ func (xp *TxStringCtx) Marshal(name string, i XdrType) {
 }
 
 func (ctx TxStringCtx) Exec() {
-	ctx.Env.Tx.XdrMarshal(&ctx, "tx")
-	fmt.Fprintf(ctx.Out, "signatures.%s: %d\n", ps_len, len(ctx.Env.Signatures))
-	for i := range(ctx.Env.Signatures) {
-		var hint string
-		if ski := ctx.Net.Signers.Lookup(ctx.Net, ctx.Env, i); ski != nil {
-			hint = fmt.Sprintf("%x (%s)", ctx.Env.Signatures[i].Hint, *ski)
-		} else {
-			hint = fmt.Sprintf(
-				"%x (bad signature/unknown key/-net=%s is wrong)",
-				ctx.Env.Signatures[i].Hint, ctx.Net.Name)
-		}
-		fmt.Fprintf(ctx.Out,
-			`signatures[%d].hint: %s
-signatures[%[1]d].signature: %[3]x
-`, i, hint, ctx.Env.Signatures[i].Signature)
-	}
+	ctx.Env.XdrMarshal(&ctx, "")
 }
 
 type XdrHelp map[string]bool

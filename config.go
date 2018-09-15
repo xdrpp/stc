@@ -161,11 +161,11 @@ func (c SignerCache) Save(filename string) error {
 	return SafeWriteFile(filename, c.String(), 0666)
 }
 
-func (c SignerCache) Lookup(
-	net *StellarNet, e *TransactionEnvelope, n int) *SignerKeyInfo {
-	skis := c[e.Signatures[n].Hint]
+func (c SignerCache) Lookup(net *StellarNet, e *TransactionEnvelope,
+	ds *DecoratedSignature) *SignerKeyInfo {
+	skis := c[ds.Hint]
 	for i := range skis {
-		if skis[i].Key.VerifyTx(net.NetworkId, e,  e.Signatures[n].Signature) {
+		if skis[i].Key.VerifyTx(net.NetworkId, e,  ds.Signature) {
 			return &skis[i]
 		}
 	}
