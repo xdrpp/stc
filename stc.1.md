@@ -12,6 +12,7 @@ stc [-net=_id_] [-sign] [-c] [-l] [-u] [-i | -o FILE] _input-file_ \
 stc -edit [-net=ID] _file_ \
 stc -post [-net=ID] _input-file_ \
 stc -preauth [-net=ID] _input-file_ \
+stc -txhash [-net=ID] _input-file_ \
 stc -keygen [_name_] \
 stc -sec2pub [_name_] \
 stc -import-key _name_ \
@@ -31,11 +32,11 @@ The tool runs in one of several modes.  The default mode processes a
 transaction in a single shot, optionally updating the sequence numbers
 and fees, translating the transaction to/from human-readable form, or
 signing it.  In edit mode, stc repeatedly invokes a text editor to
-allow somewhat interactive editing of transactions.  In preauth mode,
-stc hashes a transactions to facilitate creation of pre-signed
-transactions.  In post mode, stc posts a transaction to the network.
-Finally, key management mode allows one to maintain a set of signing
-keys.
+allow somewhat interactive editing of transactions.  In hash mode, stc
+hashes a transactions to facilitate creation of pre-signed
+transactions or lookup of transaction results.  In post mode, stc
+posts a transaction to the network.  Finally, key management mode
+allows one to maintain a set of signing keys.
 
 ## Default mode
 
@@ -50,10 +51,10 @@ implies `-sign`), and `-u`.
 
 The human-readable text form of the transaction is automatically
 derived from the XDR, with just a few special-cased types.  The format
-of is a series of lines of the form "`Field-Name: Value Comment`".
-The field name is the XDR field name, or one of two pseudo-fields.
-Pointers have a boolean pseudofield called `_present` that true when
-the pointer is non-null.  Variable-length arrays have an integer
+is a series of lines of the form "`Field-Name: Value Comment`".  The
+field name is the XDR field name, or one of two pseudo-fields.
+Pointers have a boolean pseudofield called `_present` that is true
+when the pointer is non-null.  Variable-length arrays have an integer
 pseudofield `len` specifying the array length.  There must be no space
 between a field name and the colon.  After the colon comes the value
 for that field.  Anything after the value is ignored.  stc sometimes
@@ -72,14 +73,16 @@ Two field types have specially formatted values:
   escapes (e.g., `\x1f`), with no surrounding quotes.  Backslash must
   be escaped with itself (e.g., `\\`).
 
-Note the text-format of transactions is subject to change, while the
-base-64 XDR version should be backwards compatible.  If you want to
-preserve transactions that you can later read or re-use, compile the
-transaction with `-c`.  XDR is also compatible with other tools.  You
-can also view or sign XDR transactions with `stellar-core` itself,
-using the command "`stellar-core --base64 --printxdr FILE`", or by
-using the web-based Stellar XDR viewer at:
-<https://www.stellar.org/laboratory/#xdr-viewer>
+Note that txrep is more likely to change than the base-64 XDR encoding
+of transactions.  Hence, if you want to preserve transactions that you
+can later read or re-use, compile them with `-c`.  XDR is also
+compatible with other tools.  Notably, you can examine the contents of
+an XDR transaction with `stellar-core` itself, using the command
+"`stellar-core --base64 --printxdr FILE`", or by using the web-based
+Stellar XDR viewer at
+<https://www.stellar.org/laboratory/#xdr-viewer>.  You can also sign
+XDR transactions with `stellar-core`, using "`stellar-core --base64
+--signtxn`".
 
 ## Edit mode
 
@@ -106,24 +109,32 @@ Post-mode submits a transaction to the Stellar network.  This is how
 you actually execute a transaction you have properly formatted and
 signed.
 
-## Preauth mode
+## Hash mode
 
-Stellar allows an account to be configured to allow a pre-authorized
-transaction with a specific signing weight.  These pre-authorized
-transactions are network-dependent hash values represented by strkeys
-starting with the letter "T".  Running stc with the `-preauth` flag
-outputs this strkey to standard output.
+Stellar hashes transactions to a unique 32-byte value that depends on
+the network identification string.  A transaction's hash, in hex
+format, can be used to query horizon for the results of the
+transaction after it executes.  With the option `-txhash`, stc hashes
+transaction and outputs this hex value.
+
+Stellar also allows an account to be configured to allow a
+pre-authorized transaction to have a specific signing weight.  These
+pre-authorized transactions use the same network-dependent hash values
+as computed by `-txhash`.  However, to include such a hash as an
+account signer, it must be encoded in strkey format starting with the
+letter "T".  Running stc with the `-preauth` flag prints this
+strkey-format hash to standard output.
 
 Great care must be taken when creating a pre-authorized transaction,
 as any mistake will cause the transaction not to run.  In particular,
 make sure you have set the sequence number to one more than it will be
 at the time you run the transaction, not one more than it is
-currently.  (In particular, if the transaction allowing the
-pre-authorized transaction uses the same source account, it will
-consume a sequence number.)  You should also make sure the transaction
-fee is high enough.  You may wish to increase the fee above what is
-currently required in case the fee has increased at the time you need
-to execute the pre-authorized transaction.
+currently.  (In particular, if the transaction adding the
+pre-authorized transaction as a signer uses the same source account,
+it will consume a sequence number.)  You should also make sure the
+transaction fee is high enough.  You may wish to increase the fee
+above what is currently required in case the fee has increased at the
+time you need to execute the pre-authorized transaction.
 
 Another potential source of error is that the pre-authorized
 transaction hash depends on the network name, so make absolutely sure
@@ -132,7 +143,7 @@ the `-net` option is correct when using `-preauth`.
 ## Key management mode
 
 stc runs in key management mode when one of the following flags is
-selected:  `-keygen`, `-sec2pub`, `import-key`, `-export-key`, and
+selected:  `-keygen`, `-sec2pub`, `-import-key`, `-export-key`, and
 `-list-keys`.
 
 These options take a key name.  If the key name contains a slash, it
@@ -167,8 +178,8 @@ is to output in text mode.  Only available in default mode.
 :	Print usage information.
 
 `-i`
-:	Edit in place--overwrite the input file with the stc's output.  Only
-available in default mode.
+:	Edit in place---overwrite the input file with the stc's output.
+Only available in default mode.
 
 `-import-key`
 : Read a private key from the terminal (or standard input) and write
@@ -222,9 +233,10 @@ change the number of transactions.  Only available in default mode.
 standard output in human-readable form.
 
 `stc -edit trans`
-:	Run the editor on the text format of the transaction in
-file `trans` (which can be either text or base64 XDR).  Keep editing
-the file until the editor quits without making any changes.
+:	Run the editor on the text format of the transaction in file
+`trans` (which can be either text or base64 XDR, or not exist yet in
+which case it will be created in XDR format).  Keep editing the file
+until the editor quits without making any changes.
 
 `stc -c -i -key mykey trans`
 :	Reads a transaction in file `trans`, signs it using key `mykey`,
@@ -236,7 +248,7 @@ format.
 transaction must previously have been signed.
 
 `stc -keygen`
-:	Generate a new private/public key pair, and print them both to
+:	Generate a new private/public key pair and print them both to
 standard output, one per line (private key first).
 
 `stc -keygen mykey`
@@ -309,7 +321,9 @@ stellar-core(1), gpg(1)
 
 <https://www.stellar.org/>
 
-<https://github.com/stellar/stellar-protocol/issues/159>
+<https://www.stellar.org/laboratory/#xdr-viewer>
+
+<https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0011.md>
 
 # BUGS
 
@@ -325,7 +339,5 @@ transaction in `txfile` with a public-key-encrypted signature key in
 Various forms of malformed textual input will surely cause stc to
 panic, though the binary parser should be pretty robust.
 
-The tool does not report line numbers for parse errors.
-
-The textual format for transactions is subject to change.  (However,
-the compiled format generated by `stc -c` is stable.)
+Txrep, the textual format for transactions is subject to change.
+However, the compiled format generated by `stc -c` is stable.
