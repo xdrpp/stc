@@ -36,7 +36,8 @@ maintainer-clean: clean
 	mv -f .gitignore~ .gitignore
 
 goxdr.1: goxdr.1.md
-	-pandoc -s -w man goxdr.1.md -o goxdr.1
+	pandoc -s -w man goxdr.1.md -o goxdr.1 || \
+		git show $$(git for-each-ref --count 1 --format '%(refname)' 'refs/remotes/*/go1'):./$@ > $@
 
 .PHONY: all install clean maintainer-clean
 .NOTPARALLEL:
