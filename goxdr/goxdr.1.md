@@ -65,8 +65,8 @@ for go's `true` and `false`.  Be sure to use the capitalized versions
 in case statements of XDR source files so as to maintain compatibility
 with other languages and implementations.
 
-An XDR `struct` is compiled to a defined type represented a go struct
-containing each field of the XDR struct.
+An XDR `struct` is compiled to a defined type represented as a go
+struct containing each field of the XDR struct.
 
 An XDR `union` is compiled to a data structure with one public field
 for the discriminant and one method for each non-void "arm
@@ -229,16 +229,11 @@ bool supports `XdrValue()`, but returns `nil` from `XdrPointer()`).
 
 ## XDR functions
 
-For each (capitalized) type `T` defined in goxdr's output, there is
-also a function `XDR_T` with the following type:
-
-~~~~{.go}
-func XDR_T(x XDR, name string, v *T) {...}
-~~~~
-
-For types that are instances of `XdrAggregate` (that is `struct` and
-`union` types, as well as pointers and variable-length arrays), this
-function is a simple wrapper around the `Marshal` method:
+As previously mentioned, each (capitalized) type `T` output by goxdr
+also has function `XDR_T`.  For types that are instances of
+`XdrAggregate` (that is `struct` and `union` types, as well as
+pointers and variable-length arrays), this function is a simple
+wrapper around the `Marshal` method:
 
 ~~~~{.go}
 func XDR_T(x XDR, name string, v *T) {
@@ -247,10 +242,10 @@ func XDR_T(x XDR, name string, v *T) {
 ~~~~
 
 For other types, however, this generated function casts `v` to a more
-convenient alternate type implementing the methods above.  For
-instance, this function in the pre-defined boilerplate casts an
-ordinary `*int32` into the defined type `*XdrInt32` which implements
-the `XdrNum32` interface:
+convenient alternate type implementing the interfaces described in the
+previous subsection.  As an example, the following function in the
+pre-defined boilerplate casts an ordinary `*int32` into the defined
+type `*XdrInt32` which implements the `XdrNum32` interface:
 
 ~~~~{.go}
 func XDR_int32(x XDR, name string, v *int32) {
@@ -258,13 +253,14 @@ func XDR_int32(x XDR, name string, v *int32) {
 }
 ~~~~
 
-Note that an XDR `Marshal` method can use a type switch to special
-case certain types.  However, this does not work for `typedefs`, which
-goxdr emits as type aliases--i.e. `type Alias = Original` and not
-`type Alias Original`.  However, the `XDR_Alias` functions for such a
-typedef checks for a method called `x.Marshal_Alias(x XDR, name
-string, v *Alias)` and calls it instead of `x.Marshal` if it exists,
-allowing code to differentiate type aliases.
+Note that an XDR `Marshal` method can use a type switch to
+special-case certain types.  However, this does not work for
+`typedefs`, which goxdr emits as type aliases rather than defined
+types---i.e. "`type Alias = Original`" rather than "`type Alias
+Original`".  However, the `XDR_Alias` function for such a typedef
+checks for a method called `x.Marshal_Alias(x XDR, name string, v
+*Alias)` and calls it instead of `x.Marshal` if it exists, allowing
+code to differentiate type aliases.
 
 XDR functions panic with type `XdrError` (a user-defined string) if
 the input is invalid or a value is out of range.
@@ -370,7 +366,7 @@ func (xp *XdrMyPrint) Marshal(name string, i XdrType) {
 	case fmt.Stringer:
 		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
 	case XdrPtr:
-		fmt.Fprintf(xp.Out, "%s.present: %v\n", name, v.GetPresent())
+		fmt.Fprintf(xp.Out, "%s._present: %v\n", name, v.GetPresent())
 		v.XdrMarshalValue(xp, name)
 	case XdrVec:
 		fmt.Fprintf(xp.Out, "%s.len: %d\n", name, v.GetVecLen())
