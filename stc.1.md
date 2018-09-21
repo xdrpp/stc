@@ -21,12 +21,12 @@ stc -list-keys
 
 # DESCRIPTION
 
-The Stellar transaction compiler is a command-line tool for creating,
-viewing, editing, signing, and posting Stellar network transactions.
-It is intended to be integrated into shell-scripts, or to create test
+The Stellar transaction compiler, stc, is a command-line tool for
+creating, viewing, editing, signing, and posting Stellar network
+transactions.  It is intended for use by scripts or for creating test
 transactions without the ambiguity of higher-layer wallet
-abstractions.  It can also be useful in non-graphical environments,
-such as a single-board computer implementing cold storage.
+abstractions.  stc is also useful in non-graphical environments, such
+as a single-board computer used for cold storage.
 
 The tool runs in one of several modes.  The default mode processes a
 transaction in a single shot, optionally updating the sequence numbers
@@ -42,17 +42,17 @@ allows one to maintain a set of signing keys.
 
 The default mode parses a transaction (in either textual or
 base64-encoded binary), and then outputs it.  The input comes from a
-file specified, or from standard input of the argument is "`-`".  By
-default, a transaction is output in a human-readable text form know as
-_txrep_ format.  With the `-c` flag, it will be output in
-base64-encoded binary XDR format.  Various options modify the
-transaction as it is being processed, notably `-sign`, `-key` (which
-implies `-sign`), and `-u`.
+file specified on the command line, or from standard input of the
+argument is "`-`".  By default, stc outputs transactions in the
+human-readable _txrep_ format, specified by SEP-0011.  With the `-c`
+flag, stc outputs base64-encoded binary XDR format.  Various options
+modify the transaction as it is being processed, notably `-sign`,
+`-key` (which implies `-sign`), and `-u`.
 
-The human-readable text form of the transaction is automatically
-derived from the XDR, with just a few special-cased types.  The format
-is a series of lines of the form "`Field-Name: Value Comment`".  The
-field name is the XDR field name, or one of two pseudo-fields.
+Txrep format is automatically derived from the XDR specification of
+`TransactionEnvelope`, with just a few special-cased types.  The
+format is a series of lines of the form "`Field-Name: Value Comment`".
+The field name is the XDR field name, or one of two pseudo-fields.
 Pointers have a boolean pseudofield called `_present` that is true
 when the pointer is non-null.  Variable-length arrays have an integer
 pseudofield `len` specifying the array length.  There must be no space
@@ -129,12 +129,12 @@ Great care must be taken when creating a pre-authorized transaction,
 as any mistake will cause the transaction not to run.  In particular,
 make sure you have set the sequence number to one more than it will be
 at the time you run the transaction, not one more than it is
-currently.  (In particular, if the transaction adding the
-pre-authorized transaction as a signer uses the same source account,
-it will consume a sequence number.)  You should also make sure the
-transaction fee is high enough.  You may wish to increase the fee
-above what is currently required in case the fee has increased at the
-time you need to execute the pre-authorized transaction.
+currently.  (If the transaction adding the pre-authorized transaction
+as a signer uses the same source account, it will consume a sequence
+number.)  You should also make sure the transaction fee is high
+enough.  You may wish to increase the fee above what is currently
+required in case the fee has increased at the time you need to execute
+the pre-authorized transaction.
 
 Another potential source of error is that the pre-authorized
 transaction hash depends on the network name, so make absolutely sure
@@ -277,7 +277,7 @@ if that environment variable exists, and otherwise
 `$HOME/.config/stc`.  Within the configuration directory are two
 subdirectories: `keys` and `networks`.
 
-Each file in `key` contains a signing key, which is either a single
+Each file in `keys` contains a signing key, which is either a single
 line of text representing a Stellar signing key in strkey format
 (starting with the letter "S"), or such a line of text symmetrically
 encrypted and ASCII armored by gpg.  These are the key names supplied
@@ -319,13 +319,30 @@ each subdirectory of `networks` there are four files:
 
 stellar-core(1), gpg(1)
 
-<https://www.stellar.org/>
+The Stellar web site:  <https://www.stellar.org/>
 
+Stellar's web-based XDR viewer:\
 <https://www.stellar.org/laboratory/#xdr-viewer>
 
+SEP-0011, the specification for txrep format:\
 <https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0011.md>
 
+RFC4506, the specification for XDR:\
+<https://tools.ietf.org/html/rfc4506>
+
+The XDR definition of a `TransactionEnvelope`:\
+<https://github.com/stellar/stellar-core/blob/master/src/xdr/Stellar-transaction.x>
+
 # BUGS
+
+stc accepts and generates any `TransactionEnvelope` that is valid
+according to the XDR specification.  However, a `TransactionEnvelope`
+that is syntactically valid XDR may not be a valid Stellar
+transaction.  stellar-core imposes additional restrictions on
+transactions, such as prohibiting non-ASCII characters in certain
+string fields.  This fact is important to keep in mind when using stc
+to examine pre-signed transactions:  what looks like a valid, signed
+transaction may not actually be valid.
 
 stc uses a potentially imperfect heuristic to decide whether a file
 contains a base64-encoded binary transaction or a textual one.
@@ -338,6 +355,3 @@ transaction in `txfile` with a public-key-encrypted signature key in
 
 Various forms of malformed textual input will surely cause stc to
 panic, though the binary parser should be pretty robust.
-
-Txrep, the textual format for transactions is subject to change.
-However, the compiled format generated by `stc -c` is stable.
