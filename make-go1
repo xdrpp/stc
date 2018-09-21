@@ -10,7 +10,7 @@ make stc.1
 (cd goxdr && make goxdr.1)
 
 GIT_DIR=$(git rev-parse --git-dir)
-export GIT_INDEX_FILE="$GIT_DIR/index.gh-pages"
+export GIT_INDEX_FILE="$GIT_DIR/index.go1"
 rm -f "$GIT_INDEX_FILE"
 
 git read-tree HEAD
