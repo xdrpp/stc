@@ -1,8 +1,11 @@
 # Stellar transaction compiler
 
-This is a command-line tool for creating, viewing, editing, and
-signing transactions for the [Stellar](https://www.stellar.org/)
-blockchain.
+stc is a command-line tool that translates
+[Stellar](https://www.stellar.org/) blockchain transactions back and
+forth between human-readable
+[txrep](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0011.md)
+format and Stellar's native binary XDR representation.  With stc, you
+can create, view, edit, sign, and submit Stellar transactions.
 
 # Installing `stc` for non-developers
 
