@@ -59,6 +59,21 @@ format the man page.
 To understand the included `goxdr` XDR compiler, see its [man
 page](goxdr/goxdr.1.md).
 
+# Run with Docker
+
+You can run stc with Docker. First build the container:
+
+    docker build -t xdrpp/stc -f Dockerfile .
+
+Then run stc against files in the local directory like this:
+
+    docker run --rm -it -v $PWD:/stc xdrpp/stc stc my_transaction.bin
+
+Define an alias to simplify this:
+
+    alias stc='docker run --rm -it -v $PWD:/stc xdrpp/stc stc $@'
+    stc my_transaction.bin
+
 # Disclaimer
 
 There is no warranty for the program, to the extent permitted by
