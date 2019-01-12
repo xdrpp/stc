@@ -14,7 +14,7 @@ run the following two commands (assuming your GOPATH is in the default
 location of `~/go`):
 
     rm -rf ~/go/src/github.com/xdrpp/stc/
-    go get github.com/xdrpp/stc/
+    go get github.com/xdrpp/stc/...
 
 The `rm` command is necessary when upgrading because [some `go get`
 limitation](https://github.com/golang/go/issues/27526) leaves your
@@ -24,9 +24,10 @@ remote `go1` branch.
 Once this completes, put the `~/go/bin` directory on your path and you
 should be able to run `stc`.
 
-If you'd like to install the `goxdr` XDR compiler, you can also run:
+If you'd like to install just the `goxdr` XDR compiler, you can also
+run:
 
-    go get github.com/xdrpp/stc/goxdr
+    go get github.com/xdrpp/stc/cmd/goxdr
 
 # Using `stc`
 
@@ -53,11 +54,11 @@ to build the tool.  If that doesn't work, you may have an old version
 of the extra `crypto` library, so make sure to run `make
 update-depend`.
 
-To install `stc` you will also need [pandoc](https://pandoc.org/) to
+To install `stc`, you will also need [pandoc](https://pandoc.org/) to
 format the man page.
 
 To understand the included `goxdr` XDR compiler, see its [man
-page](goxdr/goxdr.1.md).
+page](cmd/goxdr/goxdr.1.md).
 
 # Disclaimer
 

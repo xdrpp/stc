@@ -1,5 +1,5 @@
 
-package main
+package stc
 
 import (
 	"encoding/json"
@@ -76,7 +76,7 @@ func GetLedgerHeader(net *StellarNet) *LedgerHeader {
 	}
 
 	ret := &LedgerHeader{}
-	if err := txIn(ret, lhx.Embedded.Records[0].Header_xdr); err != nil {
+	if err := TxIn(ret, lhx.Embedded.Records[0].Header_xdr); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return nil
 	}
@@ -89,7 +89,7 @@ func PostTransaction(net *StellarNet,
 		fmt.Fprintln(os.Stderr, "Missing or invalid horizon config file\n")
 		return nil
 	}
-	tx := txOut(e)
+	tx := TxOut(e)
 	resp, err := http.PostForm(net.Horizon + "/transactions",
 		url.Values{"tx": {tx}})
 	if err != nil {
@@ -112,7 +112,7 @@ func PostTransaction(net *StellarNet,
 	if res.Result_xdr == "" { res.Result_xdr = res.Extras.Result_xdr }
 
 	var ret TransactionResult
-	if err = txIn(&ret, res.Result_xdr); err != nil {
+	if err = TxIn(&ret, res.Result_xdr); err != nil {
 		fmt.Fprintf(os.Stderr, "Invalid result_xdr\n")
 		return nil
 	}

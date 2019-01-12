@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	. "stc"
 )
 
 type acctInfo struct {
@@ -178,9 +180,9 @@ func readTx(infile string) (txe *TransactionEnvelope, help XdrHelp, err error) {
 
 	var e TransactionEnvelope
 	if isCompiled(sinput) {
-		err = txIn(&e, sinput)
+		err = TxIn(&e, sinput)
 	} else {
-		help, err = txScan(&e, sinput, infile)
+		help, err = TxScan(&e, sinput, infile)
 	}
 	if err == nil {
 		txe = &e
@@ -204,7 +206,7 @@ func writeTx(outfile string, e *TransactionEnvelope, net *StellarNet,
 	help XdrHelp) error {
 	var output string
 	if help == nil {
-		output = txOut(e) + "\n"
+		output = TxOut(e) + "\n"
 	} else {
 		buf := &strings.Builder{}
 		TxStringCtx{ Out: buf, Env: e, Net: net, Help: help }.Exec()
@@ -348,7 +350,7 @@ func doEdit(net *StellarNet, arg string) {
 			os.Exit(1)
 		}
 		e = &TransactionEnvelope{}
-		help, err = txScan(e, string(contents), path)
+		help, err = TxScan(e, string(contents), path)
 	}
 
 	if compiled {

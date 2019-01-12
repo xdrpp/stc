@@ -1,5 +1,5 @@
 
-package main
+package stc
 
 import (
 	"encoding/base64"
@@ -81,7 +81,7 @@ skipspace:
 	return nil
 }
 
-func txOut(e XdrAggregate) string {
+func TxOut(e XdrAggregate) string {
 	out := &strings.Builder{}
 	b64o := base64.NewEncoder(base64.StdEncoding, out)
 	e.XdrMarshal(&XdrOut{b64o}, "")
@@ -89,7 +89,7 @@ func txOut(e XdrAggregate) string {
 	return out.String()
 }
 
-func txIn(e XdrAggregate, input string) (err error) {
+func TxIn(e XdrAggregate, input string) (err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			if xe, ok := i.(XdrError); ok {
@@ -352,7 +352,7 @@ func (xs *XdrScan) Marshal(name string, i XdrType) {
 	delete(xs.kvs, name)
 }
 
-func txScan(t XdrAggregate, in string, filename string) (
+func TxScan(t XdrAggregate, in string, filename string) (
 	help XdrHelp, err error) {
 	defer func() {
 		if i := recover(); i != nil {
