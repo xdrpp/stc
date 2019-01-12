@@ -17,40 +17,41 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"stc/stx"
 )
 
-func XdrSHA256(t XdrAggregate) []byte {
+func XdrSHA256(t stx.XdrAggregate) []byte {
 	sha := sha256.New()
-	t.XdrMarshal(&XdrOut{sha}, "")
+	t.XdrMarshal(&stx.XdrOut{sha}, "")
 	return sha.Sum(nil)
 }
 
 func TxPayloadHash(network string, e *TransactionEnvelope) []byte {
-	payload := TransactionSignaturePayload{
+	payload := stx.TransactionSignaturePayload{
 		NetworkId: sha256.Sum256(([]byte)(network)),
 	}
-	payload.TaggedTransaction.Type = ENVELOPE_TYPE_TX
+	payload.TaggedTransaction.Type = stx.ENVELOPE_TYPE_TX
 	*payload.TaggedTransaction.Tx() = e.Tx
 	return XdrSHA256(&payload)
 }
 
-func (pk *PublicKey) Verify(message, sig []byte) bool {
+func Verify(pk *PublicKey, message []byte, sig []byte) bool {
 	switch pk.Type {
-	case PUBLIC_KEY_TYPE_ED25519:
+	case stx.PUBLIC_KEY_TYPE_ED25519:
 		return ed25519.Verify(pk.Ed25519()[:], message, sig)
 	default:
 		return false
 	}
 }
 
-func (pk *SignerKey) VerifyTx(network string, e *TransactionEnvelope,
+func VerifyTx(pk *stx.SignerKey, network string, e *TransactionEnvelope,
 	sig []byte) bool {
 	switch pk.Type {
-	case SIGNER_KEY_TYPE_ED25519:
+	case stx.SIGNER_KEY_TYPE_ED25519:
 		return ed25519.Verify(pk.Ed25519()[:], TxPayloadHash(network, e), sig)
-	case SIGNER_KEY_TYPE_PRE_AUTH_TX:
+	case stx.SIGNER_KEY_TYPE_PRE_AUTH_TX:
 		return bytes.Equal(TxPayloadHash(network, e), pk.PreAuthTx()[:])
-	case SIGNER_KEY_TYPE_HASH_X:
+	case stx.SIGNER_KEY_TYPE_HASH_X:
 		x := sha256.Sum256(sig)
 		return bytes.Equal(x[:], pk.HashX()[:])
 	default:
@@ -61,7 +62,7 @@ func (pk *SignerKey) VerifyTx(network string, e *TransactionEnvelope,
 type Ed25519Priv ed25519.PrivateKey
 
 func (sk Ed25519Priv) String() string {
-	return ToStrKey(STRKEY_SEED_ED25519, ed25519.PrivateKey(sk).Seed())
+	return stx.ToStrKey(stx.STRKEY_SEED_ED25519, ed25519.PrivateKey(sk).Seed())
 }
 
 func (sk Ed25519Priv) Sign(msg []byte) ([]byte, error) {
@@ -69,7 +70,7 @@ func (sk Ed25519Priv) Sign(msg []byte) ([]byte, error) {
 }
 
 func (sk Ed25519Priv) Public() *PublicKey {
-	ret := PublicKey{ Type: PUBLIC_KEY_TYPE_ED25519 }
+	ret := stx.PublicKey{ Type: stx.PUBLIC_KEY_TYPE_ED25519 }
 	copy(ret.Ed25519()[:], ed25519.PrivateKey(sk).Public().(ed25519.PublicKey))
 	return &ret
 }
@@ -87,17 +88,17 @@ func (sk PrivateKey) Sign(msg []byte) ([]byte, error) { return sk.k.Sign(msg) }
 func (sk PrivateKey) Public() *PublicKey { return sk.k.Public() }
 
 func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
-	bs, err := ss.Token(true, isKeyChar)
+	bs, err := ss.Token(true, stx.IsStrKeyChar)
 	if err != nil {
 		return err
 	}
-	key, vers := FromStrKey(string(bs))
+	key, vers := stx.FromStrKey(string(bs))
 	switch vers {
-	case STRKEY_SEED_ED25519:
+	case stx.STRKEY_SEED_ED25519:
 		sec.k = Ed25519Priv(ed25519.NewKeyFromSeed(key))
 		return nil
 	default:
-		return StrKeyError("Invalid private key")
+		return stx.StrKeyError("Invalid private key")
 	}
 }
 
@@ -107,7 +108,7 @@ func (sec *PrivateKey) SignTx(network string, e *TransactionEnvelope) error {
 		return err
 	}
 
-	e.Signatures = append(e.Signatures, DecoratedSignature{
+	e.Signatures = append(e.Signatures, stx.DecoratedSignature{
 		Hint: sec.Public().Hint(),
 		Signature: sig,
 	})
@@ -123,9 +124,9 @@ func genEd25519() PrivateKey {
 	return PrivateKey{ Ed25519Priv(sk) }
 }
 
-func KeyGen(pkt PublicKeyType) PrivateKey {
+func KeyGen(pkt stx.PublicKeyType) PrivateKey {
 	switch pkt {
-	case PUBLIC_KEY_TYPE_ED25519:
+	case stx.PUBLIC_KEY_TYPE_ED25519:
 		return genEd25519()
 	default:
 		panic(fmt.Sprintf("KeyGen: unsupported PublicKeyType %v", pkt))

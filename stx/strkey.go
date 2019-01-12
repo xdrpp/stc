@@ -1,4 +1,6 @@
-package stc
+// The stc package provides a go representation of Stellar XDR data
+// structures.
+package stx
 
 import (
 	"bytes"
@@ -44,6 +46,7 @@ func crc16(data []byte) (crc uint16) {
 	return
 }
 
+// ToStrKey converts the raw bytes of a key to ASCII strkey format.
 func ToStrKey(ver StrKeyVersionByte, bin []byte) string {
 	var out bytes.Buffer
 	out.WriteByte(byte(ver) << 3)
@@ -54,6 +57,9 @@ func ToStrKey(ver StrKeyVersionByte, bin []byte) string {
 	return base32.StdEncoding.EncodeToString(out.Bytes())
 }
 
+// FromStrKey decodes a strkey-format string into the raw bytes of the
+// key and the type of key.  Returns the reserved StrKeyVersionByte
+// STRKEY_ERROR if it fails to decode the string.
 func FromStrKey(in string) ([]byte, StrKeyVersionByte) {
 	bin, err := base32.StdEncoding.DecodeString(in)
 	if err != nil || len(bin) < 3 || bin[0]&7 != 0 {
@@ -72,6 +78,10 @@ func FromStrKey(in string) ([]byte, StrKeyVersionByte) {
 	return bin[1 : len(bin)-2], StrKeyVersionByte(bin[0] >> 3)
 }
 
+// Like FromStrKey, but the caller specifies the desired
+// StrKeyVersionByte.  Throws an error if the input is either invalid
+// or is of a type other than tat designated by the specified
+// StrKeyVersionByte.
 func MustFromStrKey(want StrKeyVersionByte, in string) []byte {
 	bin, ver := FromStrKey(in)
 	if bin == nil || ver != want {
@@ -80,6 +90,7 @@ func MustFromStrKey(want StrKeyVersionByte, in string) []byte {
 	return bin
 }
 
+// Renders a PublicKey in strkey format.
 func (pk *PublicKey) String() string {
 	switch pk.Type {
 	case PUBLIC_KEY_TYPE_ED25519:
@@ -89,6 +100,7 @@ func (pk *PublicKey) String() string {
 	}
 }
 
+// Renders a SignerKey in strkey format.
 func (pk SignerKey) String() string {
 	switch pk.Type {
 	case SIGNER_KEY_TYPE_ED25519:
@@ -102,12 +114,14 @@ func (pk SignerKey) String() string {
 	}
 }
 
-func isKeyChar(c rune) bool {
+// Returns true if c is a valid character in a strkey formatted key.
+func IsStrKeyChar(c rune) bool {
 	return c >= 'A' && c <= 'Z' || c >= '0' && c <= '9'
 }
 
+// Parses a public key in strkey format.
 func (pk *PublicKey) Scan(ss fmt.ScanState, _ rune) error {
-	bs, err := ss.Token(true, isKeyChar)
+	bs, err := ss.Token(true, IsStrKeyChar)
 	if err != nil {
 		return err
 	}
@@ -122,8 +136,9 @@ func (pk *PublicKey) Scan(ss fmt.ScanState, _ rune) error {
 	}
 }
 
+// Parses a signer in strkey format.
 func (pk *SignerKey) Scan(ss fmt.ScanState, _ rune) error {
-	bs, err := ss.Token(true, isKeyChar)
+	bs, err := ss.Token(true, IsStrKeyChar)
 	if err != nil {
 		return err
 	}
@@ -146,12 +161,14 @@ func (pk *SignerKey) Scan(ss fmt.ScanState, _ rune) error {
 
 func signerHint(bs []byte) (ret SignatureHint) {
 	if len(bs) < 4 {
-		panic("SignerHint invalid input")
+		panic(StrKeyError("signerHint insufficient signer length"))
 	}
 	copy(ret[:], bs[len(bs)-4:])
 	return
 }
 
+// Returns the last 4 bytes of a PublicKey, as required for the Hint
+// field in a DecoratedSignature.
 func (pk *PublicKey) Hint() SignatureHint {
 	switch pk.Type {
 	case PUBLIC_KEY_TYPE_ED25519:
@@ -161,6 +178,8 @@ func (pk *PublicKey) Hint() SignatureHint {
 	}
 }
 
+// Returns the last 4 bytes of a SignerKey, as required for the Hint
+// field in a DecoratedSignature.
 func (pk *SignerKey) Hint() SignatureHint {
 	switch pk.Type {
 	case SIGNER_KEY_TYPE_ED25519:

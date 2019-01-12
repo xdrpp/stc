@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"stc/stx"
 )
 
 func get(net *StellarNet, query string) []byte {
@@ -54,7 +55,7 @@ func GetAccountEntry(net *StellarNet, acct string) *HorizonAccountEntry {
 	return nil
 }
 
-func GetLedgerHeader(net *StellarNet) *LedgerHeader {
+func GetLedgerHeader(net *StellarNet) *stx.LedgerHeader {
 	body := get(net, "ledgers?limit=1&order=desc")
 	if body == nil {
 		return nil
@@ -75,7 +76,7 @@ func GetLedgerHeader(net *StellarNet) *LedgerHeader {
 		return nil
 	}
 
-	ret := &LedgerHeader{}
+	ret := &stx.LedgerHeader{}
 	if err := TxIn(ret, lhx.Embedded.Records[0].Header_xdr); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return nil

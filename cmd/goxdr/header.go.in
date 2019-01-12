@@ -112,7 +112,7 @@ func xdrPanic(s string, args ...interface{}) {
 }
 
 // RFC4506 defines bool as equivalent to an enum with values all-caps
-// TRUE and FALSE.  For convenience, we represent and XDR bool as a Go
+// TRUE and FALSE.  For convenience, we represent an XDR bool as a Go
 // bool instead, and so define these constants in case they show up in
 // union cases.
 const (

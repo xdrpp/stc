@@ -2,7 +2,7 @@ DESTDIR =
 PREFIX = /usr/local
 MANDIR = $(PREFIX)/share/man
 
-BUILT_SOURCES = xdr_generated.go
+BUILT_SOURCES = stx/xdr_generated.go
 XDRS = xdr/Stellar-SCP.x xdr/Stellar-ledger-entries.x			\
 xdr/Stellar-ledger.x xdr/Stellar-overlay.x xdr/Stellar-transaction.x	\
 xdr/Stellar-types.x
@@ -37,8 +37,8 @@ cmd/goxdr/goxdr:
 cmd/stc/stc: $(BUILT_SOURCES)
 	cd cmd/stc && go build
 
-xdr_generated.go: cmd/goxdr/goxdr $(XDRS)
-	cmd/goxdr/goxdr -p stc -o $@ $(XDRS)
+stx/xdr_generated.go: cmd/goxdr/goxdr $(XDRS)
+	cmd/goxdr/goxdr -p stx -o $@ $(XDRS)
 
 clean:
 	$(MAKE) -C cmd/goxdr $@
@@ -58,4 +58,4 @@ go1:
 	./make-go1
 
 .PHONY: all install clean maintainer-clean go1
-.PHONY: build-depend update-depend goxdr/goxdr
+.PHONY: build-depend update-depend cmd/goxdr/goxdr

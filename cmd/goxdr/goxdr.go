@@ -40,11 +40,13 @@ func uncapitalize(s string) string {
 	return s
 }
 
-func underscore(s string) string {
-	if s == "" || s[0] == '_' {
+const xdrinline_prefix string = "XdrPrivate_"
+
+func xdrinline(s string) string {
+	if strings.HasPrefix(s, xdrinline_prefix) {
 		return s
 	}
-	return "_" + s
+	return xdrinline_prefix + s
 }
 
 func parseXDR(out *rpc_syms, file string) {
@@ -102,7 +104,7 @@ func (e *emitter) xprintf(str string, args ...interface{}) {
 
 func (e *emitter) get_typ(context idval, d *rpc_decl) idval {
 	if d.typ.getgo() == "" {
-		d.typ.setlocal(underscore(context.getgo()) + "_" + d.id.getgo())
+		d.typ.setlocal(xdrinline(context.getgo()) + "_" + d.id.getgo())
 		*d.inline_decl.getsym() = d.typ
 		e.emit(d.inline_decl)
 	}
@@ -375,7 +377,11 @@ func (r *rpc_enum) emit(e *emitter) {
 	out := &strings.Builder{}
 	fmt.Fprintf(out, "type %s int32\nconst (\n", r.id)
 	for _, tag := range r.tags {
-		fmt.Fprintf(out, "\t%s = %s(%s)\n", tag.id, r.id, tag.val)
+		if _, err := strconv.Atoi(tag.val.String()); err == nil {
+			fmt.Fprintf(out, "\t%s %s = %s\n", tag.id, r.id, tag.val)
+		} else {
+			fmt.Fprintf(out, "\t%s %s = %s(%s)\n", tag.id, r.id, r.id, tag.val)
+		}
 	}
 	fmt.Fprintf(out, ")\n")
 	e.append(out)

@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"stc/stx"
 )
 
 type StellarNet struct {
@@ -90,7 +91,7 @@ func EnsureDir(filename string) error {
 }
 
 type SignerKeyInfo struct {
-	Key SignerKey
+	Key stx.SignerKey
 	Comment string
 }
 
@@ -115,7 +116,7 @@ func (ski *SignerKeyInfo) Scan(ss fmt.ScanState, c rune) error {
 	}
 }
 
-type SignerCache map[SignatureHint][]SignerKeyInfo
+type SignerCache map[stx.SignatureHint][]SignerKeyInfo
 
 func (c SignerCache) String() string {
 	out := &strings.Builder{}
@@ -145,7 +146,7 @@ func (c *SignerCache) Load(filename string) error {
 		_, e := fmt.Sscanf(scanner.Text(), "%v", &ski)
 		if e == nil {
 			c.Add(ski.Key.String(), ski.Comment)
-		} else if _, ok := e.(StrKeyError); ok {
+		} else if _, ok := e.(stx.StrKeyError); ok {
 			fmt.Fprintf(os.Stderr, "%s:%d: invalid signer key\n",
 				filename, lineno)
 		} else {
@@ -162,10 +163,10 @@ func (c SignerCache) Save(filename string) error {
 }
 
 func (c SignerCache) Lookup(net *StellarNet, e *TransactionEnvelope,
-	ds *DecoratedSignature) *SignerKeyInfo {
+	ds *stx.DecoratedSignature) *SignerKeyInfo {
 	skis := c[ds.Hint]
 	for i := range skis {
-		if skis[i].Key.VerifyTx(net.NetworkId, e,  ds.Signature) {
+		if VerifyTx(&skis[i].Key, net.NetworkId, e,  ds.Signature) {
 			return &skis[i]
 		}
 	}
@@ -173,7 +174,7 @@ func (c SignerCache) Lookup(net *StellarNet, e *TransactionEnvelope,
 }
 
 func (c SignerCache) Add(strkey, comment string) error {
-	var signer SignerKey
+	var signer stx.SignerKey
 	_, err := fmt.Sscan(strkey, &signer)
 	if err != nil {
 		return err
@@ -221,7 +222,7 @@ func (h *AccountHints) Load(filename string) error {
 		if len(v) == 0 || len(v[0]) == 0 {
 			continue
 		}
-		var ac AccountID
+		var ac stx.AccountID
 		if _, err := fmt.Sscan(v[0], &ac); err != nil {
 			fmt.Fprintf(os.Stderr, "%s:%d: %s\n", filename, lineno, err.Error())
 			continue

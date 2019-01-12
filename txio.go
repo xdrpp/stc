@@ -1,4 +1,11 @@
 
+/*
+
+Stellar transaction compiler library.  Provides functions for
+manipulating Stellar transactions, translating them back and forth
+between txrep format, and posting them.
+
+*/
 package stc
 
 import (
@@ -8,6 +15,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"stc/stx"
 )
 
 // pseudo-selectors
@@ -56,7 +64,7 @@ skipspace:
 		} else if err != nil {
 			return err
 		} else if r <= ' ' || r >= 127 {
-			err = StrKeyError("Invalid character in AssetCode")
+			err = stx.StrKeyError("Invalid character in AssetCode")
 			break
 		} else if r != '\\' {
 			out[i] = byte(r)
@@ -76,23 +84,23 @@ skipspace:
 	}
 	r, _, err = ss.ReadRune()
 	if err != io.EOF && !unicode.IsSpace(r) {
-		return StrKeyError("AssetCode too long")
+		return stx.StrKeyError("AssetCode too long")
 	}
 	return nil
 }
 
-func TxOut(e XdrAggregate) string {
+func TxOut(e stx.XdrAggregate) string {
 	out := &strings.Builder{}
 	b64o := base64.NewEncoder(base64.StdEncoding, out)
-	e.XdrMarshal(&XdrOut{b64o}, "")
+	e.XdrMarshal(&stx.XdrOut{b64o}, "")
 	b64o.Close()
 	return out.String()
 }
 
-func TxIn(e XdrAggregate, input string) (err error) {
+func TxIn(e stx.XdrAggregate, input string) (err error) {
 	defer func() {
 		if i := recover(); i != nil {
-			if xe, ok := i.(XdrError); ok {
+			if xe, ok := i.(stx.XdrError); ok {
 				err = xe
 				//fmt.Fprintln(os.Stderr, xe)
 				return
@@ -102,7 +110,7 @@ func TxIn(e XdrAggregate, input string) (err error) {
 	}()
 	in := strings.NewReader(input)
 	b64i := base64.NewDecoder(base64.StdEncoding, in)
-	e.XdrMarshal(&XdrIn{b64i}, "")
+	e.XdrMarshal(&stx.XdrIn{b64i}, "")
 	return nil
 }
 
@@ -114,12 +122,12 @@ type trackTypes struct {
 func (x *trackTypes) present() string {
 	return "." + strings.Repeat("_inner", x.ptrDepth-1) + ps_present;
 }
-func (x *trackTypes) track(i XdrType) (cleanup func()) {
+func (x *trackTypes) track(i stx.XdrType) (cleanup func()) {
 	oldx := *x
 	switch i.(type) {
-	case XdrPtr:
+	case stx.XdrPtr:
 		x.ptrDepth++
-	case *Asset:
+	case *stx.Asset:
 		x.inAsset = true
 	default:
 		return func() {}
@@ -139,7 +147,8 @@ func (xp *TxStringCtx) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
 
-func (xp *TxStringCtx) Marshal_SequenceNumber(name string, v *SequenceNumber) {
+func (xp *TxStringCtx) Marshal_SequenceNumber(name string,
+	v *stx.SequenceNumber) {
 	fmt.Fprintf(xp.Out, "%s: %d\n", name, *v)
 }
 
@@ -191,14 +200,14 @@ type xdrEnumNames interface {
 	XdrEnumNames() map[int32]string
 }
 
-func (xp *TxStringCtx) Marshal(name string, i XdrType) {
+func (xp *TxStringCtx) Marshal(name string, i stx.XdrType) {
 	defer xp.track(i)()
 	switch v := i.(type) {
-	case *TimeBounds:
+	case *stx.TimeBounds:
 		fmt.Fprintf(xp.Out, "%s.minTime: %d%s\n%s.maxTime: %d%s\n",
 			name, v.MinTime, dateComment(v.MinTime),
 			name, v.MaxTime, dateComment(v.MaxTime))
-	case *AccountID:
+	case *stx.AccountID:
 		ac := v.String()
 		if hint := xp.Net.Accounts[ac]; hint != "" {
 			fmt.Fprintf(xp.Out, "%s: %s (%s)\n", name, ac, hint)
@@ -221,24 +230,24 @@ func (xp *TxStringCtx) Marshal(name string, i XdrType) {
 		} else {
 			fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
 		}
-	case XdrArrayOpaque:
+	case stx.XdrArrayOpaque:
 		if xp.inAsset {
 			fmt.Fprintf(xp.Out, "%s: %s\n", name, renderCode(v.GetByteSlice()))
 		} else {
 			fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
 		}
-	case *XdrInt64:
+	case *stx.XdrInt64:
 		fmt.Fprintf(xp.Out, "%s: %s (%s)\n", name, v.String(),
 			ScalePrint(int64(*v), 7))
 	case fmt.Stringer:
 		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
-	case XdrPtr:
+	case stx.XdrPtr:
 		fmt.Fprintf(xp.Out, "%s%s: %v\n", name, xp.present(), v.GetPresent())
 		v.XdrMarshalValue(xp, name)
-	case XdrVec:
+	case stx.XdrVec:
 		fmt.Fprintf(xp.Out, "%s.%s: %d\n", name, ps_len, v.GetVecLen())
 		v.XdrMarshalN(xp, name, v.GetVecLen())
-	case *DecoratedSignature:
+	case *stx.DecoratedSignature:
 		var hint string
 		if ski := xp.Net.Signers.Lookup(xp.Net, xp.Env, v); ski != nil {
 			hint = fmt.Sprintf("%x (%s)", v.Hint, *ski)
@@ -249,7 +258,7 @@ func (xp *TxStringCtx) Marshal(name string, i XdrType) {
 		}
 		fmt.Fprintf(xp.Out, "%[1]s.hint: %[2]s\n%[1]s.signature: %[3]x\n",
 			name, hint, v.Signature)
-	case XdrAggregate:
+	case stx.XdrAggregate:
 		v.XdrMarshal(xp, name)
 	default:
 		fmt.Fprintf(xp.Out, "%s: %v\n", name, i)
@@ -286,12 +295,12 @@ func (xs *XdrScan) report(line int, fmtstr string, args...interface{}) {
 	fmt.Fprintf(&xs.errmsg, fmtstr, args...)
 }
 
-func (xs *XdrScan) Marshal(name string, i XdrType) {
+func (xs *XdrScan) Marshal(name string, i stx.XdrType) {
 	defer xs.track(i)()
 	lv, ok := xs.kvs[name]
 	val := lv.val
 	switch v := i.(type) {
-	case XdrArrayOpaque:
+	case stx.XdrArrayOpaque:
 		var err error
 		if xs.inAsset {
 			err = scanCode(v.GetByteSlice(), val)
@@ -313,7 +322,7 @@ func (xs *XdrScan) Marshal(name string, i XdrType) {
 		} else if len(val) > 0 && val[len(val)-1] == '?' {
 			xs.help[name] = true
 		}
-	case XdrPtr:
+	case stx.XdrPtr:
 		val = "false"
 		field := name + xs.present()
 		fmt.Sscanf(xs.kvs[field].val, "%s", &val)
@@ -329,7 +338,7 @@ func (xs *XdrScan) Marshal(name string, i XdrType) {
 				"%s (%s) must be true or false\n", field, val)
 		}
 		v.XdrMarshalValue(xs, name)
-	case *XdrSize:
+	case *stx.XdrSize:
 		var size uint32
 		lv = xs.kvs[name + "." + ps_len]
 		fmt.Sscan(lv.val, &size)
@@ -341,23 +350,24 @@ func (xs *XdrScan) Marshal(name string, i XdrType) {
 			xs.report(lv.line, "%s.%s (%d) exceeds maximum size %d.\n",
 				name, ps_len, size, v.XdrBound())
 		}
-	case XdrAggregate:
+	case stx.XdrAggregate:
 		v.XdrMarshal(xs, name)
 	case xdrPointer:
 		if !ok { return }
 		fmt.Sscan(val, v.XdrPointer())
 	default:
-		xdrPanic("XdrScan: Don't know how to parse %s (%T).\n", name, i)
+		panic(stx.XdrError(fmt.Sprintf(
+			"XdrScan: Don't know how to parse %s (%T).\n", name, i)))
 	}
 	delete(xs.kvs, name)
 }
 
-func TxScan(t XdrAggregate, in string, filename string) (
+func TxScan(t stx.XdrAggregate, in string, filename string) (
 	help XdrHelp, err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			switch i.(type) {
-			case XdrError, StrKeyError:
+			case stx.XdrError, stx.StrKeyError:
 				err = i.(error)
 				//fmt.Fprintln(os.Stderr, err)
 				return
@@ -383,7 +393,7 @@ func TxScan(t XdrAggregate, in string, filename string) (
 	}
 	t.XdrMarshal(&x, "")
 	if x.err {
-		err = XdrError(x.errmsg.String())
+		err = stx.XdrError(x.errmsg.String())
 	}
 	return
 }

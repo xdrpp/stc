@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	. "stc"
+	"stc/stx"
 )
 
 type acctInfo struct {
@@ -20,29 +21,29 @@ type acctInfo struct {
 	signers []HorizonSigner
 }
 type xdrGetAccounts struct {
-	accounts map[AccountID]*acctInfo
+	accounts map[stx.AccountID]*acctInfo
 }
 
 func (xp *xdrGetAccounts) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
-func (xp *xdrGetAccounts) Marshal(field string, i XdrType) {
+func (xp *xdrGetAccounts) Marshal(field string, i stx.XdrType) {
 	switch v := i.(type) {
-	case *AccountID:
+	case *stx.AccountID:
 		if _, ok := xp.accounts[*v]; !ok {
 			xp.accounts[*v] = &acctInfo{ field: field }
 		}
-	case XdrAggregate:
+	case stx.XdrAggregate:
 		v.XdrMarshal(xp, field)
 	}
 }
 
 func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
-	xga := xdrGetAccounts{ map[AccountID]*acctInfo{} }
+	xga := xdrGetAccounts{ map[stx.AccountID]*acctInfo{} }
 	e.XdrMarshal(&xga, "")
 	c := make(chan struct{})
 	for ac, infp := range xga.accounts {
-		go func(ac AccountID, infp *acctInfo) {
+		go func(ac stx.AccountID, infp *acctInfo) {
 			var ae *HorizonAccountEntry
 			if usenet {
 				ae = GetAccountEntry(net, ac.String())
@@ -75,7 +76,7 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 }
 
 func doKeyGen(outfile string) {
-	sk := KeyGen(PUBLIC_KEY_TYPE_ED25519)
+	sk := KeyGen(stx.PUBLIC_KEY_TYPE_ED25519)
 	if outfile == "" {
 		fmt.Println(sk)
 		fmt.Println(sk.Public())
@@ -131,10 +132,10 @@ func fixTx(net *StellarNet, e *TransactionEnvelope) {
 		}
 	}()
 
-	seqchan := make(chan SequenceNumber)
+	seqchan := make(chan stx.SequenceNumber)
 	go func() {
-		var val SequenceNumber
-		var zero AccountID
+		var val stx.SequenceNumber
+		var zero stx.AccountID
 		if e.Tx.SourceAccount != zero {
 			if a := GetAccountEntry(net, e.Tx.SourceAccount.String());
 			a != nil {
@@ -519,14 +520,14 @@ func main() {
 	case *opt_post:
 		res := PostTransaction(net, e)
 		if res != nil {
-			fmt.Print(XdrToString(res))
+			fmt.Print(stx.XdrToString(res))
 		}
-		if res == nil || res.Result.Code != TxSUCCESS {
+		if res == nil || res.Result.Code != stx.TxSUCCESS {
 			fmt.Fprint(os.Stderr, "Post transaction failed\n")
 			os.Exit(1)
 		}
 	case *opt_preauth, *opt_txhash:
-		sk := SignerKey{ Type: SIGNER_KEY_TYPE_PRE_AUTH_TX }
+		sk := stx.SignerKey{ Type: stx.SIGNER_KEY_TYPE_PRE_AUTH_TX }
 		copy(sk.PreAuthTx()[:], TxPayloadHash(net.NetworkId, e))
 		if *opt_txhash { fmt.Printf("%x\n", *sk.PreAuthTx()) }
 		if *opt_preauth { fmt.Println(&sk) }
