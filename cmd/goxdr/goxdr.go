@@ -170,7 +170,7 @@ func (v _ptrflag_$TYPE) SetU32(nv uint32) {
 			*v.p = new($TYPE)
 		}
 	default:
-		xdrPanic("*$TYPE present flag value %d should be 0 or 1", nv)
+		XdrPanic("*$TYPE present flag value %d should be 0 or 1", nv)
 	}
 }
 func (v _ptrflag_$TYPE) XdrPointer() interface{} { return nil }
@@ -250,9 +250,9 @@ func (v *$VEC) XdrBound() uint32 {
 }
 func (*$VEC) XdrCheckLen(length uint32) {
 	if length > uint32($BOUND) {
-		xdrPanic("$VEC length %d exceeds bound $BOUND", length)
+		XdrPanic("$VEC length %d exceeds bound $BOUND", length)
 	} else if int(length) < 0 {
-		xdrPanic("$VEC length %d exceeds max int", length)
+		XdrPanic("$VEC length %d exceeds max int", length)
 	}
 }
 func (v *$VEC) GetVecLen() uint32 { return uint32(len(*v)) }
@@ -525,7 +525,7 @@ func (r *rpc_union) emit(e *emitter) {
 		}
 `, ret)
 		badcase := fmt.Sprintf(
-`		xdrPanic("%s.%s accessed when %s == %%v", u.%[3]s)
+`		XdrPanic("%s.%s accessed when %s == %%v", u.%[3]s)
 		return nil
 `, r.id, u.decl.id, r.tagid)
 		fmt.Fprintf(out, "\tswitch u.%s {\n", r.tagid)
@@ -657,7 +657,7 @@ func (v *%[1]s) XdrMarshal(x XDR, name string) {
 	fmt.Fprintf(out, "\t}\n")
 	if !r.hasdefault {
 		fmt.Fprintf(out,
-`	xdrPanic(fmt.Sprintf("invalid %[1]s (%%v) in %[2]s", v.%[1]s))
+`	XdrPanic(fmt.Sprintf("invalid %[1]s (%%v) in %[2]s", v.%[1]s))
 `, r.tagid, r.id)
 	}
 	fmt.Fprintf(out, "}\n")
@@ -700,11 +700,26 @@ func emitAll(syms *rpc_syms) string {
 	return e.output.String()
 }
 
+type stringlist []string
+func (sl *stringlist) String() string {
+	var out strings.Builder
+	for _, s := range *sl {
+		fmt.Fprintf(&out, "import . \"%s\"\n", s)
+	}
+	return out.String()
+}
+func (sl *stringlist) Set(v string) error {
+	*sl = append(*sl, v)
+	return nil
+}
+
 func main() {
 	opt_nobp := flag.Bool("b", false, "Suppress initial boilerplate code")
 	opt_output := flag.String("o", "", "Name of output file")
 	opt_pkg := flag.String("p", "main", "Name of package")
 	opt_help := flag.Bool("help", false, "Print usage")
+	var imports stringlist
+	flag.Var(&imports, "i", "add import directive for `path`")
 	progname = os.Args[0]
 	if pos := strings.LastIndexByte(progname, '/'); pos >= 0 {
 		progname = progname[pos+1:]
@@ -750,7 +765,7 @@ func main() {
 	fmt.Fprintln(out, "; DO NOT EDIT.\n");
 
 	if *opt_pkg != "" {
-		fmt.Fprintf(out, "package %s\n", *opt_pkg)
+		fmt.Fprintf(out, "package %s\n%s", *opt_pkg, imports.String())
 	}
 	if !*opt_nobp {
 		io.WriteString(out, header)

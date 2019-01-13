@@ -356,8 +356,7 @@ func (xs *XdrScan) Marshal(name string, i stx.XdrType) {
 		if !ok { return }
 		fmt.Sscan(val, v.XdrPointer())
 	default:
-		panic(stx.XdrError(fmt.Sprintf(
-			"XdrScan: Don't know how to parse %s (%T).\n", name, i)))
+		stx.XdrPanic("XdrScan: Don't know how to parse %s (%T).\n", name, i)
 	}
 	delete(xs.kvs, name)
 }

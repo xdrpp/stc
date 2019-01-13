@@ -101,15 +101,15 @@ compiles to this go code:
 ~~~~{.go}
 type Myenum int32
 const (
-    Tag1 = Myenum(1)
-    Tag2 = Myenum(2)
-    Tag3 = Myenum(3)
+    Tag1 Myenum = 1
+    Tag2 Myenum = 2
+    Tag3 Myenum = 3
 )
 func XDR_Myenum(x XDR, name string, v *Myenum) {...}
 
 type Myunion struct {
     Discriminant Myenum
-    ....
+    ...
 }
 func (u *Myunion) One() *int32 {...}
 func (u *Myunion) Two() *string {...}
@@ -167,7 +167,7 @@ func (xp *MyXDR2) Sprintf(f string, args ...interface{}) string {
 applied to the data structure.  The second argument, `val`, will be
 the go value that must be marshaled/unmarshaled.  To simplify data
 structure traversal, the value is not always just a pointer to the
-value to be marshaled--in some cases the value is cast to or wrapped
+value to be marshaled---in some cases the value is cast to or wrapped
 in a defined type that allows handling of many different types to be
 collapsed together.  Specifically, here is the type of `val` depending
 on what is being marshaled:
@@ -300,6 +300,10 @@ XDR files into different go files, you will need to specify `-b` with
 each XDR input file to avoid including the boilerplate, then run goxdr
 with no input files (`goxdr -o goxdr_boilerplate.go`) to get one copy
 of the boilerplate.
+
+`-i` _path_
+:	Add the directive <tt>import . "_path_"</tt> at the top of the
+output file.
 
 `-o` _output.go_
 :	Write the output to file _output.go_ instead of standard output.

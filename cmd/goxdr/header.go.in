@@ -107,7 +107,7 @@ type XDR interface {
 // The error thrown by marshaling functions when data has bad value.
 type XdrError string
 func (v XdrError) Error() string { return string(v) }
-func xdrPanic(s string, args ...interface{}) {
+func XdrPanic(s string, args ...interface{}) {
 	panic(XdrError(fmt.Sprintf(s, args...)))
 }
 
@@ -239,7 +239,7 @@ func (v *XdrBool) SetU32(nv uint32) {
 	case 1:
 		*v = true
 	}
-	xdrPanic("bool must be 0 or 1")
+	XdrPanic("bool must be 0 or 1")
 }
 func (v *XdrBool) XdrPointer() interface{} { return (*bool)(v) }
 func (v *XdrBool) XdrValue() interface{} { return bool(*v) }
@@ -285,9 +285,9 @@ func (v *XdrSize) String() string { return fmt.Sprintf("%v", v.size) }
 func (v *XdrSize) GetU32() uint32 { return v.size }
 func (v *XdrSize) SetU32(nv uint32) {
 	if nv > v.bound {
-		xdrPanic("size %d greater than bound %d", nv, v.bound)
+		XdrPanic("size %d greater than bound %d", nv, v.bound)
 	} else if int(nv) < 0 {
-		xdrPanic("size %d greater than max slice len", nv)
+		XdrPanic("size %d greater than max slice len", nv)
 	}
 	v.size = nv
 }
@@ -345,14 +345,14 @@ func (v XdrString) XdrBound() uint32 { return v.Bound }
 func (v XdrString) GetString() string { return *v.Str }
 func (v XdrString) SetString(s string) {
 	if uint(len(s)) > uint(v.Bound) {
-		xdrPanic("Cannot store %d bytes in string<%d>", len(s), v.Bound)
+		XdrPanic("Cannot store %d bytes in string<%d>", len(s), v.Bound)
 	}
 	*v.Str = s
 }
 func (v XdrString) GetByteSlice() []byte { return ([]byte)(*v.Str) }
 func (v XdrString) SetByteSlice(bs []byte) {
 	if uint(len(bs)) > uint(v.Bound) {
-		xdrPanic("Cannot store %d bytes in string<%d>", len(bs), v.Bound)
+		XdrPanic("Cannot store %d bytes in string<%d>", len(bs), v.Bound)
 	}
 	*v.Str = string(bs)
 }
@@ -378,7 +378,7 @@ func (v XdrVecOpaque) GetByteSlice() []byte { return *v.Bytes }
 func (v XdrVecOpaque) XdrBound() uint32 { return v.Bound }
 func (v XdrVecOpaque) SetByteSlice(bs []byte) {
 	if uint(len(bs)) > uint(v.Bound) {
-		xdrPanic("Cannot store %d bytes in string<%d>", len(bs), v.Bound)
+		XdrPanic("Cannot store %d bytes in string<%d>", len(bs), v.Bound)
 	}
 	*v.Bytes = bs
 }
@@ -503,7 +503,7 @@ func (xo *XdrOut) Marshal(name string, i XdrType) {
 func xdrReadN(in io.Reader, n uint32) []byte {
 	var b bytes.Buffer
 	if _, err := io.CopyN(&b, in, int64(n)); err != nil {
-		xdrPanic(err.Error())
+		XdrPanic(err.Error())
 	}
 	return b.Bytes()
 }
@@ -513,7 +513,7 @@ func xdrReadPad(in io.Reader, n uint32) {
 		got := xdrReadN(in, 4-(n&3))
 		for _, b := range got {
 			if b != 0 {
-				xdrPanic("padding contained non-zero bytes")
+				XdrPanic("padding contained non-zero bytes")
 			}
 		}
 	}
