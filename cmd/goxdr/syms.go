@@ -11,6 +11,7 @@ const (
 type idval struct {
 	xid string					// The symbol in the xdr file
 	goid string					// The name we should use in go
+	comment string				// A block comment that preceded id
 }
 func (iv *idval) getx() string { return iv.xid }
 func (iv *idval) getgo() string { return iv.goid }
@@ -27,6 +28,7 @@ type rpc_decl struct {
 
 	typ idval
 	inline_decl rpc_sym
+	comment string
 }
 
 type rpc_typedef rpc_decl
@@ -38,6 +40,7 @@ type rpc_const struct {
 type rpc_struct struct {
 	id idval
 	decls []rpc_decl
+	comment string
 }
 
 type rpc_enum struct {
@@ -55,6 +58,7 @@ type rpc_union struct {
 	id, tagtype, tagid idval
 	fields []rpc_ufield
 	hasdefault bool
+	comment string
 }
 
 type rpc_proc struct {

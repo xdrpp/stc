@@ -7,7 +7,7 @@ import "strconv"
 %}
 
 %union {
-	str string
+	tok Token
 	idval idval
 	num uint32
 	symlist []rpc_sym
@@ -24,33 +24,32 @@ import "strconv"
 	proc rpc_proc
 }
 
-%token <str> T_ID
-%token <str> T_NUM
+%token <tok> T_ID
+%token <tok> T_NUM
+%token <tok> T_CONST
+%token <tok> T_STRUCT
+%token <tok> T_UNION
+%token <tok> T_ENUM
+%token <tok> T_TYPEDEF
+%token <tok> T_PROGRAM
+%token <tok> T_NAMESPACE
 
-%token T_CONST
-%token T_STRUCT
-%token T_UNION
-%token T_ENUM
-%token T_TYPEDEF
-%token T_PROGRAM
-%token T_NAMESPACE
+%token <tok> T_BOOL
+%token <tok> T_UNSIGNED
+%token <tok> T_INT
+%token <tok> T_HYPER
+%token <tok> T_FLOAT
+%token <tok> T_DOUBLE
+%token <tok> T_QUADRUPLE
+%token <tok> T_VOID
 
-%token T_BOOL
-%token T_UNSIGNED
-%token T_INT
-%token T_HYPER
-%token T_FLOAT
-%token T_DOUBLE
-%token T_QUADRUPLE
-%token T_VOID
+%token <tok> T_VERSION
+%token <tok> T_SWITCH
+%token <tok> T_CASE
+%token <tok> T_DEFAULT
 
-%token T_VERSION
-%token T_SWITCH
-%token T_CASE
-%token T_DEFAULT
-
-%token T_OPAQUE
-%token T_STRING
+%token <tok> T_OPAQUE
+%token <tok> T_STRING
 
 %type <def> definition def_enum def_const def_namespace def_type
 %type <def> def_struct def_union def_program
@@ -67,6 +66,7 @@ import "strconv"
 %type <idval> id newid qid value vec_len type base_type union_case type_or_void
 %type <num> number
 %type <arrayqual> vec_qual array_qual any_qual
+%type <tok> ';'
 
 %%
 
@@ -142,7 +142,7 @@ comma_warn: /* empty */
 
 def_struct: T_STRUCT newid struct_body ';'
 	{
-		$$ = &rpc_struct{$2, $3}
+		$$ = &rpc_struct{$2, $3, $1.BlockComment}
 	};
 
 struct_body: '{' declaration_list '}'
@@ -163,6 +163,7 @@ def_union: T_UNION newid union_body ';'
 	{
 		ret := $3				// Copy it
 		ret.id = $2
+		ret.comment = $1.BlockComment
 		$$ = &ret
 	};
 
@@ -235,6 +236,9 @@ union_decl: declaration
 def_type: T_TYPEDEF declaration
 	{
 		ret := rpc_typedef($2)
+		if $1.BlockComment != "" {
+			ret.comment = $1.BlockComment
+		}
 		$$ = &ret
 	};
 
@@ -244,12 +248,22 @@ declaration: type_specifier id any_qual ';'
 		$$.id = $2
 		$$.qual = $3.qual
 		$$.bound = $3.bound
+		if $1.comment != "" {
+			$$.comment = $1.comment
+		} else {
+			$$.comment = $4.LineComment
+		}
 	}
 | type_specifier '*' id ';'
 	{
 		$$ = $1
 		$$.id = $3
 		$$.qual = PTR
+		if $1.comment != "" {
+			$$.comment = $1.comment
+		} else {
+			$$.comment = $4.LineComment
+		}
 	}
 | T_OPAQUE id array_qual ';'
 	{
@@ -257,6 +271,11 @@ declaration: type_specifier id any_qual ';'
 		$$.typ.setlocal("byte")
 		$$.qual = $3.qual
 		$$.bound = $3.bound
+		if $1.BlockComment != "" {
+			$$.comment = $1.BlockComment
+		} else {
+			$$.comment = $4.LineComment
+		}
 	}
 | T_STRING id vec_qual ';'
 	{
@@ -264,6 +283,11 @@ declaration: type_specifier id any_qual ';'
 		$$.typ.setlocal("string")
 		$$.qual = SCALAR
 		$$.bound = $3.bound
+		if $1.BlockComment != "" {
+			$$.comment = $1.BlockComment
+		} else {
+			$$.comment = $4.LineComment
+		}
 	}
 	;
 
@@ -292,15 +316,18 @@ type_specifier: type
 	}
 | T_ENUM enum_body
 	{
-		$$ = rpc_decl{inline_decl: &rpc_enum{tags: $2}}
+		$$ = rpc_decl{inline_decl: &rpc_enum{tags: $2},
+			comment : $1.BlockComment}
 	}
 | T_STRUCT struct_body
 	{
-		$$ = rpc_decl{inline_decl: &rpc_struct{decls: $2}}
+		$$ = rpc_decl{inline_decl: &rpc_struct{decls: $2,
+			comment: $1.BlockComment}}
 	}
 | T_UNION union_body
 	{
 		decl := $2
+		decl.comment = $1.BlockComment
 		$$.inline_decl = &decl
 	};
 
@@ -361,43 +388,49 @@ arg_list: type
 
 type: base_type | qid;
 
-base_type: T_INT { $$.setlocal("int32") }
-| T_BOOL { $$.setlocal("bool") }
-| T_UNSIGNED T_INT { $$.setlocal("uint32") }
+base_type: T_INT { $$.setlocal("int32"); $$.comment = $1.BlockComment }
+| T_BOOL { $$.setlocal("bool"); $$.comment = $1.BlockComment }
+| T_UNSIGNED T_INT { $$.setlocal("uint32"); $$.comment = $1.BlockComment }
 | T_UNSIGNED {
 		yylex.(*Lexer).
 			Warn("RFC4506 requires \"int\" after \"unsigned\"")
 		$$.setlocal("uint32")
+		$$.comment = $1.BlockComment
 	}
-| T_HYPER { $$.setlocal("int64") }
-| T_UNSIGNED T_HYPER { $$.setlocal("uint64") }
-| T_FLOAT { $$.setlocal("float32") }
-| T_DOUBLE { $$.setlocal("float64") }
-| T_QUADRUPLE { $$.setlocal("float128") }
+| T_HYPER { $$.setlocal("int64"); $$.comment = $1.BlockComment }
+| T_UNSIGNED T_HYPER { $$.setlocal("uint64"); $$.comment = $1.BlockComment }
+| T_FLOAT { $$.setlocal("float32"); $$.comment = $1.BlockComment }
+| T_DOUBLE { $$.setlocal("float64"); $$.comment = $1.BlockComment }
+| T_QUADRUPLE { $$.setlocal("float128"); $$.comment = $1.BlockComment }
   ;
 
 vec_len: value
 | /* empty */ { $$.setlocal("") };
 
 value: qid
-| T_NUM { $$ = gid($1) };
+| T_NUM { $$ = gid($1.Value) };
 
 number: T_NUM
 	{
-		val, err := strconv.ParseUint($1, 0, 32)
+		val, err := strconv.ParseUint($1.Value, 0, 32)
 		if err != nil {
-			yylex.Error(err.Error() + " at " + $1)
+			yylex.Error(err.Error() + " at " + $1.Value)
 		}
 		$$ = uint32(val)
 	}
 
 newid: T_ID
 	{
-		yylex.(*Lexer).Checkdup($1)
-		$$ = gid($1)
+		yylex.(*Lexer).Checkdup($1.Value)
+		$$ = gid($1.Value)
+		$$.comment = $1.BlockComment
 	};
 
 qid: id;	// might make sense for qid to allow package-qualified
-id: T_ID { $$ = gid($1) };
+id: T_ID
+	{
+		$$ = gid($1.Value)
+		$$.comment = $1.BlockComment
+	};
 
 %%

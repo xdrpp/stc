@@ -360,6 +360,9 @@ func (r *rpc_const) emit(e *emitter) {
 
 func (r0 *rpc_typedef) emit(e *emitter) {
 	r := (*rpc_decl)(r0)
+	if r.comment != "" {
+		e.printf("%s\n", r.comment)
+	}
 	e.printf("type %s = %s\n", r.id, e.decltypeb(gid(""), r))
 	e.xprintf(
 `func XDR_%[1]s(x XDR, name string, v *%[1]s) {
@@ -441,6 +444,9 @@ func (v *%[1]s) XdrValue() interface{} {
 
 func (r *rpc_struct) emit(e *emitter) {
 	out := &strings.Builder{}
+	if r.comment != "" {
+		fmt.Fprintf(out, "%s\n", r.comment)
+	}
 	fmt.Fprintf(out, "type %s struct {\n", r.id)
 	for i := range r.decls {
 		fmt.Fprintf(out, "\t%s %s\n", r.decls[i].id,
@@ -489,6 +495,9 @@ func (u *rpc_ufield) isVoid() bool {
 
 func (r *rpc_union) emit(e *emitter) {
 	out := &strings.Builder{}
+	if r.comment != "" {
+		fmt.Fprintf(out, "%s\n", r.comment)
+	}
 	fmt.Fprintf(out, "type %s struct {\n", r.id)
 	fmt.Fprintf(out, "\t%s %s\n", r.tagid, r.tagtype)
 	for i := range r.fields {

@@ -9,6 +9,8 @@ type TokenType = int
 type Token struct {
 	Type TokenType
 	Value string
+	BlockComment string
+	LineComment string
 }
 
 const EOFRune rune = -1
@@ -19,6 +21,7 @@ type Lexer struct {
 	lineno int
 	midline bool
 	output *rpc_syms
+	blockComment string
 	Package string
 	newsymbols map[string]struct{}
 }
@@ -28,13 +31,15 @@ func NewLexer(out *rpc_syms, filename, input string) *Lexer {
 		out.Symbols = []rpc_sym{}
 		out.SymbolMap = map[string]rpc_sym{}
 	}
-	return &Lexer{
+	l := &Lexer{
 		filename: filename,
 		input: input,
 		lineno: 1,
 		output: out,
 		newsymbols: map[string]struct{}{},
 	}
+	l.clearComment()
+	return l
 }
 
 var keywords map[string]int = map[string]int {
@@ -79,44 +84,182 @@ func (l *Lexer) advance(length int) {
 	}
 }
 
+func (l *Lexer) findEOL() int {
+	n := strings.IndexByte(l.input, '\n')
+	if n > 0 && l.input[n-1] == '\r' {
+		return n-1
+	} else if n >= 0 {
+		return n
+	}
+	return len(l.input)
+}
+
+func (l *Lexer) skipWS() bool {
+	i := strings.IndexFunc(l.input, func(c rune) bool {
+		return c != ' ' && c != '\t'
+	})
+	if i > 0 {
+		l.advance(i)
+		return true
+	}
+	return false
+}
+
+func (l *Lexer) skipWSNL() bool {
+	l.skipWS()
+	n := len(l.input)
+	if n >= 1 && l.input[0] == '\n' {
+		l.advance(1)
+		return true
+	}
+	if n >= 2 && l.input[0:2] == "\r\n" {
+		l.advance(2)
+		return true
+	}
+	return false
+}
+
+func (l *Lexer) findSlash() (pos int, column int) {
+	for i := 0;; i++ {
+		switch {
+		case i + 2 >= len(l.input):
+			return -1, -1
+		case l.input[i] == ' ':
+			column++
+		case l.input[i] == '\t':
+			column += 8
+		case l.input[i] == '/':
+			return i, column
+		default:
+			return -1, -1
+		}
+	}
+}
+
+func (l *Lexer) getLineComment() (comment string, column int) {
+	i, column := l.findSlash()
+	if i >= 0 && l.input[i+1] == '/' {
+		comment = l.input[i:l.findEOL()]
+		l.skipLine()
+	}
+	return
+}
+
+func stripIndent(columns int, input string) string {
+	var i int
+loop:
+	for i = 0; columns > 0 && i < len(input); i++ {
+		switch input[i] {
+		case ' ':
+			columns--
+		case '\t':
+			columns -= 8
+		default:
+			break loop
+		}
+	}
+	return input[i:]
+}
+
+func (l *Lexer) skipComment() bool {
+	i, column := l.findSlash()
+	if i < 0 || (l.input[i+1] != '*' && l.input[i+1] != '/') {
+		return false
+	}
+
+	l.clearComment()
+	out := &strings.Builder{}
+
+	if l.input[i+1] == '/' {
+		if l.midline {
+			l.skipLine()
+			return true
+		}
+		com, col := l.getLineComment()
+		out.WriteString(com)
+		for {
+			com, col2 := l.getLineComment()
+			if col2 < 0 {
+				break
+			}
+			if col2 == col {
+				out.WriteByte('\n')
+				out.WriteString(com)
+			} else {
+				out.Reset()
+				out.WriteString(com)
+				col = col2
+			}
+		}
+		l.blockComment = out.String()
+		return true
+	}
+
+	j := strings.Index(l.input[i+2:], "*/")
+	if j < 0 {
+		l.advance(i)
+		return true
+	}
+	comment := l.input[i:i+j+4]
+	wasMidline := l.midline
+	l.advance(i+j+4)
+	if wasMidline || !l.skipWSNL() {
+		return true
+	}
+
+	first := true
+	for _, line := range strings.Split(comment, "\n") {
+		if first {
+			first = false
+		} else {
+			out.WriteByte('\n')
+			line = stripIndent(column, line)
+		}
+		line = strings.TrimSuffix(line, "\r")
+		out.WriteString(line)
+	}
+	l.blockComment = out.String()
+	return true
+}
+
 func (l *Lexer) makeToken(typ TokenType, n int) *Token {
-	if n < 0 || n > len(l.input) {
+	if n <= 0 || n > len(l.input) {
 		panic("Lexer::makeToken: length out of range")
 	}
 	t := Token {
 		Type: typ,
 		Value: l.input[:n],
+		BlockComment: l.blockComment,
 	}
+	l.clearComment()
 	l.advance(n)
+	if com, col := l.getLineComment(); col >= 0 {
+		t.LineComment = com
+	}
 	return &t
+}
+
+func (l *Lexer) clearComment() {
+	l.blockComment = ""
 }
 
 func (l *Lexer) skipSpace() {
 	for {
-		if i := strings.IndexFunc(l.input, func(c rune) bool {
-			return strings.IndexAny(" \t\r\n", string(c)) == -1
-		}); i > 0 {
-			l.advance(i)
-		} else if i < 0 {
-			l.advance(len(l.input))
-			return
-		} else if strings.HasPrefix(l.input, "//") {
-				l.skipLine()
-		} else if strings.HasPrefix(l.input, "/*") {
-			i := strings.Index(l.input[2:], "*/")
-			if i < 0 {
-				return
-			}
-			l.advance(i+4)
-		} else {
+		com := l.skipComment()
+		nl := l.skipWSNL()
+		if nl {
+			l.clearComment()
+		} else if !com {
 			return
 		}
 	}
 }
 
 func (l *Lexer) skipLine() {
-	if i := strings.IndexByte(l.input, '\n'); i > 0 {
+	if i := strings.IndexByte(l.input, '\n'); i >= 0 {
 		l.advance(i+1)
+	} else {
+		l.advance(len(l.input))
 	}
 }
 
@@ -209,9 +352,8 @@ func (l *Lexer) Lex(lval *yySymType) int {
 	t := l.next()
 	if (t == nil) {
 		return 0
-	} else {
-		lval.str = t.Value
 	}
+	lval.tok = *t
 	return t.Type
 }
 
