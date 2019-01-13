@@ -514,6 +514,17 @@ func (r *rpc_union) emit(e *emitter) {
 			continue
 		}
 		ret := e.decltype(r.id, &u.decl)
+		if (u.hasdefault) {
+			fmt.Fprintf(out,
+				"// Valid by default when u.%s does not match another field.\n",
+				r.tagid)
+		} else if len(u.cases) == 1 {
+			fmt.Fprintf(out, "// Valid when u.%s is %s.\n",
+				r.tagid, u.joinedCases())
+		} else {
+			fmt.Fprintf(out, "// Valid when u.%s is one of: %s.\n",
+				r.tagid, u.joinedCases())
+		}
 		fmt.Fprintf(out, "func (u *%s) %s() *%s {\n", r.id, u.decl.id, ret)
 		goodcase := fmt.Sprintf(
 `		if v, ok := u._u.(*%[1]s); ok {
@@ -534,7 +545,7 @@ func (r *rpc_union) emit(e *emitter) {
 			fmt.Fprintf(out, "\tcase ")
 			for j := range r.fields {
 				u1 := &r.fields[j]
-				if r.hasdefault {
+				if u1.hasdefault {
 					continue
 				}
 				if needcomma {
