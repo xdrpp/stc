@@ -33,24 +33,26 @@ marshaling and unmarshaling.
 To be consistent with go's symbol export policy, all types, enum
 constants, and struct/union fields defined in an XDR file are
 capitalized in the corresponding go representation.  Base XDR types
-are mapped to their equivalent go types as follows:
+are mapped to their equivalent go types as follows (note that `T`
+cannot be `opaque` or `string` in this table):
 
-    XDR type        Go type     notes
-    --------------  ---------   ------------------------------
-    bool            bool        const (TRUE=true; FALSE=false)
+    XDR type        Go type       notes
+    --------------  ---------     ------------------------------
+    bool            bool          const (TRUE=true; FALSE=false)
     int             int32
     unsigned int    uint32
     hyper           int64
     unsigned hyper  uint64
     float           float32
     double          float64
-    quadruple       float128    but float128 is not defined
+    quadruple       float128      but float128 is not defined
     string<n>       string
     opaque<n>       []byte
     opaque[n]       [n]byte
-    T*              *T          for any XDR type T
-    T<n>            []T         for any XDR type T
-    T[n]            [n]T        for any XDR type T
+    enum T          type T int32
+    T*              *T            for any XDR type T
+    T<n>            []T           for any XDR type T
+    T[n]            [n]T          for any XDR type T
 
 Each XDR `typedef` is compiled to a go type alias (`type Alias =
 Original`).
@@ -205,9 +207,9 @@ on what is being marshaled:
 * Similar to variable-length arrays, pointers use a defined type that
   implements the `XdrPtr` and `XdrAggregate` interfaces.  When
   recursing, `Marshal` is called first on another defined type that
-  implements `XdrUint32` (capable of containing the value 0 or 1 to
-  indicate nil or value-present), then, if the pointer is non-nil, on
-  the underlying value.
+  implements the `XdrNum32` interface (capable of containing the value
+  0 or 1 to indicate nil or value-present), then, if the pointer is
+  non-nil, it calls `Marshal` on the underlying value.
 
 * `string` is passed as an `XdrString`, which also encodes the size
   bound of the string and implements the `XdrVarBytes` and `XdrBytes`
@@ -227,13 +229,33 @@ via the `XdrPointer()` and `XdrValue()` methods, which return an
 fake `bool` on which `Marshal` is called for a pointer type (which
 bool supports `XdrValue()`, but returns `nil` from `XdrPointer()`).
 
+The table below summarizes the (overlapping) interfaces implemented by
+types passed to `Marshal` functions, where `T` stands for a complete
+standalone XDR type (so not `string` or `opaque`).  Basic marshaling
+can be performed in a type switch statement handling interfaces that
+cover all types, for instance `XdrNum32`, `XdrNum64`, `XdrBytes`, and
+`XdrAggregate`.
+
+    Interface    Implemented for underlying types
+    -----------  ---------------------------------------
+    XdrNum32     bool, [unsigned] int, enums, float,
+                 size, pointer present flag
+    XdrNum64     [unsigned] hyper, double
+    XdrVec       T<n>
+    XdrPtr       T*
+    XdrVarBytes  string<n>, opaque<n>
+    XdrBytes     string<n>, opaque[n], opaque<n>
+    XdrAggregate struct T, union T, T*, T<n>
+    Stringer     all types in XdrNum{32,64} and XdrBytes
+    Scanner      all types in XdrNum{32,64} and XdrBytes
+    XdrType      all XDR types
+
 ## XDR functions
 
 As previously mentioned, each (capitalized) type `T` output by goxdr
 also has function `XDR_T`.  For types that are instances of
-`XdrAggregate` (that is `struct` and `union` types, as well as
-pointers and variable-length arrays), this function is a simple
-wrapper around the `Marshal` method:
+`XdrAggregate` (e.g., `struct` and `union` types), this function is a
+simple wrapper around the `Marshal` method:
 
 ~~~~{.go}
 func XDR_T(x XDR, name string, v *T) {
@@ -245,7 +267,7 @@ For other types, however, this generated function casts `v` to a more
 convenient alternate type implementing the interfaces described in the
 previous subsection.  As an example, the following function in the
 pre-defined boilerplate casts an ordinary `*int32` into the defined
-type `*XdrInt32` which implements the `XdrNum32` interface:
+type `*XdrInt32`, which implements the `XdrNum32` interface:
 
 ~~~~{.go}
 func XDR_int32(x XDR, name string, v *int32) {
@@ -253,8 +275,34 @@ func XDR_int32(x XDR, name string, v *int32) {
 }
 ~~~~
 
-Note that an XDR `Marshal` method can use a type switch to
-special-case certain types.  However, this does not work for
+The following table lists the concrete types passed to the `Marshal`
+method.  Note that types listed as `generated` get passed as a
+different defined type for each underlying type `T`.  The defined type
+makes the size bound availble via an `XdrBound()` method, since that
+information cannot conveniently be encoded as part of the go type.
+
+    XDR type        Marshaled as    notes
+    --------------  --------------  --------------------------
+    bool            *XdrBool
+    int             *XdrInt32
+    unsigned int    *XdrUint32
+    float           *XdrFloat32
+    hyper           *XdrInt64
+    unsigned hyper  *XdrUint64
+    double          *XdrFloat64
+    string<n>       XdrString
+    opaque<n>       XdrVecOpaque
+    opaque[n]       XdrArrayOpaque
+    T               *T              for struct, enum, union
+    T[n]            n times *T
+    T*              generated
+    T<n>            generated
+    size            *XdrSize        when recursing in T<n>
+
+
+
+Note that while an XDR `Marshal` method can use a type switch to
+special-case certain types, this approach does not work for
 `typedefs`, which goxdr emits as type aliases rather than defined
 types---i.e. "`type Alias = Original`" rather than "`type Alias
 Original`".  However, the `XDR_Alias` function for such a typedef
