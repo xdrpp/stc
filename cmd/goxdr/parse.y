@@ -22,6 +22,7 @@ import "strconv"
 	prog rpc_program
 	vers rpc_vers
 	proc rpc_proc
+	comment string
 }
 
 %token <tok> T_ID
@@ -66,7 +67,8 @@ import "strconv"
 %type <idval> id newid qid value vec_len type base_type union_case type_or_void
 %type <num> number
 %type <arrayqual> vec_qual array_qual any_qual
-%type <tok> ';'
+%type <comment> comma_warn
+%type <tok> ';' ','
 
 %%
 
@@ -99,17 +101,18 @@ def_namespace: T_NAMESPACE T_ID '{' file '}'
 
 def_const: T_CONST newid '=' value ';'
 	{
-		$$ = &rpc_const{ $2, $4 }
+		$$ = &rpc_const{ $2, $4, nonEmpty($1.BlockComment, $5.LineComment) }
 	};
 
 def_enum: T_ENUM newid enum_body ';'
 	{
-		$$ = &rpc_enum{ $2, $3 }
+		$$ = &rpc_enum{ $2, $3, $1.BlockComment }
 	};
 
 enum_body: '{' enum_tag_list comma_warn '}'
 	{
 		$$ = $2
+		$$[len($$)-1].comment = nonEmpty($$[len($$)-1].comment, $3)
 	};
 
 enum_tag_list: enum_tag
@@ -118,24 +121,27 @@ enum_tag_list: enum_tag
 	}
 |	enum_tag_list ',' enum_tag
 	{
+		last := &$1[len($1)-1]
+		last.comment = nonEmpty(last.comment, $2.LineComment)
 		$$ = append($1, $3)
 	};
 
 enum_tag: newid '=' value
 	{
-		tag := rpc_const{$1, $3}
+		tag := rpc_const{$1, $3, nonEmpty($1.comment, $3.comment) }
 		yylex.(*Lexer).output.SymbolMap[$1.getx()] = &tag
 		$$ = tag
 	}
 | newid
 	{
 		yylex.(*Lexer).Warn("RFC4506 requires a value for each enum tag");
-		$$ = rpc_const{$1, lid("iota")}
+		$$ = rpc_const{$1, lid("iota"), $1.comment}
 	};
 
-comma_warn: /* empty */
+comma_warn: /* empty */ { $$ = "" }
 |	','
 	{
+		$$ = $1.LineComment
 		yylex.(*Lexer).
 		Warn("RFC4506 disallows comma after last enum tag")
 	};
@@ -248,22 +254,14 @@ declaration: type_specifier id any_qual ';'
 		$$.id = $2
 		$$.qual = $3.qual
 		$$.bound = $3.bound
-		if $1.comment != "" {
-			$$.comment = $1.comment
-		} else {
-			$$.comment = $4.LineComment
-		}
+		$$.comment = nonEmpty($1.comment, $4.LineComment)
 	}
 | type_specifier '*' id ';'
 	{
 		$$ = $1
 		$$.id = $3
 		$$.qual = PTR
-		if $1.comment != "" {
-			$$.comment = $1.comment
-		} else {
-			$$.comment = $4.LineComment
-		}
+		$$.comment = nonEmpty($1.comment, $4.LineComment)
 	}
 | T_OPAQUE id array_qual ';'
 	{
@@ -271,11 +269,7 @@ declaration: type_specifier id any_qual ';'
 		$$.typ.setlocal("byte")
 		$$.qual = $3.qual
 		$$.bound = $3.bound
-		if $1.BlockComment != "" {
-			$$.comment = $1.BlockComment
-		} else {
-			$$.comment = $4.LineComment
-		}
+		$$.comment = nonEmpty($1.BlockComment, $4.LineComment)
 	}
 | T_STRING id vec_qual ';'
 	{
@@ -283,11 +277,7 @@ declaration: type_specifier id any_qual ';'
 		$$.typ.setlocal("string")
 		$$.qual = SCALAR
 		$$.bound = $3.bound
-		if $1.BlockComment != "" {
-			$$.comment = $1.BlockComment
-		} else {
-			$$.comment = $4.LineComment
-		}
+		$$.comment = nonEmpty($1.BlockComment, $4.LineComment)
 	}
 	;
 
@@ -312,7 +302,7 @@ any_qual: array_qual
 
 type_specifier: type
 	{
-		$$ = rpc_decl{typ: $1}
+		$$ = rpc_decl{typ: $1, comment: $1.comment}
 	}
 | T_ENUM enum_body
 	{
@@ -408,7 +398,12 @@ vec_len: value
 | /* empty */ { $$.setlocal("") };
 
 value: qid
-| T_NUM { $$ = gid($1.Value) };
+| T_NUM
+	{
+		$$ = gid($1.Value)
+		$$.comment = $1.LineComment
+	}
+	;
 
 number: T_NUM
 	{
@@ -423,14 +418,23 @@ newid: T_ID
 	{
 		yylex.(*Lexer).Checkdup($1.Value)
 		$$ = gid($1.Value)
-		$$.comment = $1.BlockComment
+		$$.comment = nonEmpty($1.BlockComment, $1.LineComment)
 	};
 
 qid: id;	// might make sense for qid to allow package-qualified
 id: T_ID
 	{
 		$$ = gid($1.Value)
-		$$.comment = $1.BlockComment
+		$$.comment = nonEmpty($1.BlockComment, $1.LineComment)
 	};
 
 %%
+
+func nonEmpty(args ...string) string {
+	for i := range args {
+		if args[i] != "" {
+			return args[i]
+		}
+	}
+	return ""
+}

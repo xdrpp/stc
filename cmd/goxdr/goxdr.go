@@ -40,6 +40,13 @@ func uncapitalize(s string) string {
 	return s
 }
 
+func indent(s string) string {
+	if s == "" {
+		return ""
+	}
+	return "\t" + strings.Replace(s, "\n", "\n\t", -1) + "\n"
+}
+
 const xdrinline_prefix string = "XdrPrivate_"
 
 func xdrinline(s string) string {
@@ -378,8 +385,12 @@ func (r0 *rpc_typedef) emit(e *emitter) {
 
 func (r *rpc_enum) emit(e *emitter) {
 	out := &strings.Builder{}
+	if r.comment != "" {
+		fmt.Fprintf(out, "%s\n", r.comment)
+	}
 	fmt.Fprintf(out, "type %s int32\nconst (\n", r.id)
 	for _, tag := range r.tags {
+		out.WriteString(indent(tag.comment))
 		if _, err := strconv.Atoi(tag.val.String()); err == nil {
 			fmt.Fprintf(out, "\t%s %s = %s\n", tag.id, r.id, tag.val)
 		} else {
@@ -449,6 +460,7 @@ func (r *rpc_struct) emit(e *emitter) {
 	}
 	fmt.Fprintf(out, "type %s struct {\n", r.id)
 	for i := range r.decls {
+		out.WriteString(indent(r.decls[i].comment))
 		fmt.Fprintf(out, "\t%s %s\n", r.decls[i].id,
 			e.decltypeb(r.id, &r.decls[i]))
 	}
@@ -499,20 +511,23 @@ func (r *rpc_union) emit(e *emitter) {
 		fmt.Fprintf(out, "%s\n", r.comment)
 	}
 	fmt.Fprintf(out, "type %s struct {\n", r.id)
-	fmt.Fprintf(out, "\t%s %s\n", r.tagid, r.tagtype)
+	fmt.Fprintf(out,
+		"\t// %s is the union discriminant, with the following arms:\n",
+		r.tagid)
 	for i := range r.fields {
 		u := &r.fields[i]
 		if u.isVoid() {
 			continue
 		}
 		if (u.hasdefault) {
-			fmt.Fprintf(out, "\t// default:\n")
+			fmt.Fprintf(out, "\t//   default:\n")
 		} else {
-			fmt.Fprintf(out, "\t// %s:\n", u.joinedCases())
+			fmt.Fprintf(out, "\t//   %s:\n", u.joinedCases())
 		}
-		fmt.Fprintf(out, "\t//    %s() *%s\n", u.decl.id,
+		fmt.Fprintf(out, "\t//      %s() *%s\n", u.decl.id,
 			e.decltypeb(r.id, &u.decl))
 	}
+	fmt.Fprintf(out, "\t%s %s\n", r.tagid, r.tagtype)
 	fmt.Fprintf(out, "\t_u interface{}\n" +
 		"}\n")
 	e.append(out)
@@ -523,6 +538,7 @@ func (r *rpc_union) emit(e *emitter) {
 			continue
 		}
 		ret := e.decltype(r.id, &u.decl)
+/*
 		if (u.hasdefault) {
 			fmt.Fprintf(out,
 				"// Valid by default when u.%s does not match another field.\n",
@@ -533,6 +549,10 @@ func (r *rpc_union) emit(e *emitter) {
 		} else {
 			fmt.Fprintf(out, "// Valid when u.%s is one of: %s.\n",
 				r.tagid, u.joinedCases())
+		}
+*/
+		if u.decl.comment != "" {
+			fmt.Fprintf(out, "%s\n", u.decl.comment)
 		}
 		fmt.Fprintf(out, "func (u *%s) %s() *%s {\n", r.id, u.decl.id, ret)
 		goodcase := fmt.Sprintf(
