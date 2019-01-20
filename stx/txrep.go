@@ -1,12 +1,5 @@
 
-/*
-
-Stellar transaction compiler library.  Provides functions for
-manipulating Stellar transactions, translating them back and forth
-between txrep format, and posting them.
-
-*/
-package stc
+package stx
 
 import (
 	"fmt"
@@ -14,31 +7,32 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"stc/stx"
 )
 
-// Convert a TransactionEnvelope to base64-encoded binary XDR format.
-func TxToBase64(tx *TransactionEnvelope) string {
-	return stx.XdrToBase64(tx)
+// Interface for annotating generated Txrep output.
+type TxrepAnnotate interface{
+	// Returns extra information with which to annotate an account, or
+	// "" if no annotation is necessary.
+	AccountIDNote(*AccountID) string
+
+	// Returns extra informaiton with which to decorate a signer, or
+	// "" if no annotation is necessary.
+	SignerNote(*TransactionEnvelope, *DecoratedSignature) string
+
+	// Returns true if field should be rendered with extra help.
+	GetHelp(string) bool
+
+	// Called when parsing, rather than generating, Txrep, so as to
+	// record that a '?' was found during parsing of a field.
+	SetHelp(string)
 }
 
-// Parse a TransactionEnvelope from base64-encoded binary XDR format.
-func TxFromBase64(input string) (*TransactionEnvelope, error) {
-	tx := &TransactionEnvelope{}
-	if err := stx.XdrFromBase64(tx, input); err != nil {
-		return nil, err
-	}
-	return tx, nil
-}
-
-// Parse a TransactionEnvelope from base64-encoded binary XDR format.
-func mustTxFromBase64(input string) *TransactionEnvelope {
-	if tx, err := TxFromBase64(input); err != nil {
-		panic(err)
-	} else {
-		return tx
-	}
-}
+type nullTxrepAnnotate struct{}
+func (nullTxrepAnnotate) AccountIDNote(*AccountID) string { return "" }
+func (nullTxrepAnnotate) SignerNote(*TransactionEnvelope,
+	*DecoratedSignature) string { return "" }
+func (nullTxrepAnnotate) SetHelp(string) {}
+func (nullTxrepAnnotate) GetHelp(string) bool { return false }
 
 // pseudo-selectors
 const (
@@ -86,7 +80,7 @@ skipspace:
 		} else if err != nil {
 			return err
 		} else if r <= ' ' || r >= 127 {
-			err = stx.StrKeyError("Invalid character in AssetCode")
+			err = StrKeyError("Invalid character in AssetCode")
 			break
 		} else if r != '\\' {
 			out[i] = byte(r)
@@ -104,9 +98,10 @@ skipspace:
 	for ; i < len(out); i++ {
 		out[i] = 0
 	}
+	// XXX - might already have read space above
 	r, _, err = ss.ReadRune()
 	if err != io.EOF && !unicode.IsSpace(r) {
-		return stx.StrKeyError("AssetCode too long")
+		return StrKeyError("AssetCode too long")
 	}
 	return nil
 }
@@ -119,12 +114,12 @@ type trackTypes struct {
 func (x *trackTypes) present() string {
 	return "." + strings.Repeat("_inner", x.ptrDepth-1) + ps_present;
 }
-func (x *trackTypes) track(i stx.XdrType) (cleanup func()) {
+func (x *trackTypes) track(i XdrType) (cleanup func()) {
 	oldx := *x
 	switch i.(type) {
-	case stx.XdrPtr:
+	case XdrPtr:
 		x.ptrDepth++
-	case *stx.Asset:
+	case *Asset:
 		x.inAsset = true
 	default:
 		return func() {}
@@ -132,21 +127,20 @@ func (x *trackTypes) track(i stx.XdrType) (cleanup func()) {
 	return func() { *x = oldx }
 }
 
-type TxStringCtx struct {
-	Out io.Writer
-	Env *TransactionEnvelope
-	Net *StellarNet
-	Help XdrHelp
+type txStringCtx struct {
+	TxrepAnnotate
+	out io.Writer
+	env *TransactionEnvelope
 	trackTypes
 }
 
-func (xp *TxStringCtx) Sprintf(f string, args ...interface{}) string {
+func (xp *txStringCtx) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
 
-func (xp *TxStringCtx) Marshal_SequenceNumber(name string,
-	v *stx.SequenceNumber) {
-	fmt.Fprintf(xp.Out, "%s: %d\n", name, *v)
+func (xp *txStringCtx) Marshal_SequenceNumber(name string,
+	v *SequenceNumber) {
+	fmt.Fprintf(xp.out, "%s: %d\n", name, *v)
 }
 
 type xdrPointer interface {
@@ -162,7 +156,7 @@ func init() {
 	}
 }
 
-func ScalePrint(val int64, exp int) string {
+func scalePrint(val int64, exp int) string {
 	mag := uint64(val)
 	if val < 0 { mag = uint64(-val) }
 	unit := exp10[exp]
@@ -197,79 +191,88 @@ type xdrEnumNames interface {
 	XdrEnumNames() map[int32]string
 }
 
-func (xp *TxStringCtx) Marshal(name string, i stx.XdrType) {
+func (xp *txStringCtx) Marshal(name string, i XdrType) {
 	defer xp.track(i)()
 	switch v := i.(type) {
-	case *stx.TimeBounds:
-		fmt.Fprintf(xp.Out, "%s.minTime: %d%s\n%s.maxTime: %d%s\n",
+	case *TimeBounds:
+		fmt.Fprintf(xp.out, "%s.minTime: %d%s\n%s.maxTime: %d%s\n",
 			name, v.MinTime, dateComment(v.MinTime),
 			name, v.MaxTime, dateComment(v.MaxTime))
-	case *stx.AccountID:
+	case *AccountID:
 		ac := v.String()
-		if hint := xp.Net.Accounts[ac]; hint != "" {
-			fmt.Fprintf(xp.Out, "%s: %s (%s)\n", name, ac, hint)
+		if hint := xp.AccountIDNote(v); hint != "" {
+			fmt.Fprintf(xp.out, "%s: %s (%s)\n", name, ac, hint)
 		} else {
-			fmt.Fprintf(xp.Out, "%s: %s\n", name, ac)
+			fmt.Fprintf(xp.out, "%s: %s\n", name, ac)
 		}
 	case xdrEnumNames:
-		if xp.Help[name] {
-			fmt.Fprintf(xp.Out, "%s: %s (", name, v.String())
+		if xp.GetHelp(name) {
+			fmt.Fprintf(xp.out, "%s: %s (", name, v.String())
 			var notfirst bool
 			for _, name := range v.XdrEnumNames() {
 				if notfirst {
-					fmt.Fprintf(xp.Out, ", %s", name)
+					fmt.Fprintf(xp.out, ", %s", name)
 				} else {
 					notfirst = true
-					fmt.Fprintf(xp.Out, "%s", name)
+					fmt.Fprintf(xp.out, "%s", name)
 				}
 			}
-			fmt.Fprintf(xp.Out, ")\n")
+			fmt.Fprintf(xp.out, ")\n")
 		} else {
-			fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
+			fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
 		}
-	case stx.XdrArrayOpaque:
+	case XdrArrayOpaque:
 		if xp.inAsset {
-			fmt.Fprintf(xp.Out, "%s: %s\n", name, renderCode(v.GetByteSlice()))
+			fmt.Fprintf(xp.out, "%s: %s\n", name, renderCode(v.GetByteSlice()))
 		} else {
-			fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
+			fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
 		}
-	case *stx.XdrInt64:
-		fmt.Fprintf(xp.Out, "%s: %s (%s)\n", name, v.String(),
-			ScalePrint(int64(*v), 7))
+	case *XdrInt64:
+		fmt.Fprintf(xp.out, "%s: %s (%s)\n", name, v.String(),
+			scalePrint(int64(*v), 7))
 	case fmt.Stringer:
-		fmt.Fprintf(xp.Out, "%s: %s\n", name, v.String())
-	case stx.XdrPtr:
-		fmt.Fprintf(xp.Out, "%s%s: %v\n", name, xp.present(), v.GetPresent())
+		fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
+	case XdrPtr:
+		fmt.Fprintf(xp.out, "%s%s: %v\n", name, xp.present(), v.GetPresent())
 		v.XdrMarshalValue(xp, name)
-	case stx.XdrVec:
-		fmt.Fprintf(xp.Out, "%s.%s: %d\n", name, ps_len, v.GetVecLen())
+	case XdrVec:
+		fmt.Fprintf(xp.out, "%s.%s: %d\n", name, ps_len, v.GetVecLen())
 		v.XdrMarshalN(xp, name, v.GetVecLen())
-	case *stx.DecoratedSignature:
+	case *DecoratedSignature:
 		var hint string
-		if ski := xp.Net.Signers.Lookup(xp.Net.NetworkId,
-			xp.Env.TransactionEnvelope, v);
-		ski != nil {
-			hint = fmt.Sprintf("%x (%s)", v.Hint, *ski)
+		if note := xp.SignerNote(xp.env, v); note != "" {
+			hint = fmt.Sprintf("%x (%s)", v.Hint, note)
 		} else {
-			hint = fmt.Sprintf(
-				"%x (bad signature/unknown key/-net=%s is wrong)",
-				v.Hint, xp.Net.Name)
+			hint = fmt.Sprintf("%x", v.Hint)
 		}
-		fmt.Fprintf(xp.Out, "%[1]s.hint: %[2]s\n%[1]s.signature: %[3]x\n",
+		fmt.Fprintf(xp.out, "%[1]s.hint: %[2]s\n%[1]s.signature: %[3]x\n",
 			name, hint, v.Signature)
-	case stx.XdrAggregate:
+	case XdrAggregate:
 		v.XdrMarshal(xp, name)
 	default:
-		fmt.Fprintf(xp.Out, "%s: %v\n", name, i)
+		fmt.Fprintf(xp.out, "%s: %v\n", name, i)
 	}
 }
 
-func (ctx TxStringCtx) Exec() {
-	ctx.Env.XdrMarshal(&ctx, "")
+// Writes a human-readable version of a transaction or other
+// XdrAggregate structure to out in txrep format.
+func XdrToTxrep(out io.Writer, txe *TransactionEnvelope,
+	annotate TxrepAnnotate) {
+	ctx := txStringCtx {
+		out: out,
+		env: txe,
+		TxrepAnnotate: annotate,
+	}
+	if ctx.TxrepAnnotate == nil {
+		ctx.TxrepAnnotate = nullTxrepAnnotate{}
+	}
+	ctx.env.XdrMarshal(&ctx, "")
 }
 
-type XdrHelp map[string]bool
 
+
+
+/*
 type lineval struct {
 	line int
 	val string
@@ -294,12 +297,12 @@ func (xs *XdrScan) report(line int, fmtstr string, args...interface{}) {
 	fmt.Fprintf(&xs.errmsg, fmtstr, args...)
 }
 
-func (xs *XdrScan) Marshal(name string, i stx.XdrType) {
+func (xs *XdrScan) Marshal(name string, i XdrType) {
 	defer xs.track(i)()
 	lv, ok := xs.kvs[name]
 	val := lv.val
 	switch v := i.(type) {
-	case stx.XdrArrayOpaque:
+	case XdrArrayOpaque:
 		var err error
 		if xs.inAsset {
 			err = scanCode(v.GetByteSlice(), val)
@@ -321,7 +324,7 @@ func (xs *XdrScan) Marshal(name string, i stx.XdrType) {
 		} else if len(val) > 0 && val[len(val)-1] == '?' {
 			xs.help[name] = true
 		}
-	case stx.XdrPtr:
+	case XdrPtr:
 		val = "false"
 		field := name + xs.present()
 		fmt.Sscanf(xs.kvs[field].val, "%s", &val)
@@ -337,7 +340,7 @@ func (xs *XdrScan) Marshal(name string, i stx.XdrType) {
 				"%s (%s) must be true or false\n", field, val)
 		}
 		v.XdrMarshalValue(xs, name)
-	case *stx.XdrSize:
+	case *XdrSize:
 		var size uint32
 		lv = xs.kvs[name + "." + ps_len]
 		fmt.Sscan(lv.val, &size)
@@ -349,23 +352,23 @@ func (xs *XdrScan) Marshal(name string, i stx.XdrType) {
 			xs.report(lv.line, "%s.%s (%d) exceeds maximum size %d.\n",
 				name, ps_len, size, v.XdrBound())
 		}
-	case stx.XdrAggregate:
+	case XdrAggregate:
 		v.XdrMarshal(xs, name)
 	case xdrPointer:
 		if !ok { return }
 		fmt.Sscan(val, v.XdrPointer())
 	default:
-		stx.XdrPanic("XdrScan: Don't know how to parse %s (%T).\n", name, i)
+		XdrPanic("XdrScan: Don't know how to parse %s (%T).\n", name, i)
 	}
 	delete(xs.kvs, name)
 }
 
-func TxScan(t stx.XdrAggregate, in string, filename string) (
+func TxScan(t XdrAggregate, in string, filename string) (
 	help XdrHelp, err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			switch i.(type) {
-			case stx.XdrError, stx.StrKeyError:
+			case XdrError, StrKeyError:
 				err = i.(error)
 				//fmt.Fprintln(os.Stderr, err)
 				return
@@ -391,8 +394,8 @@ func TxScan(t stx.XdrAggregate, in string, filename string) (
 	}
 	t.XdrMarshal(&x, "")
 	if x.err {
-		err = stx.XdrError(x.errmsg.String())
+		err = XdrError(x.errmsg.String())
 	}
 	return
 }
-
+*/

@@ -28,6 +28,30 @@ type StellarNet struct {
 	Accounts AccountHints
 }
 
+func (net *StellarNet) AccountIDNote(acct *stx.AccountID) string {
+	return net.Accounts[acct.String()]
+}
+
+func (net *StellarNet) SignerNote(txe *stx.TransactionEnvelope,
+	sig *stx.DecoratedSignature) string {
+	if ski := net.Signers.Lookup(net.NetworkId, txe, sig); ski != nil {
+		return ski.String()
+	}
+	return fmt.Sprintf("bad signature/unknown key/%s is wrong network",
+		net.Name)
+}
+
+// Does nothing
+func (*StellarNet) SetHelp(string) {
+}
+
+// Always false
+func (*StellarNet) GetHelp(string) bool {
+	return false
+}
+
+var _ stx.TxrepAnnotate = &StellarNet{}
+
 // Default parameters for the Stellar main net (including the address
 // of a Horizon instance hosted by SDF).
 var StellarMainNet = StellarNet{
@@ -122,11 +146,11 @@ func (c SignerCache) Save(filename string) error {
 	return SafeWriteFile(filename, c.String(), 0666)
 }
 
-func (c SignerCache) Lookup(net *StellarNet, e *TransactionEnvelope,
+func (c SignerCache) Lookup(networkID string, e *stx.TransactionEnvelope,
 	ds *stx.DecoratedSignature) *SignerKeyInfo {
 	skis := c[ds.Hint]
 	for i := range skis {
-		if VerifyTx(&skis[i].Key, net.NetworkId, e,  ds.Signature) {
+		if VerifyTx(&skis[i].Key, networkID, e,  ds.Signature) {
 			return &skis[i]
 		}
 	}

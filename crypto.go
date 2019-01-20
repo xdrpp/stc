@@ -30,7 +30,7 @@ func xdrSHA256(t stx.XdrAggregate) []byte {
 // Returns the transaction hash for a transaction.  The first
 // argument, network, is the network name, since the transaction hash
 // depends on the particular instantiation of the Stellar network.
-func TxPayloadHash(network string, e *TransactionEnvelope) []byte {
+func TxPayloadHash(network string, e *stx.TransactionEnvelope) []byte {
 	payload := stx.TransactionSignaturePayload{
 		NetworkId: sha256.Sum256(([]byte)(network)),
 	}
@@ -51,7 +51,7 @@ func verify(pk *PublicKey, message []byte, sig []byte) bool {
 */
 
 // Verify the signature on a transaction.
-func VerifyTx(pk *stx.SignerKey, network string, e *TransactionEnvelope,
+func VerifyTx(pk *stx.SignerKey, network string, e *stx.TransactionEnvelope,
 	sig []byte) bool {
 	switch pk.Type {
 	case stx.SIGNER_KEY_TYPE_ED25519:
@@ -113,7 +113,7 @@ func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 // Signs a transaction and appends the signature to the Signatures
 // list in the TransactionEnvelope.
 func (sec *PrivateKey) SignTx(network string, e *TransactionEnvelope) error {
-	sig, err := sec.sign(TxPayloadHash(network, e))
+	sig, err := sec.sign(TxPayloadHash(network, e.TransactionEnvelope))
 	if err != nil {
 		return err
 	}

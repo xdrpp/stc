@@ -530,7 +530,7 @@ func main() {
 		}
 	case *opt_preauth, *opt_txhash:
 		sk := stx.SignerKey{ Type: stx.SIGNER_KEY_TYPE_PRE_AUTH_TX }
-		copy(sk.PreAuthTx()[:], TxPayloadHash(net.NetworkId, e))
+		copy(sk.PreAuthTx()[:], TxPayloadHash(net.NetworkId, e.TransactionEnvelope))
 		if *opt_txhash { fmt.Printf("%x\n", *sk.PreAuthTx()) }
 		if *opt_preauth { fmt.Println(&sk) }
 	default:
