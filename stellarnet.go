@@ -3,59 +3,50 @@ package stc
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 	"stc/stx"
 )
 
 type StellarNet struct {
+	// Short name for network (used only in error messages).
 	Name string
+
+	// Network password used for hashing and signing transactions.
 	NetworkId string
+
+	// Base URL of horizon (including trailing slash).
 	Horizon string
+
+	// Set of signers to recognize when checking signatures on
+	// transactions and annotations to show when printing signers.
 	Signers SignerCache
+
+	// Annotations to show on particular accounts when rendering them
+	// in human-readable txrep format.
 	Accounts AccountHints
 }
 
-var defaultNets = []StellarNet{
-	{Name: "main",
-		NetworkId: "Public Global Stellar Network ; September 2015",
-		Horizon: "https://horizon.stellar.org/"},
-	{Name: "test",
-		NetworkId: "Test SDF Network ; September 2015",
-		Horizon: "https://horizon-testnet.stellar.org/"},
+// Default parameters for the Stellar main net (including the address
+// of a Horizon instance hosted by SDF).
+var StellarMainNet = StellarNet{
+	Name: "main",
+	NetworkId: "Public Global Stellar Network ; September 2015",
+	Horizon: "https://horizon.stellar.org/",
 }
 
-var ConfigRoot string
-
-func init() {
-	if d, ok := os.LookupEnv("STCDIR"); ok {
-		ConfigRoot = d
-	} else if d, ok = os.LookupEnv("XDG_CONFIG_HOME"); ok {
-		ConfigRoot = filepath.Join(d, "stc")
-	} else if d, ok = os.LookupEnv("HOME"); ok {
-		ConfigRoot = filepath.Join(d, ".config", "stc")
-	} else {
-		ConfigRoot = ".stc"
-	}
+// Default parameters for the Stellar test network (including the
+// address of a Horizon instance hosted by SDF).
+var StellarTestNet = StellarNet{
+	Name: "test",
+	NetworkId: "Test SDF Network ; September 2015",
+	Horizon: "https://horizon-testnet.stellar.org/",
 }
 
-func (net *StellarNet) ConfigPath(names ...string) string {
-	args := make([]string, 3, 3 + len(names))
-	args[0] = ConfigRoot
-	args[1] = "networks"
-	args[2] = net.Name
-	args = append(args, names...)
-	return filepath.Join(args...)
-}
-
-func EnsureDir(filename string) error {
-	return os.MkdirAll(filepath.Dir(filename), 0777)
-}
-
+// An annotated SignerKey that can be used to authenticate
+// transactions.  Prints and Scans as a StrKey-format SignerKey, a
+// space, and then the comment.
 type SignerKeyInfo struct {
 	Key stx.SignerKey
 	Comment string
@@ -82,8 +73,12 @@ func (ski *SignerKeyInfo) Scan(ss fmt.ScanState, c rune) error {
 	}
 }
 
+// A SignerCache maps 4-byte SignatureHint values to annotated
+// SignerKeys.
 type SignerCache map[stx.SignatureHint][]SignerKeyInfo
 
+// Renders SignerCache as a a set of SignerKeyInfo structures, one per
+// line.
 func (c SignerCache) String() string {
 	out := &strings.Builder{}
 	for _, ski := range c {
@@ -124,7 +119,6 @@ func (c *SignerCache) Load(filename string) error {
 }
 
 func (c SignerCache) Save(filename string) error {
-	EnsureDir(filename)
 	return SafeWriteFile(filename, c.String(), 0666)
 }
 
@@ -148,8 +142,9 @@ func (c SignerCache) Add(strkey, comment string) error {
 	hint := signer.Hint()
 	skis, ok := c[hint]
 	if ok {
-		for _, k := range skis {
-			if strkey == k.Key.String() {
+		for i := range skis {
+			if strkey == skis[i].Key.String() {
+				skis[i].Comment = comment
 				return nil
 			}
 		}
@@ -160,6 +155,8 @@ func (c SignerCache) Add(strkey, comment string) error {
 	return nil
 }
 
+// Set of annotations to show as comments when showing Stellar
+// AccountID values.
 type AccountHints map[string]string
 
 func (h AccountHints) String() string {
@@ -199,96 +196,5 @@ func (h *AccountHints) Load(filename string) error {
 }
 
 func (h *AccountHints) Save(filename string) error {
-	EnsureDir(filename)
 	return SafeWriteFile(filename, h.String(), 0666)
-}
-
-func FileExists(path string) bool {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true
-	} else if os.IsNotExist(err) {
-		return false
-	} else {
-		panic(err)
-	}
-}
-
-func printErr() bool {
-	i := recover()
-	if err, ok := i.(error); ok {
-		fmt.Fprintln(os.Stderr, err.Error())
-		return true
-	} else if i != nil {
-		panic(i)
-	}
-	return false
-}
-
-func CreateIfMissing(path string, contents string) {
-	defer printErr()
-	if !FileExists(path) {
-		SafeWriteFile(path, contents, 0666)
-	}
-}
-
-func netInit() {
-	for _, net := range defaultNets {
-		os.MkdirAll(net.ConfigPath(), 0777)
-		CreateIfMissing(net.ConfigPath("network_id"), net.NetworkId + "\n")
-		CreateIfMissing(net.ConfigPath("horizon"), net.Horizon + "\n")
-	}
-	os.Symlink(defaultNets[0].Name,
-		filepath.Join(ConfigRoot, "networks", "default"))
-}
-
-func head(path string) (string, error) {
-	input, err := ioutil.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	if pos := bytes.IndexByte(input, '\n'); pos >= 0 {
-		input = input[:pos]
-	}
-	return string(input), nil
-}
-
-func GetStellarNet(name string) *StellarNet {
-	netInit()
-	net := &StellarNet{ Name: name }
-	var err error
-	net.NetworkId, err = head(net.ConfigPath("network_id"))
-	if err != nil {
-		return nil
-	}
-	net.Horizon, _ = head(net.ConfigPath("horizon"))
-	net.Signers.Load(net.ConfigPath("signers"))
-	net.Accounts.Load(net.ConfigPath("accounts"))
-	return net
-}
-
-func (net *StellarNet) SaveSigners() error {
-	return net.Signers.Save(net.ConfigPath("signers"))
-}
-
-func AdjustKeyName(key string) string {
-	if key == "" {
-		fmt.Fprintln(os.Stderr, "missing private key name")
-		os.Exit(1)
-	}
-	if dir, _ := filepath.Split(key); dir != "" {
-		return key
-	}
-	keydir := filepath.Join(ConfigRoot, "keys")
-	os.MkdirAll(keydir, 0700)
-	return filepath.Join(keydir, key)
-}
-
-func GetKeyNames() []string {
-	d, err := os.Open(filepath.Join(ConfigRoot, "keys"))
-	if err != nil {
-		return nil
-	}
-	names, _ := d.Readdirnames(-1)
-	return names
 }

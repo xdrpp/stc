@@ -541,7 +541,7 @@ func main() {
 				os.Exit(1)
 			}
 		}
-		if *opt_learn { net.SaveSigners() }
+		if *opt_learn { SaveSigners(net) }
 		if *opt_compile { help = nil }
 		if *opt_inplace { *opt_output = arg }
 		mustWriteTx(*opt_output, e, net, help)
