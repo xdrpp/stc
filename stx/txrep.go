@@ -109,6 +109,7 @@ skipspace:
 type trackTypes struct {
 	ptrDepth int
 	inAsset bool
+	env *TransactionEnvelope
 }
 
 func (x *trackTypes) present() string {
@@ -116,11 +117,13 @@ func (x *trackTypes) present() string {
 }
 func (x *trackTypes) track(i XdrType) (cleanup func()) {
 	oldx := *x
-	switch i.(type) {
+	switch v := i.(type) {
 	case XdrPtr:
 		x.ptrDepth++
 	case *Asset:
 		x.inAsset = true
+	case *TransactionEnvelope:
+		x.env = v
 	default:
 		return func() {}
 	}
@@ -130,7 +133,6 @@ func (x *trackTypes) track(i XdrType) (cleanup func()) {
 type txStringCtx struct {
 	TxrepAnnotate
 	out io.Writer
-	env *TransactionEnvelope
 	trackTypes
 }
 
@@ -255,21 +257,18 @@ func (xp *txStringCtx) Marshal(name string, i XdrType) {
 }
 
 // Writes a human-readable version of a transaction or other
-// XdrAggregate structure to out in txrep format.
-func XdrToTxrep(out io.Writer, txe *TransactionEnvelope,
-	annotate TxrepAnnotate) {
+// XdrAggregate structure to out in txrep format.  If annotate is not
+// nil, it will be used to annotate the output.
+func XdrToTxrep(out io.Writer, x XdrAggregate, annotate TxrepAnnotate) {
 	ctx := txStringCtx {
 		out: out,
-		env: txe,
 		TxrepAnnotate: annotate,
 	}
 	if ctx.TxrepAnnotate == nil {
 		ctx.TxrepAnnotate = nullTxrepAnnotate{}
 	}
-	ctx.env.XdrMarshal(&ctx, "")
+	x.XdrMarshal(&ctx, "")
 }
-
-
 
 
 /*
@@ -278,26 +277,26 @@ type lineval struct {
 	val string
 }
 
-type XdrScan struct {
+type xdrScan struct {
+	TxrepAnnotate
 	kvs map[string]lineval
-	help XdrHelp
 	err bool
 	errmsg strings.Builder
 	file string
 	trackTypes
 }
 
-func (*XdrScan) Sprintf(f string, args ...interface{}) string {
+func (*xdrScan) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
 
-func (xs *XdrScan) report(line int, fmtstr string, args...interface{}) {
+func (xs *xdrScan) report(line int, fmtstr string, args...interface{}) {
 	xs.err = true
 	fmt.Fprintf(&xs.errmsg, "%s:%d: ", xs.file, line)
 	fmt.Fprintf(&xs.errmsg, fmtstr, args...)
 }
 
-func (xs *XdrScan) Marshal(name string, i XdrType) {
+func (xs *xdrScan) Marshal(name string, i XdrType) {
 	defer xs.track(i)()
 	lv, ok := xs.kvs[name]
 	val := lv.val
@@ -312,17 +311,17 @@ func (xs *XdrScan) Marshal(name string, i XdrType) {
 			_, err = fmt.Sscan(val, v)
 		}
 		if err != nil {
-			xs.help[name] = true
+			xs.SetHelp(name)
 			xs.report(lv.line, "%s\n", err.Error())
 		}
 	case fmt.Scanner:
 		if !ok { return }
 		_, err := fmt.Sscan(val, v)
 		if err != nil {
-			xs.help[name] = true
+			xs.SetHelp(name)
 			xs.report(lv.line, "%s\n", err.Error())
 		} else if len(val) > 0 && val[len(val)-1] == '?' {
-			xs.help[name] = true
+			xs.SetHelp(name)
 		}
 	case XdrPtr:
 		val = "false"
@@ -358,10 +357,11 @@ func (xs *XdrScan) Marshal(name string, i XdrType) {
 		if !ok { return }
 		fmt.Sscan(val, v.XdrPointer())
 	default:
-		XdrPanic("XdrScan: Don't know how to parse %s (%T).\n", name, i)
+		XdrPanic("xdrScan: Don't know how to parse %s (%T).\n", name, i)
 	}
 	delete(xs.kvs, name)
 }
+
 
 func TxScan(t XdrAggregate, in string, filename string) (
 	help XdrHelp, err error) {
@@ -378,7 +378,7 @@ func TxScan(t XdrAggregate, in string, filename string) (
 	}()
 	kvs := map[string]lineval{}
 	help = make(XdrHelp)
-	x := XdrScan{kvs: kvs, help: help, file: filename}
+	x := xdrScan{kvs: kvs, help: help, file: filename}
 	lineno := 0
 	for _, line := range strings.Split(in, "\n") {
 		lineno++
