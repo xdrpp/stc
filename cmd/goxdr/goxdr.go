@@ -1,3 +1,5 @@
+// Please see the goxdr.1 man page for complete documentation of this
+// command.
 package main
 
 import (

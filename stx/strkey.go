@@ -1,5 +1,5 @@
-// The stc package provides a go representation of Stellar XDR data
-// structures.
+// The stx package provides a compiled go representation of Stellar's
+// XDR data structures.
 package stx
 
 import (
@@ -91,7 +91,7 @@ func MustFromStrKey(want StrKeyVersionByte, in string) []byte {
 }
 
 // Renders a PublicKey in strkey format.
-func (pk *PublicKey) String() string {
+func (pk PublicKey) String() string {
 	switch pk.Type {
 	case PUBLIC_KEY_TYPE_ED25519:
 		return ToStrKey(STRKEY_PUBKEY_ED25519, pk.Ed25519()[:])

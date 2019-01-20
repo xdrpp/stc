@@ -5,7 +5,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -51,39 +50,6 @@ func (net *StellarNet) ConfigPath(names ...string) string {
 	args[2] = net.Name
 	args = append(args, names...)
 	return filepath.Join(args...)
-}
-
-func SafeWriteFile(filename string, data string, perm os.FileMode) error {
-	tmp := fmt.Sprintf("%s#%d#", filename, os.Getpid())
-	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY, perm)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if f != nil { f.Close() }
-		if tmp != "" { os.Remove(tmp) }
-	}()
-
-	n, err := f.WriteString(data)
-	if err != nil {
-		return err
-	} else if n < len(data) {
-		return io.ErrShortWrite
-	}
-	if err = f.Sync(); err != nil {
-		return err
-	}
-	err = f.Close()
-	f = nil
-	if err != nil {
-		return err
-	}
-
-	os.Remove(filename + "~")
-	os.Link(filename, filename + "~")
-	err = os.Rename(tmp, filename)
-	tmp = ""
-	return err
 }
 
 func EnsureDir(filename string) error {
@@ -248,7 +214,7 @@ func FileExists(path string) bool {
 	}
 }
 
-func PrintErr() bool {
+func printErr() bool {
 	i := recover()
 	if err, ok := i.(error); ok {
 		fmt.Fprintln(os.Stderr, err.Error())
@@ -260,7 +226,7 @@ func PrintErr() bool {
 }
 
 func CreateIfMissing(path string, contents string) {
-	defer PrintErr()
+	defer printErr()
 	if !FileExists(path) {
 		SafeWriteFile(path, contents, 0666)
 	}
