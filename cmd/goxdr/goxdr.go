@@ -49,7 +49,7 @@ func indent(s string) string {
 	return "\t" + strings.Replace(s, "\n", "\n\t", -1) + "\n"
 }
 
-const xdrinline_prefix string = "XdrPrivate_"
+const xdrinline_prefix string = "XdrAnon_"
 
 func xdrinline(s string) string {
 	if strings.HasPrefix(s, xdrinline_prefix) {
@@ -146,7 +146,7 @@ func (e *emitter) decltypeb(context idval, d *rpc_decl) string {
 }
 
 func (e *emitter) gen_ptr(typ idval) string {
-	ptrtyp := "XdrPtr_" + typ.getgo()
+	ptrtyp := "_XdrPtr_" + typ.getgo()
 	if typ.getgo()[0] == '_' {
 		ptrtyp = "_XdrPtr" + typ.getgo()
 	}
@@ -243,7 +243,7 @@ func (e *emitter) get_bound(b0 idval) (string, string) {
 
 func (e *emitter) gen_vec(typ, bound0 idval) string {
 	bound, sbound := e.get_bound(bound0)
-	vectyp := "XdrVec_" + sbound + "_" + typ.getgo()
+	vectyp := "_XdrVec_" + sbound + "_" + typ.getgo()
 	if typ.getgo()[0] == '_' {
 		// '_' starts inline declarations, so only one size
 		vectyp = "_XdrVec" + typ.getgo()
@@ -428,7 +428,7 @@ func (v *%[1]s) String() string {
 	return fmt.Sprintf("%[1]s#%%d", *v)
 }
 func (v *%[1]s) Scan(ss fmt.ScanState, _ rune) error {
-	if tok, err := ss.Token(true, xdrSymChar); err != nil {
+	if tok, err := ss.Token(true, XdrSymChar); err != nil {
 		return err
 	} else {
 		stok := string(tok)
@@ -514,20 +514,21 @@ func (r *rpc_union) emit(e *emitter) {
 	}
 	fmt.Fprintf(out, "type %s struct {\n", r.id)
 	fmt.Fprintf(out,
-		"\t// %s is the union discriminant, with the following arms:\n",
+		"\t// The union discriminant %s selects among the following arms:\n",
 		r.tagid)
 	for i := range r.fields {
 		u := &r.fields[i]
-		if u.isVoid() {
-			continue
-		}
 		if (u.hasdefault) {
 			fmt.Fprintf(out, "\t//   default:\n")
 		} else {
 			fmt.Fprintf(out, "\t//   %s:\n", u.joinedCases())
 		}
-		fmt.Fprintf(out, "\t//      %s() *%s\n", u.decl.id,
-			e.decltypeb(r.id, &u.decl))
+		if u.isVoid() {
+			fmt.Fprintf(out, "\t//      void\n")
+		} else {
+			fmt.Fprintf(out, "\t//      %s() *%s\n", u.decl.id,
+				e.decltypeb(r.id, &u.decl))
+		}
 	}
 	fmt.Fprintf(out, "\t%s %s\n", r.tagid, r.tagtype)
 	fmt.Fprintf(out, "\t_u interface{}\n" +

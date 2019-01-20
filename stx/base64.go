@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-// Convert an XDR aggregate to base64-encoded binary format.  Panics
-// with XdrError if any field contains illegal values (e.g., if a
-// slice exceeds its bounds or a union discriminant has an invalid
-// value).
+// Convert an XDR aggregate to base64-encoded binary format.  Calls
+// panic() with an XdrError if any field contains illegal values
+// (e.g., if a slice exceeds its bounds or a union discriminant has an
+// invalid value).
 func XdrToBase64(e XdrAggregate) string {
 	out := &strings.Builder{}
 	b64o := base64.NewEncoder(base64.StdEncoding, out)

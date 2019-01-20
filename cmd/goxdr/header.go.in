@@ -222,7 +222,8 @@ type XdrVec interface {
 	XdrMarshalN(XDR, string, uint32)
 }
 
-func xdrSymChar(r rune) bool {
+// Returns true for A-Z, a-z, 0-9, and _.
+func XdrSymChar(r rune) bool {
 	return (r|0x20 >= 'a' && r|0x20 <= 'z') ||
 		(r >= '0' && r <= '9') || r == '_'
 }
