@@ -181,13 +181,13 @@ func readTx(infile string) (txe *TransactionEnvelope, help XdrHelp, err error) {
 	}
 	sinput := string(input)
 
-	var e TransactionEnvelope
 	if isCompiled(sinput) {
-		err = TxIn(&e, sinput)
-	} else {
-		help, err = TxScan(&e, sinput, infile)
+		txe, err = TxFromBase64(sinput)
+		return
 	}
-	if err == nil {
+
+	var e TransactionEnvelope
+	if help, err = TxScan(&e, sinput, infile); err == nil {
 		txe = &e
 	}
 	return
@@ -209,7 +209,7 @@ func writeTx(outfile string, e *TransactionEnvelope, net *StellarNet,
 	help XdrHelp) error {
 	var output string
 	if help == nil {
-		output = TxOut(e) + "\n"
+		output = TxToBase64(e) + "\n"
 	} else {
 		buf := &strings.Builder{}
 		TxStringCtx{ Out: buf, Env: e, Net: net, Help: help }.Exec()

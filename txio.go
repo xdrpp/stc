@@ -9,7 +9,6 @@ between txrep format, and posting them.
 package stc
 
 import (
-	"encoding/base64"
 	"fmt"
 	"io"
 	"strings"
@@ -17,6 +16,29 @@ import (
 	"unicode"
 	"stc/stx"
 )
+
+// Convert a TransactionEnvelope to base64-encoded binary XDR format.
+func TxToBase64(tx *TransactionEnvelope) string {
+	return stx.XdrToBase64(tx)
+}
+
+// Parse a TransactionEnvelope from base64-encoded binary XDR format.
+func TxFromBase64(input string) (*TransactionEnvelope, error) {
+	tx := &TransactionEnvelope{}
+	if err := stx.XdrFromBase64(tx, input); err != nil {
+		return nil, err
+	}
+	return tx, nil
+}
+
+// Parse a TransactionEnvelope from base64-encoded binary XDR format.
+func mustTxFromBase64(input string) *TransactionEnvelope {
+	if tx, err := TxFromBase64(input); err != nil {
+		panic(err)
+	} else {
+		return tx
+	}
+}
 
 // pseudo-selectors
 const (
@@ -86,31 +108,6 @@ skipspace:
 	if err != io.EOF && !unicode.IsSpace(r) {
 		return stx.StrKeyError("AssetCode too long")
 	}
-	return nil
-}
-
-func TxOut(e stx.XdrAggregate) string {
-	out := &strings.Builder{}
-	b64o := base64.NewEncoder(base64.StdEncoding, out)
-	e.XdrMarshal(&stx.XdrOut{b64o}, "")
-	b64o.Close()
-	return out.String()
-}
-
-func TxIn(e stx.XdrAggregate, input string) (err error) {
-	defer func() {
-		if i := recover(); i != nil {
-			if xe, ok := i.(stx.XdrError); ok {
-				err = xe
-				//fmt.Fprintln(os.Stderr, xe)
-				return
-			}
-			panic(i)
-		}
-	}()
-	in := strings.NewReader(input)
-	b64i := base64.NewDecoder(base64.StdEncoding, in)
-	e.XdrMarshal(&stx.XdrIn{b64i}, "")
 	return nil
 }
 
