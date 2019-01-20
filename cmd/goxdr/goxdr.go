@@ -334,8 +334,8 @@ func (e *emitter) xdrgen(target, name string, context idval,
 		}
 		frag =
 `	for i := 0; i < len(*$TARGET); i++ {
-			XDR_$TYPE(x, x.Sprintf("%s[%d]", $NAME, i), &(*$TARGET)[i])
-		}
+		XDR_$TYPE(x, x.Sprintf("%s[%d]", $NAME, i), &(*$TARGET)[i])
+	}
 `
 	case VEC:
 		if typ.getgo() == "byte" {
