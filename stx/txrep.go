@@ -20,26 +20,6 @@ const (
 // Generating TxRep
 //
 
-// Interface for annotating generated Txrep output.
-type TxrepAnnotate interface{
-	// Returns extra information with which to annotate an account, or
-	// "" if no annotation is necessary.
-	AccountIDNote(*AccountID) string
-
-	// Returns extra informaiton with which to decorate a signer, or
-	// "" if no annotation is necessary.
-	SignerNote(*TransactionEnvelope, *DecoratedSignature) string
-
-	// Returns true if field should be rendered with extra help.
-	GetHelp(string) bool
-}
-
-type nullTxrepAnnotate struct{}
-func (nullTxrepAnnotate) AccountIDNote(*AccountID) string { return "" }
-func (nullTxrepAnnotate) SignerNote(*TransactionEnvelope,
-	*DecoratedSignature) string { return "" }
-func (nullTxrepAnnotate) GetHelp(string) bool { return false }
-
 func renderByte(b byte) string {
 	if b <= ' ' || b >= '\x7f' {
 		return fmt.Sprintf("\\x%02x", b)
@@ -85,7 +65,9 @@ func (x *trackTypes) track(i XdrType) (cleanup func()) {
 }
 
 type txStringCtx struct {
-	TxrepAnnotate
+	accountIDNote func(*AccountID) string
+	signerNote func(*TransactionEnvelope, *DecoratedSignature) string
+	getHelp func(string) bool
 	out io.Writer
 	trackTypes
 }
@@ -156,13 +138,13 @@ func (xp *txStringCtx) Marshal(name string, i XdrType) {
 			name, v.MaxTime, dateComment(v.MaxTime))
 	case *AccountID:
 		ac := v.String()
-		if hint := xp.AccountIDNote(v); hint != "" {
+		if hint := xp.accountIDNote(v); hint != "" {
 			fmt.Fprintf(xp.out, "%s: %s (%s)\n", name, ac, hint)
 		} else {
 			fmt.Fprintf(xp.out, "%s: %s\n", name, ac)
 		}
 	case xdrEnumNames:
-		if xp.GetHelp(name) {
+		if xp.getHelp(name) {
 			fmt.Fprintf(xp.out, "%s: %s (", name, v.String())
 			var notfirst bool
 			for _, name := range v.XdrEnumNames() {
@@ -196,7 +178,7 @@ func (xp *txStringCtx) Marshal(name string, i XdrType) {
 		v.XdrMarshalN(xp, name, v.GetVecLen())
 	case *DecoratedSignature:
 		var hint string
-		if note := xp.SignerNote(xp.env, v); note != "" {
+		if note := xp.signerNote(xp.env, v); note != "" {
 			hint = fmt.Sprintf("%x (%s)", v.Hint, note)
 		} else {
 			hint = fmt.Sprintf("%x", v.Hint)
@@ -211,17 +193,39 @@ func (xp *txStringCtx) Marshal(name string, i XdrType) {
 }
 
 // Writes a human-readable version of a transaction or other
-// XdrAggregate structure to out in txrep format.  If annotate is not
-// nil, it will be used to annotate the output.
-func XdrToTxrep(out io.Writer, x XdrAggregate, annotate TxrepAnnotate) {
+// XdrAggregate structure to out in txrep format.  The following
+// methods on t can be used to add comments into the output
+//
+// Comment for AccountID:
+//   AccountIDNote(*AccountID) string
+//
+// Comment for Signature:
+//   SignerNote(*TransactionEnvelope, *DecoratedSignature)
+//
+// Help comment for field fieldname:
+//   GetHelp(fieldname string) bool
+func XdrToTxrep(out io.Writer, t XdrAggregate) {
 	ctx := txStringCtx {
+		accountIDNote: func(*AccountID) string { return "" },
+		signerNote: func(*TransactionEnvelope, *DecoratedSignature) string {
+			return ""
+		},
+		getHelp: func(string) bool { return false },
 		out: out,
-		TxrepAnnotate: annotate,
 	}
-	if ctx.TxrepAnnotate == nil {
-		ctx.TxrepAnnotate = nullTxrepAnnotate{}
+
+	if i, ok := t.(interface{ AccountIDNote(*AccountID) string }); ok {
+		ctx.accountIDNote = i.AccountIDNote
 	}
-	x.XdrMarshal(&ctx, "")
+	if i, ok := t.(interface{ SignerNote(*TransactionEnvelope,
+		*DecoratedSignature) string }); ok {
+		ctx.signerNote = i.SignerNote
+	}
+	if i, ok := t.(interface{ GetHelp(string) bool }); ok {
+		ctx.getHelp = i.GetHelp
+	}
+
+	t.XdrMarshal(&ctx, "")
 }
 
 
@@ -229,19 +233,31 @@ func XdrToTxrep(out io.Writer, x XdrAggregate, annotate TxrepAnnotate) {
 // Parsing TxRep
 //
 
-// Interface for receiving feedback on Txrep parse results.
-type TxrepFeedback interface {
-	// Called when a value ends with '?', indicating the user may wish
-	// for help on possible enum values.
-	SetHelp(field string)
-
-	// Called when there is a parse error on a specific line.
-	Error(line int, msg string)
+// Represents errors encountered when parsing textual Txrep into XDR
+// structures.
+type TxrepError []struct {
+	Line int
+	Msg string
 }
 
-type nullTxrepFeedback struct{}
-func (nullTxrepFeedback) SetHelp(string) {}
-func (nullTxrepFeedback) Error(line int, msg string) {}
+func (e TxrepError) render(prefix string) string {
+	out := &strings.Builder{}
+	for i := range e {
+		fmt.Fprintf(out, "%s:%d: %s\n", prefix, e[i].Line, e[i].Msg)
+	}
+	return out.String()
+}
+
+func (e TxrepError) Error() string {
+	return e.render("")
+}
+
+// Convert TxrepError to string, but placing filename and a colon
+// before each line, so as to render messages in the conventional
+// "file:line: message" format.
+func (e TxrepError) FileError(filename string) string {
+	return e.render(filename + ":")
+}
 
 // Slightly convoluted logic to avoid throwing away the account name
 // in case the code is bad
@@ -296,11 +312,10 @@ type lineval struct {
 }
 
 type xdrScan struct {
-	TxrepFeedback
 	trackTypes
 	kvs map[string]lineval
-	err bool
-	errmsg strings.Builder
+	err TxrepError
+	setHelp func(string)
 }
 
 func (*xdrScan) Sprintf(f string, args ...interface{}) string {
@@ -308,10 +323,8 @@ func (*xdrScan) Sprintf(f string, args ...interface{}) string {
 }
 
 func (xs *xdrScan) report(line int, fmtstr string, args...interface{}) {
-	xs.err = true
 	msg := fmt.Sprintf(fmtstr, args...)
-	fmt.Fprintf(&xs.errmsg, "%d: %s\n", line, msg)
-	xs.Error(line, msg)
+	xs.err = append(xs.err, struct{Line int; Msg string}{ line, msg })
 }
 
 func (xs *xdrScan) Marshal(name string, i XdrType) {
@@ -329,17 +342,17 @@ func (xs *xdrScan) Marshal(name string, i XdrType) {
 			_, err = fmt.Sscan(val, v)
 		}
 		if err != nil {
-			xs.SetHelp(name)
+			xs.setHelp(name)
 			xs.report(lv.line, "%s", err.Error())
 		}
 	case fmt.Scanner:
 		if !ok { return }
 		_, err := fmt.Sscan(val, v)
 		if err != nil {
-			xs.SetHelp(name)
+			xs.setHelp(name)
 			xs.report(lv.line, "%s", err.Error())
 		} else if len(val) > 0 && val[len(val)-1] == '?' {
-			xs.SetHelp(name)
+			xs.setHelp(name)
 		}
 	case XdrPtr:
 		val = "false"
@@ -365,7 +378,6 @@ func (xs *xdrScan) Marshal(name string, i XdrType) {
 			v.SetU32(size)
 		} else {
 			v.SetU32(v.XdrBound())
-			xs.err = true
 			xs.report(lv.line, "%s.%s (%d) exceeds maximum size %d.",
 				name, ps_len, size, v.XdrBound())
 		}
@@ -430,12 +442,16 @@ func (xs *xdrScan) readKvs(in io.Reader) {
 	}
 }
 
-// Parse input in Txrep format into an XdrAggregate type.
-func XdrFromTxrep(in io.Reader, t XdrAggregate, fb TxrepFeedback) (e error) {
-	if fb == nil {
-		fb = nullTxrepFeedback{}
+// Parse input in Txrep format into an XdrAggregate type.  If the
+// XdrAggregate has a method named SetHelp(string), then it is called
+// for field names when the value ends with '?'.
+func XdrFromTxrep(in io.Reader, t XdrAggregate) (e TxrepError) {
+	xs := &xdrScan{}
+	if sh, ok := t.(interface{ SetHelp(string) }); ok {
+		xs.setHelp = sh.SetHelp
+	} else {
+		xs.setHelp = func(string) {}
 	}
-	xs := &xdrScan{ TxrepFeedback: fb }
 	defer func() {
 		if i := recover(); i != nil {
 			switch i.(type) {
@@ -445,8 +461,8 @@ func XdrFromTxrep(in io.Reader, t XdrAggregate, fb TxrepFeedback) (e error) {
 				panic(i)
 			}
 		}
-		if xs.err {
-			e = XdrError(xs.errmsg.String())
+		if len(xs.err) != 0 {
+			e = xs.err
 		}
 	}()
 	xs.readKvs(in)

@@ -41,21 +41,6 @@ func (net *StellarNet) SignerNote(txe *stx.TransactionEnvelope,
 		net.Name)
 }
 
-// Always false
-func (*StellarNet) GetHelp(string) bool {
-	return false
-}
-
-// Does nothing
-func (*StellarNet) SetHelp(string) {
-}
-
-// Does nothing
-func (*StellarNet) Error(int, string) {
-}
-
-var _ stx.TxrepAnnotate = &StellarNet{}
-
 // Default parameters for the Stellar main net (including the address
 // of a Horizon instance hosted by SDF).
 var StellarMainNet = StellarNet{
