@@ -452,6 +452,28 @@ func (v *%[1]s) XdrValue() interface{} {
 	return *v
 }
 `, r.id)
+
+	alltags := &strings.Builder{}
+	for _, tag := range r.tags {
+		if val, _ := e.get_bound(tag.id); val == "0" {
+			goto skip
+		}
+		if alltags.Len() > 0 {
+			alltags.WriteString(", ")
+		}
+		alltags.WriteString(tag.id.String())
+	}
+	fmt.Fprintf(out,
+`func (v *%[1]s) XdrInitialize() {
+	switch %[1]s(0) {
+	case %[2]s:
+    default:
+		if *v == %[1]s(0) { *v = %[3]s }
+	}
+}
+`, r.id, alltags.String(), r.tags[0].id.String())
+skip:
+
 	e.xappend(out)
 }
 
@@ -704,6 +726,32 @@ func (v *%[1]s) XdrMarshal(x XDR, name string) {
 `, r.tagid, r.id)
 	}
 	fmt.Fprintf(out, "}\n")
+
+	if !r.hasdefault {
+		alltags := &strings.Builder{}
+		for i := range r.fields {
+			for j := range r.fields[i].cases {
+				tag := r.fields[i].cases[j]
+				if val, _ := e.get_bound(tag); val == "0" {
+					goto skip
+				}
+				if alltags.Len() > 0 {
+					alltags.WriteString(", ")
+				}
+				alltags.WriteString(tag.String())
+			}
+		}
+		fmt.Fprintf(out,
+`func (v *%[1]s) XdrInitialize() {
+	switch %[2]s(0) {
+	case %[3]s:
+	default:
+		if v.%[4]s == %[2]s(0) { v.%[4]s = %[5]s }
+	}
+}
+`, r.id, r.tagtype, alltags.String(), r.tagid, r.fields[0].cases[0])
+	skip:
+	}
 
 	fmt.Fprintf(out, "func XDR_%s(x XDR, name string, v *%s) {\n" +
 		"\tx.Marshal(name, v)\n" +
