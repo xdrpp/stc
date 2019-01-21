@@ -17,14 +17,14 @@ install: goxdr goxdr.1
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/goxdr $(DESTDIR)$(MANDIR)/man1/goxdr.1
 
-$(BUILT_SOURCES): header.go.in parse.y syms.go goxdr.go
+$(BUILT_SOURCES): header.go.in parse.y goxdr.go
 	PATH="$$PATH:$$(go env GOPATH)/bin" go generate
 	sed -e 's|^[ 	]*//line|//line|' parse.go > parse.go~ \
 		&& mv -f parse.go~ parse.go
 
 clean:
 	go clean
-	rm -f *~ .*~ y.output
+	rm -f *~ .*~ y.output debug
 
 maintainer-clean: clean
 	rm -f $(BUILT_SOURCES) goxdr.1

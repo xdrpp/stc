@@ -274,11 +274,23 @@ func editor(args ...string) {
 
 func firstDifferentLine(a []byte, b []byte) (lineno int) {
 	n := len(a)
+	m := n
 	if n > len(b) {
 		n = len(b)
+	} else {
+		m = n
 	}
 	lineno = 1
-	for i := 0; i < n && a[i] == b[i]; i++ {
+	for i := 0;; i++ {
+		if i >= n {
+			if i >= m {
+				lineno = 0
+			}
+			break
+		}
+		if a[i] != b[i] {
+			break
+		}
 		if a[i] == '\n' {
 			lineno++
 		}
@@ -324,13 +336,16 @@ func doEdit(net *StellarNet, arg string) {
 			os.Exit(1)
 		}
 
+		line := firstDifferentLine(contents, lastcontents)
 		if err != nil {
 			fmt.Fprint(os.Stderr, err.Error())
 			fmt.Printf("Press return to run editor.")
 			stx.ReadTextLine(os.Stdin)
+			if pe, ok := err.(ParseError); ok {
+				line = pe.TxrepError[0].Line
+			}
 		}
-		editor(fmt.Sprintf("+%d", firstDifferentLine(contents, lastcontents)),
-			path)
+		editor(fmt.Sprintf("+%d", line), path)
 
 		if err == nil {
 			fi2, staterr := os.Stat(path)

@@ -39,8 +39,7 @@ func TxPayloadHash(network string, e *stx.TransactionEnvelope) []byte {
 	return xdrSHA256(&payload)
 }
 
-/*
-func verify(pk *PublicKey, message []byte, sig []byte) bool {
+func Verify(pk *PublicKey, message []byte, sig []byte) bool {
 	switch pk.Type {
 	case stx.PUBLIC_KEY_TYPE_ED25519:
 		return ed25519.Verify(pk.Ed25519()[:], message, sig)
@@ -48,7 +47,6 @@ func verify(pk *PublicKey, message []byte, sig []byte) bool {
 		return false
 	}
 }
-*/
 
 // Verify the signature on a transaction.
 func VerifyTx(pk *stx.SignerKey, network string, e *stx.TransactionEnvelope,
@@ -92,7 +90,7 @@ type PrivateKey struct {
 	}
 }
 func (sk PrivateKey) String() string { return sk.k.String() }
-func (sk *PrivateKey) sign(msg []byte) ([]byte, error) { return sk.k.Sign(msg) }
+func (sk *PrivateKey) Sign(msg []byte) ([]byte, error) { return sk.k.Sign(msg) }
 func (sk *PrivateKey) Public() *PublicKey { return sk.k.Public() }
 
 func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
@@ -113,7 +111,7 @@ func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 // Signs a transaction and appends the signature to the Signatures
 // list in the TransactionEnvelope.
 func (sec *PrivateKey) SignTx(network string, e *TransactionEnvelope) error {
-	sig, err := sec.sign(TxPayloadHash(network, e.TransactionEnvelope))
+	sig, err := sec.Sign(TxPayloadHash(network, e.TransactionEnvelope))
 	if err != nil {
 		return err
 	}

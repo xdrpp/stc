@@ -691,7 +691,7 @@ func (v *%[1]s) XdrMarshal(x XDR, name string) {
 			fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases())
 		}
 		if !u.isVoid() {
-			out.WriteString(e.xdrgen("v." + u.decl.id.getgo() + "()",
+			out.WriteString("\t" + e.xdrgen("v." + u.decl.id.getgo() + "()",
 				`x.Sprintf("%s` + u.decl.id.getx() + `", name)`,
 				r.id, &u.decl))
 		}

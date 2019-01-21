@@ -10,16 +10,13 @@ xdr/Stellar-types.x
 GO_DEPENDS = golang.org/x/crypto/... golang.org/x/tools/cmd/goyacc	\
 golang.org/x/tools/cmd/stringer
 
-all: $(BUILT_SOURCES) cmd/stc/stc
+all: cmd/stc/stc
 
-install: cmd/stc/stc cmd/stc/stc.1
-	mkdir -p $(DESTDIR)$(PREFIX)/bin
-	cp cmd/stc/stc $(DESTDIR)$(PREFIX)/bin/stc
-	mkdir -p $(DESTDIR)$(MANDIR)/man1
-	cp cmd/stc/stc.1 $(DESTDIR)$(MANDIR)/man1/stc.1
+always:
+	@:
 
-uninstall:
-	rm -f $(DESTDIR)$(PREFIX)/bin/stc $(DESTDIR)$(MANDIR)/man1/stc.1
+install uninstall:
+	cd cmd/stc && $(MAKE) $@
 
 build-depend:
 	go get $(GO_DEPENDS)
@@ -32,30 +29,38 @@ $(XDRS):
 	git archive --prefix=xdr/ FETCH_HEAD:src/xdr | tar xf -
 
 cmd/goxdr/goxdr:
-	GOARCH=$$(go env GOHOSTARCH) $(MAKE) -C cmd/goxdr
+	cd cmd/goxdr && GOARCH=$$(go env GOHOSTARCH) $(MAKE)
 
-cmd/stc/stc: $(BUILT_SOURCES)
-	cd cmd/stc && go build
+cmd/stc/stc: $(BUILT_SOURCES) always
+	cd cmd/stc && $(MAKE)
 
 stx/xdr_generated.go: cmd/goxdr/goxdr $(XDRS)
-	cmd/goxdr/goxdr -p stx -o $@ $(XDRS)
+	cmd/goxdr/goxdr -p stx -o $@~ $(XDRS)
+	@if cmp $@ $@~ > /dev/null 2>/dev/null; then \
+		rm -f $@~; \
+	else \
+		echo mv -f $@~ $@; \
+		mv -f $@~ $@; \
+	fi
 
 clean:
-	$(MAKE) -C cmd/goxdr $@
+	for dir in cmd/goxdr cmd/stc; do \
+		(cd $$dir && $(MAKE) $@); \
+	done
 	go clean
-	cd cmd/stc && go clean
-	rm -f *~ .*~ cmd/stc/*~ cmd/stc/.*~
+	rm -f *~ .*~ */*~
 
-maintainer-clean: clean
-	$(MAKE) -C cmd/goxdr $@
-	rm -rf go.sum $(BUILT_SOURCES) xdr cmd/stc/stc.1
-
-cmd/stc/stc.1: cmd/stc/stc.1.md
-	pandoc -s -w man cmd/stc/stc.1.md -o cmd/stc/stc.1 || \
-		git show $$(git for-each-ref --count 1 --format '%(refname)' 'refs/remotes/*/go1'):./$@ > $@
+maintainer-clean:
+	for dir in cmd/goxdr cmd/stc; do \
+		(cd $$dir && $(MAKE) $@); \
+	done
+	go clean
+	rm -f *~ .*~ */*~ go.sum $(BUILT_SOURCES)
+	rm -rf xdr
 
 go1:
 	./make-go1
 
 .PHONY: all install clean maintainer-clean go1
-.PHONY: build-depend update-depend cmd/goxdr/goxdr
+.PHONY: build-depend update-depend always
+.PHONY: cmd/goxdr/goxdr cmd/goxdr/stc

@@ -23,7 +23,7 @@ type TransactionEnvelope struct {
 func NewTransactionEnvelope() *TransactionEnvelope {
 	return &TransactionEnvelope{
 		TransactionEnvelope: &stx.TransactionEnvelope{},
-		Help: map[string]struct{}{},
+		Help: nil,
 	}
 }
 
@@ -54,7 +54,7 @@ func TxFromRep(rep string) (*TransactionEnvelope, stx.TxrepError) {
 	in := strings.NewReader(rep)
 	txe := NewTransactionEnvelope()
     if err := stx.XdrFromTxrep(in, txe); err != nil {
-		return nil, err
+		return txe, err
 	}
 	return txe, nil
 }

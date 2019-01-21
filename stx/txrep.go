@@ -20,6 +20,20 @@ const (
 // Generating TxRep
 //
 
+// Reports illegal values in an XDR structure.
+type XdrBadValue []struct {
+	Field string
+	Msg string
+}
+
+func (e XdrBadValue) Error() string {
+	out := &strings.Builder{}
+	for i := range e {
+		fmt.Fprintf(out, "%s: %s\n", e[i].Field, e[i].Msg)
+	}
+	return out.String()
+}
+
 func renderByte(b byte) string {
 	if b <= ' ' || b >= '\x7f' {
 		return fmt.Sprintf("\\x%02x", b)
@@ -44,6 +58,7 @@ type trackTypes struct {
 	ptrDepth int
 	inAsset bool
 	env *TransactionEnvelope
+	err XdrBadValue
 }
 
 func (x *trackTypes) present() string {
@@ -132,6 +147,17 @@ type xdrEnumNames interface {
 
 func (xp *txStringCtx) Marshal(name string, i XdrType) {
 	defer xp.track(i)()
+	defer func(){
+		switch v := recover().(type) {
+		case nil:
+			return
+		case XdrError:
+			xp.err = append(xp.err, struct { Field string; Msg string }{
+				name, v.Error(), })
+		default:
+			panic(v)
+		}
+	}()
 	switch v := i.(type) {
 	case *TimeBounds:
 		fmt.Fprintf(xp.out, "%s.minTime: %d%s\n%s.maxTime: %d%s\n",
@@ -205,7 +231,7 @@ func (xp *txStringCtx) Marshal(name string, i XdrType) {
 //
 // Help comment for field fieldname:
 //   GetHelp(fieldname string) bool
-func XdrToTxrep(out io.Writer, t XdrAggregate) {
+func XdrToTxrep(out io.Writer, t XdrAggregate) XdrBadValue {
 	ctx := txStringCtx {
 		accountIDNote: func(*AccountID) string { return "" },
 		signerNote: func(*TransactionEnvelope, *DecoratedSignature) string {
@@ -228,6 +254,10 @@ func XdrToTxrep(out io.Writer, t XdrAggregate) {
 	}
 
 	t.XdrMarshal(&ctx, "")
+	if len(ctx.err) > 0 {
+		return ctx.err
+	}
+	return nil
 }
 
 
@@ -317,6 +347,7 @@ type xdrScan struct {
 	trackTypes
 	kvs map[string]lineval
 	err TxrepError
+	lastline int
 	setHelp func(string)
 }
 
@@ -331,7 +362,24 @@ func (xs *xdrScan) report(line int, fmtstr string, args...interface{}) {
 
 func (xs *xdrScan) Marshal(name string, i XdrType) {
 	defer xs.track(i)()
+/*
+	defer func(){
+		switch e := recover().(type) {
+		case nil:
+			return
+		case XdrError:
+			xs.report(xs.lastline, "%s", e.Error())
+		case StrKeyError:
+			xs.report(xs.lastline, "%s", e.Error())
+		default:
+			panic(e)
+		}
+	}()
+*/
 	lv, ok := xs.kvs[name]
+	if ok {
+		xs.lastline = lv.line
+	}
 	val := lv.val
 	switch v := i.(type) {
 	case XdrArrayOpaque:
