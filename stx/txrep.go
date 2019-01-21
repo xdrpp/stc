@@ -9,6 +9,17 @@ import (
 	"unicode"
 )
 
+// pseudo-selectors
+const (
+	ps_len = "len"
+	ps_present = "_present"
+)
+
+
+//
+// Generating TxRep
+//
+
 // Interface for annotating generated Txrep output.
 type TxrepAnnotate interface{
 	// Returns extra information with which to annotate an account, or
@@ -21,10 +32,6 @@ type TxrepAnnotate interface{
 
 	// Returns true if field should be rendered with extra help.
 	GetHelp(string) bool
-
-	// Called when parsing, rather than generating, Txrep, so as to
-	// record that a '?' was found during parsing of a field.
-	SetHelp(string)
 }
 
 type nullTxrepAnnotate struct{}
@@ -33,12 +40,6 @@ func (nullTxrepAnnotate) SignerNote(*TransactionEnvelope,
 	*DecoratedSignature) string { return "" }
 func (nullTxrepAnnotate) SetHelp(string) {}
 func (nullTxrepAnnotate) GetHelp(string) bool { return false }
-
-// pseudo-selectors
-const (
-	ps_len = "len"
-	ps_present = "_present"
-)
 
 func renderByte(b byte) string {
 	if b <= ' ' || b >= '\x7f' {
@@ -58,52 +59,6 @@ func renderCode(bs []byte) string {
 		out.WriteString(renderByte(bs[i]))
 	}
 	return out.String()
-}
-
-// Slightly convoluted logic to avoid throwing away the account name
-// in case the code is bad
-func scanCode(out []byte, input string) error {
-	ss := strings.NewReader(input)
-skipspace:
-	if r, _, err := ss.ReadRune(); unicode.IsSpace(r) {
-		goto skipspace
-	} else if err == nil {
-		ss.UnreadRune()
-	}
-	var i int
-	var r = ' '
-	var err error
-	for i = 0; i < len(out); i++ {
-		r, _, err = ss.ReadRune()
-		if err == io.EOF || unicode.IsSpace(r) {
-			break
-		} else if err != nil {
-			return err
-		} else if r <= ' ' || r >= 127 {
-			err = StrKeyError("Invalid character in AssetCode")
-			break
-		} else if r != '\\' {
-			out[i] = byte(r)
-			continue
-		}
-		r, _, err = ss.ReadRune()
-		if err != nil {
-			return err
-		} else if r != 'x' {
-			out[i] = byte(r)
-		} else if _, err = fmt.Fscanf(ss, "%02x", &out[i]); err != nil {
-			return err
-		}
-	}
-	for ; i < len(out); i++ {
-		out[i] = 0
-	}
-	// XXX - might already have read space above
-	r, _, err = ss.ReadRune()
-	if err != io.EOF && !unicode.IsSpace(r) {
-		return StrKeyError("AssetCode too long")
-	}
-	return nil
 }
 
 type trackTypes struct {
@@ -271,19 +226,78 @@ func XdrToTxrep(out io.Writer, x XdrAggregate, annotate TxrepAnnotate) {
 }
 
 
-/*
+//
+// Parsing TxRep
+//
+
+// Interface for receiving feedback on Txrep parse results.
+type TxrepFeedback interface {
+	// Called when a value ends with '?', indicating the user may wish
+	// for help on possible enum values.
+	SetHelp(field string)
+
+	// Called when there is a parse error on a specific line.
+	Error(line int, msg string)
+}
+
+// Slightly convoluted logic to avoid throwing away the account name
+// in case the code is bad
+func scanCode(out []byte, input string) error {
+	ss := strings.NewReader(input)
+skipspace:
+	if r, _, err := ss.ReadRune(); unicode.IsSpace(r) {
+		goto skipspace
+	} else if err == nil {
+		ss.UnreadRune()
+	}
+	var i int
+	var r = ' '
+	var err error
+	for i = 0; i < len(out); i++ {
+		r, _, err = ss.ReadRune()
+		if err == io.EOF || unicode.IsSpace(r) {
+			break
+		} else if err != nil {
+			return err
+		} else if r <= ' ' || r >= 127 {
+			err = StrKeyError("Invalid character in AssetCode")
+			break
+		} else if r != '\\' {
+			out[i] = byte(r)
+			continue
+		}
+		r, _, err = ss.ReadRune()
+		if err != nil {
+			return err
+		} else if r != 'x' {
+			out[i] = byte(r)
+		} else if _, err = fmt.Fscanf(ss, "%02x", &out[i]); err != nil {
+			return err
+		}
+	}
+	for ; i < len(out); i++ {
+		out[i] = 0
+	}
+	// XXX - might already have read space above
+	r, _, err = ss.ReadRune()
+	if err != io.EOF && !unicode.IsSpace(r) {
+		return StrKeyError("AssetCode too long")
+	}
+	return nil
+}
+
+
 type lineval struct {
 	line int
 	val string
 }
 
 type xdrScan struct {
-	TxrepAnnotate
+	TxrepFeedback
+	trackTypes
 	kvs map[string]lineval
 	err bool
 	errmsg strings.Builder
-	file string
-	trackTypes
 }
 
 func (*xdrScan) Sprintf(f string, args ...interface{}) string {
@@ -292,8 +306,9 @@ func (*xdrScan) Sprintf(f string, args ...interface{}) string {
 
 func (xs *xdrScan) report(line int, fmtstr string, args...interface{}) {
 	xs.err = true
-	fmt.Fprintf(&xs.errmsg, "%s:%d: ", xs.file, line)
-	fmt.Fprintf(&xs.errmsg, fmtstr, args...)
+	msg := fmt.Sprintf(fmtstr, args...)
+	fmt.Fprintf(&xs.errmsg, "%d: %s\n", line, msg)
+	xs.Error(line, msg)
 }
 
 func (xs *xdrScan) Marshal(name string, i XdrType) {
@@ -312,14 +327,14 @@ func (xs *xdrScan) Marshal(name string, i XdrType) {
 		}
 		if err != nil {
 			xs.SetHelp(name)
-			xs.report(lv.line, "%s\n", err.Error())
+			xs.report(lv.line, "%s", err.Error())
 		}
 	case fmt.Scanner:
 		if !ok { return }
 		_, err := fmt.Sscan(val, v)
 		if err != nil {
 			xs.SetHelp(name)
-			xs.report(lv.line, "%s\n", err.Error())
+			xs.report(lv.line, "%s", err.Error())
 		} else if len(val) > 0 && val[len(val)-1] == '?' {
 			xs.SetHelp(name)
 		}
@@ -336,7 +351,7 @@ func (xs *xdrScan) Marshal(name string, i XdrType) {
 			// We are throwing error anyway, so also try parsing any fields
 			v.SetPresent(true)
 			xs.report(xs.kvs[field].line,
-				"%s (%s) must be true or false\n", field, val)
+				"%s (%s) must be true or false", field, val)
 		}
 		v.XdrMarshalValue(xs, name)
 	case *XdrSize:
@@ -348,7 +363,7 @@ func (xs *xdrScan) Marshal(name string, i XdrType) {
 		} else {
 			v.SetU32(v.XdrBound())
 			xs.err = true
-			xs.report(lv.line, "%s.%s (%d) exceeds maximum size %d.\n",
+			xs.report(lv.line, "%s.%s (%d) exceeds maximum size %d.",
 				name, ps_len, size, v.XdrBound())
 		}
 	case XdrAggregate:
@@ -362,40 +377,75 @@ func (xs *xdrScan) Marshal(name string, i XdrType) {
 	delete(xs.kvs, name)
 }
 
-
-func TxScan(t XdrAggregate, in string, filename string) (
-	help XdrHelp, err error) {
-	defer func() {
-		if i := recover(); i != nil {
-			switch i.(type) {
-			case XdrError, StrKeyError:
-				err = i.(error)
-				//fmt.Fprintln(os.Stderr, err)
-				return
-			}
-			panic(i)
+// A type that can be passed to fmt.Scan to read a full line of input,
+// accepting every character except '\n'.  If there's a '\r' before
+// the '\n', then that '\r' is stripped.
+type InputLine []byte
+func (il *InputLine) Scan(ss fmt.ScanState, _ rune) error {
+	if line, err := ss.Token(false, func (r rune) bool {
+		return r != '\n'
+	}); err != nil {
+		return err
+	} else {
+		if len(line) > 0 && line[len(line)-1] == '\r' {
+			line = line[:len(line)-1]
 		}
-	}()
+		*il = InputLine(line)
+		return nil
+	}
+}
+
+func (xs *xdrScan) readKvs(in io.Reader) {
 	kvs := map[string]lineval{}
-	help = make(XdrHelp)
-	x := xdrScan{kvs: kvs, help: help, file: filename}
 	lineno := 0
-	for _, line := range strings.Split(in, "\n") {
+	var bline InputLine
+	var bad bool
+	for {
+		_, err := fmt.Fscanln(in, &bline)
+		if err != nil {
+			if err != io.EOF {
+				bad = true
+				xs.report(lineno, "%s", err.Error())
+			}
+			if !bad {
+				xs.kvs = kvs
+			}
+			return
+		}
 		lineno++
+		line := string(bline)
 		if line == "" {
 			continue
 		}
 		kv := strings.SplitN(line, ":", 2)
 		if len(kv) != 2 {
-			x.report(lineno, "syntax error\n")
+			bad = true
+			xs.report(lineno, "syntax error")
 			continue
 		}
 		kvs[kv[0]] = lineval{lineno, kv[1]}
 	}
-	t.XdrMarshal(&x, "")
-	if x.err {
-		err = XdrError(x.errmsg.String())
+}
+
+// Parse input in Txrep format into an XdrAggregate type.
+func XdrFromTxrep(in io.Reader, t XdrAggregate, back TxrepFeedback) (e error) {
+	xs := &xdrScan{}
+	defer func() {
+		if i := recover(); i != nil {
+			switch i.(type) {
+			case XdrError, StrKeyError:
+				xs.report(0, "%s", i.(error).Error())
+			default:
+				panic(i)
+			}
+		}
+		if xs.err {
+			e = XdrError(xs.errmsg.String())
+		}
+	}()
+	xs.readKvs(in)
+	if xs.kvs != nil {
+		t.XdrMarshal(xs, "")
 	}
 	return
 }
-*/
