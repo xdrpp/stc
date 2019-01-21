@@ -3,7 +3,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -168,7 +167,17 @@ func isCompiled(content string) bool {
 	return false
 }
 
-func readTx(infile string) (txe *TransactionEnvelope, help XdrHelp, err error) {
+type ParseError struct {
+	stx.TxrepError
+	Filename string
+}
+
+func (pe ParseError) Error() string {
+	return pe.FileError(pe.Filename)
+}
+
+func readTx(infile string) (
+	txe *TransactionEnvelope, compiled bool, err error) {
 	var input []byte
 	if infile == "-" {
 		input, err = ioutil.ReadAll(os.Stdin)
@@ -182,38 +191,32 @@ func readTx(infile string) (txe *TransactionEnvelope, help XdrHelp, err error) {
 	sinput := string(input)
 
 	if isCompiled(sinput) {
+		compiled = true
 		txe, err = TxFromBase64(sinput)
-		return
-	}
-
-	var e TransactionEnvelope
-	if help, err = TxScan(&e, sinput, infile); err == nil {
-		txe = &e
+	} else if newe, pe := TxFromRep(sinput); pe != nil {
+		err = ParseError{ pe, infile }
+	} else {
+		txe = newe
 	}
 	return
 }
 
-func mustReadTx(infile string) (*TransactionEnvelope, XdrHelp) {
-	e, help, err := readTx(infile)
+func mustReadTx(infile string) (*TransactionEnvelope, bool) {
+	e, compiled, err := readTx(infile)
 	if err != nil {
 		fmt.Fprint(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	if help == nil {
-		help = make(XdrHelp)
-	}
-	return e, help
+	return e, compiled
 }
 
 func writeTx(outfile string, e *TransactionEnvelope, net *StellarNet,
-	help XdrHelp) error {
+	compiled bool) error {
 	var output string
-	if help == nil {
+	if compiled {
 		output = TxToBase64(e) + "\n"
 	} else {
-		buf := &strings.Builder{}
-		TxStringCtx{ Out: buf, Env: e, Net: net, Help: help }.Exec()
-		output = buf.String()
+		output = net.TxToRep(e)
 	}
 
 	if outfile == "" {
@@ -228,8 +231,8 @@ func writeTx(outfile string, e *TransactionEnvelope, net *StellarNet,
 }
 
 func mustWriteTx(outfile string, e *TransactionEnvelope, net *StellarNet,
-	help XdrHelp) {
-	if err := writeTx(outfile, e, net, help); err != nil {
+	compiled bool) {
+	if err := writeTx(outfile, e, net, compiled); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
@@ -289,18 +292,14 @@ func doEdit(net *StellarNet, arg string) {
 		os.Exit(1)
 	}
 
-	e, help, err := readTx(arg)
-	compiled := help == nil
+	e, compiled, err := readTx(arg)
 	if os.IsNotExist(err) {
-		e = &TransactionEnvelope{}
+		e = NewTransactionEnvelope()
 	} else if err != nil {
 		fmt.Fprint(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	getAccounts(net, e, false)
-	if help == nil {
-		help = make(XdrHelp)
-	}
 
 	f, err := ioutil.TempFile("", progname)
 	if err != nil {
@@ -315,9 +314,7 @@ func doEdit(net *StellarNet, arg string) {
 	var contents, lastcontents []byte
 	for {
 		if err == nil {
-			buf := &bytes.Buffer{}
-			TxStringCtx{ Out: buf, Env: e, Net: net, Help: help }.Exec()
-			lastcontents = buf.Bytes()
+			lastcontents = []byte(net.TxToRep(e))
 			ioutil.WriteFile(path, lastcontents, 0600)
 		}
 
@@ -330,8 +327,7 @@ func doEdit(net *StellarNet, arg string) {
 		if err != nil {
 			fmt.Fprint(os.Stderr, err.Error())
 			fmt.Printf("Press return to run editor.")
-			var li InputLine
-			fmt.Scanln(&li)
+			stx.ReadTextLine(os.Stdin)
 		}
 		editor(fmt.Sprintf("+%d", firstDifferentLine(contents, lastcontents)),
 			path)
@@ -352,14 +348,15 @@ func doEdit(net *StellarNet, arg string) {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-		e = &TransactionEnvelope{}
-		help, err = TxScan(e, string(contents), path)
+		err = nil
+		if newe, pe := TxFromRep(string(contents)); pe != nil {
+			err = ParseError{ pe, path }
+		} else {
+			e = newe
+		}
 	}
 
-	if compiled {
-		help = nil
-	}
-	mustWriteTx(arg, e, net, help)
+	mustWriteTx(arg, e, net, compiled)
 }
 
 func b2i(bs ...bool) int {
@@ -517,7 +514,7 @@ func main() {
 		return
 	}
 
-	e, help := mustReadTx(arg)
+	e, _ := mustReadTx(arg)
 	switch {
 	case *opt_post:
 		res := PostTransaction(net, e)
@@ -542,8 +539,7 @@ func main() {
 			}
 		}
 		if *opt_learn { SaveSigners(net) }
-		if *opt_compile { help = nil }
 		if *opt_inplace { *opt_output = arg }
-		mustWriteTx(*opt_output, e, net, help)
+		mustWriteTx(*opt_output, e, net, *opt_compile)
 	}
 }

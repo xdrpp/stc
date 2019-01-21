@@ -146,8 +146,6 @@ func KeyGen(pkt stx.PublicKeyType) PrivateKey {
 	}
 }
 
-type InputLine = stx.InputLine
-
 // PassphraseFile is the io.Reader from which passphrases should be
 // read.  If set to a terminal, then a prompt will be displayed and
 // echo will be disabled while the user types the passphrase.  The
@@ -192,9 +190,8 @@ func GetPass(prompt string) []byte {
 		fmt.Fprintln(PassphrasePrompt, "")
 		return bytePassword
 	} else {
-		var line InputLine
-		fmt.Fscanln(PassphraseFile, &line)
-		return []byte(line)
+		line, _ := stx.ReadTextLine(PassphraseFile)
+		return line
 	}
 }
 

@@ -57,6 +57,7 @@ func (x *trackTypes) track(i XdrType) (cleanup func()) {
 	case *Asset:
 		x.inAsset = true
 	case *TransactionEnvelope:
+		// In case some XDR structure wraps TransactionEnvelope
 		x.env = v
 	default:
 		return func() {}
@@ -213,6 +214,7 @@ func XdrToTxrep(out io.Writer, t XdrAggregate) {
 		getHelp: func(string) bool { return false },
 		out: out,
 	}
+	ctx.env, _ = t.XdrPointer().(*TransactionEnvelope)
 
 	if i, ok := t.(interface{ AccountIDNote(*AccountID) string }); ok {
 		ctx.accountIDNote = i.AccountIDNote
@@ -243,7 +245,7 @@ type TxrepError []struct {
 func (e TxrepError) render(prefix string) string {
 	out := &strings.Builder{}
 	for i := range e {
-		fmt.Fprintf(out, "%s:%d: %s\n", prefix, e[i].Line, e[i].Msg)
+		fmt.Fprintf(out, "%s%d: %s\n", prefix, e[i].Line, e[i].Msg)
 	}
 	return out.String()
 }
@@ -392,32 +394,34 @@ func (xs *xdrScan) Marshal(name string, i XdrType) {
 	delete(xs.kvs, name)
 }
 
-// A type that can be passed to fmt.Scan to read a full line of input,
-// accepting every character except '\n'.  If there's a '\r' before
-// the '\n', then that '\r' is stripped.
-type InputLine []byte
-func (il *InputLine) Scan(ss fmt.ScanState, _ rune) error {
-	if line, err := ss.Token(false, func (r rune) bool {
-		return r != '\n'
-	}); err != nil {
-		return err
-	} else {
-		if len(line) > 0 && line[len(line)-1] == '\r' {
-			line = line[:len(line)-1]
-		}
-		*il = InputLine(line)
-		return nil
+type inputLine []byte
+func (il *inputLine) Scan(ss fmt.ScanState, _ rune) error {
+	t, e := ss.Token(false, func(r rune) bool { return r != '\n' })
+	*il = inputLine(t)
+	return e
+}
+
+// Read a line of text without using bufio
+func ReadTextLine(r io.Reader) ([]byte, error) {
+	var line inputLine
+	var c rune
+	_, err := fmt.Fscanf(r, "%v%c", &line, &c)
+	if err == nil && c != '\n' {
+		err = io.EOF
 	}
+	if len(line) > 0 && line[len(line)-1] == '\r' {
+		line = line[:len(line)-1]
+	}
+	return []byte(line), err
 }
 
 func (xs *xdrScan) readKvs(in io.Reader) {
 	kvs := map[string]lineval{}
 	lineno := 0
-	var bline InputLine
 	var bad bool
 	for {
-		_, err := fmt.Fscanln(in, &bline)
-		if err != nil {
+		bline, err := ReadTextLine(in)
+		if err != nil && (err != io.EOF || len(bline) == 0) {
 			if err != io.EOF {
 				bad = true
 				xs.report(lineno, "%s", err.Error())

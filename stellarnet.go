@@ -157,7 +157,6 @@ func (c SignerCache) Add(strkey, comment string) error {
 	if ok {
 		for i := range skis {
 			if strkey == skis[i].Key.String() {
-				skis[i].Comment = comment
 				return nil
 			}
 		}
