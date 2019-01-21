@@ -38,7 +38,6 @@ type nullTxrepAnnotate struct{}
 func (nullTxrepAnnotate) AccountIDNote(*AccountID) string { return "" }
 func (nullTxrepAnnotate) SignerNote(*TransactionEnvelope,
 	*DecoratedSignature) string { return "" }
-func (nullTxrepAnnotate) SetHelp(string) {}
 func (nullTxrepAnnotate) GetHelp(string) bool { return false }
 
 func renderByte(b byte) string {
@@ -240,6 +239,10 @@ type TxrepFeedback interface {
 	Error(line int, msg string)
 }
 
+type nullTxrepFeedback struct{}
+func (nullTxrepFeedback) SetHelp(string) {}
+func (nullTxrepFeedback) Error(line int, msg string) {}
+
 // Slightly convoluted logic to avoid throwing away the account name
 // in case the code is bad
 func scanCode(out []byte, input string) error {
@@ -428,8 +431,11 @@ func (xs *xdrScan) readKvs(in io.Reader) {
 }
 
 // Parse input in Txrep format into an XdrAggregate type.
-func XdrFromTxrep(in io.Reader, t XdrAggregate, back TxrepFeedback) (e error) {
-	xs := &xdrScan{}
+func XdrFromTxrep(in io.Reader, t XdrAggregate, fb TxrepFeedback) (e error) {
+	if fb == nil {
+		fb = nullTxrepFeedback{}
+	}
+	xs := &xdrScan{ TxrepFeedback: fb }
 	defer func() {
 		if i := recover(); i != nil {
 			switch i.(type) {

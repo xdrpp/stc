@@ -41,13 +41,17 @@ func (net *StellarNet) SignerNote(txe *stx.TransactionEnvelope,
 		net.Name)
 }
 
+// Always false
+func (*StellarNet) GetHelp(string) bool {
+	return false
+}
+
 // Does nothing
 func (*StellarNet) SetHelp(string) {
 }
 
-// Always false
-func (*StellarNet) GetHelp(string) bool {
-	return false
+// Does nothing
+func (*StellarNet) Error(int, string) {
 }
 
 var _ stx.TxrepAnnotate = &StellarNet{}

@@ -146,23 +146,7 @@ func KeyGen(pkt stx.PublicKeyType) PrivateKey {
 	}
 }
 
-// A type that can be passed to fmt.Scan to read a full line of input,
-// accepting every character except '\n'.  If there's a '\r' before
-// the '\n', then that '\r' is stripped.
-type InputLine []byte
-func (il *InputLine) Scan(ss fmt.ScanState, _ rune) error {
-	if line, err := ss.Token(false, func (r rune) bool {
-		return r != '\n'
-	}); err != nil {
-		return err
-	} else {
-		if len(line) > 0 && line[len(line)-1] == '\r' {
-			line = line[:len(line)-1]
-		}
-		*il = InputLine(line)
-		return nil
-	}
-}
+type InputLine = stx.InputLine
 
 // PassphraseFile is the io.Reader from which passphrases should be
 // read.  If set to a terminal, then a prompt will be displayed and
