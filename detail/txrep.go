@@ -1,5 +1,5 @@
 
-package stx
+package detail
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"stc/stx"
 )
 
 // pseudo-selectors
@@ -57,21 +58,21 @@ func renderCode(bs []byte) string {
 type trackTypes struct {
 	ptrDepth int
 	inAsset bool
-	env *TransactionEnvelope
+	env *stx.TransactionEnvelope
 	err XdrBadValue
 }
 
 func (x *trackTypes) present() string {
 	return "." + strings.Repeat("_inner", x.ptrDepth-1) + ps_present;
 }
-func (x *trackTypes) track(i XdrType) (cleanup func()) {
+func (x *trackTypes) track(i stx.XdrType) (cleanup func()) {
 	oldx := *x
 	switch v := i.(type) {
-	case XdrPtr:
+	case stx.XdrPtr:
 		x.ptrDepth++
-	case *Asset, *AllowTrustOp:
+	case *stx.Asset, *stx.AllowTrustOp:
 		x.inAsset = true
-	case *TransactionEnvelope:
+	case *stx.TransactionEnvelope:
 		// In case some XDR structure wraps TransactionEnvelope
 		x.env = v
 	default:
@@ -81,8 +82,8 @@ func (x *trackTypes) track(i XdrType) (cleanup func()) {
 }
 
 type txStringCtx struct {
-	accountIDNote func(*AccountID) string
-	signerNote func(*TransactionEnvelope, *DecoratedSignature) string
+	accountIDNote func(*stx.AccountID) string
+	signerNote func(*stx.TransactionEnvelope, *stx.DecoratedSignature) string
 	getHelp func(string) bool
 	out io.Writer
 	trackTypes
@@ -93,7 +94,7 @@ func (xp *txStringCtx) Sprintf(f string, args ...interface{}) string {
 }
 
 func (xp *txStringCtx) Marshal_SequenceNumber(name string,
-	v *SequenceNumber) {
+	v *stx.SequenceNumber) {
 	fmt.Fprintf(xp.out, "%s: %d\n", name, *v)
 }
 
@@ -141,13 +142,13 @@ type xdrEnumNames interface {
 	XdrEnumNames() map[int32]string
 }
 
-func (xp *txStringCtx) Marshal(name string, i XdrType) {
+func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 	defer xp.track(i)()
 	defer func(){
 		switch v := recover().(type) {
 		case nil:
 			return
-		case XdrError:
+		case stx.XdrError:
 			xp.err = append(xp.err, struct { Field string; Msg string }{
 				name, v.Error(), })
 		default:
@@ -155,11 +156,11 @@ func (xp *txStringCtx) Marshal(name string, i XdrType) {
 		}
 	}()
 	switch v := i.(type) {
-	case *TimeBounds:
+	case *stx.TimeBounds:
 		fmt.Fprintf(xp.out, "%s.minTime: %d%s\n%s.maxTime: %d%s\n",
 			name, v.MinTime, dateComment(v.MinTime),
 			name, v.MaxTime, dateComment(v.MaxTime))
-	case *AccountID:
+	case *stx.AccountID:
 		ac := v.String()
 		if hint := xp.accountIDNote(v); hint != "" {
 			fmt.Fprintf(xp.out, "%s: %s (%s)\n", name, ac, hint)
@@ -182,24 +183,24 @@ func (xp *txStringCtx) Marshal(name string, i XdrType) {
 		} else {
 			fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
 		}
-	case XdrArrayOpaque:
+	case stx.XdrArrayOpaque:
 		if xp.inAsset {
 			fmt.Fprintf(xp.out, "%s: %s\n", name, renderCode(v.GetByteSlice()))
 		} else {
 			fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
 		}
-	case *XdrInt64:
+	case *stx.XdrInt64:
 		fmt.Fprintf(xp.out, "%s: %s (%s)\n", name, v.String(),
 			scalePrint(int64(*v), 7))
 	case fmt.Stringer:
 		fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
-	case XdrPtr:
+	case stx.XdrPtr:
 		fmt.Fprintf(xp.out, "%s%s: %v\n", name, xp.present(), v.GetPresent())
 		v.XdrMarshalValue(xp, name)
-	case XdrVec:
+	case stx.XdrVec:
 		fmt.Fprintf(xp.out, "%s.%s: %d\n", name, ps_len, v.GetVecLen())
 		v.XdrMarshalN(xp, name, v.GetVecLen())
-	case *DecoratedSignature:
+	case *stx.DecoratedSignature:
 		var hint string
 		if note := xp.signerNote(xp.env, v); note != "" {
 			hint = fmt.Sprintf("%x (%s)", v.Hint, note)
@@ -208,7 +209,7 @@ func (xp *txStringCtx) Marshal(name string, i XdrType) {
 		}
 		fmt.Fprintf(xp.out, "%[1]s.hint: %[2]s\n%[1]s.signature: %[3]x\n",
 			name, hint, v.Signature)
-	case XdrAggregate:
+	case stx.XdrAggregate:
 		v.XdrMarshal(xp, name)
 	default:
 		fmt.Fprintf(xp.out, "%s: %v\n", name, i)
@@ -227,22 +228,23 @@ func (xp *txStringCtx) Marshal(name string, i XdrType) {
 //
 // Help comment for field fieldname:
 //   GetHelp(fieldname string) bool
-func XdrToTxrep(out io.Writer, t XdrAggregate) XdrBadValue {
+func XdrToTxrep(out io.Writer, t stx.XdrAggregate) XdrBadValue {
 	ctx := txStringCtx {
-		accountIDNote: func(*AccountID) string { return "" },
-		signerNote: func(*TransactionEnvelope, *DecoratedSignature) string {
+		accountIDNote: func(*stx.AccountID) string { return "" },
+		signerNote: func(*stx.TransactionEnvelope,
+			*stx.DecoratedSignature) string {
 			return ""
 		},
 		getHelp: func(string) bool { return false },
 		out: out,
 	}
-	ctx.env, _ = t.XdrPointer().(*TransactionEnvelope)
+	ctx.env, _ = t.XdrPointer().(*stx.TransactionEnvelope)
 
-	if i, ok := t.(interface{ AccountIDNote(*AccountID) string }); ok {
+	if i, ok := t.(interface{ AccountIDNote(*stx.AccountID) string }); ok {
 		ctx.accountIDNote = i.AccountIDNote
 	}
-	if i, ok := t.(interface{ SignerNote(*TransactionEnvelope,
-		*DecoratedSignature) string }); ok {
+	if i, ok := t.(interface{ SignerNote(*stx.TransactionEnvelope,
+		*stx.DecoratedSignature) string }); ok {
 		ctx.signerNote = i.SignerNote
 	}
 	if i, ok := t.(interface{ GetHelp(string) bool }); ok {
@@ -307,7 +309,7 @@ skipspace:
 		} else if err != nil {
 			return err
 		} else if r <= ' ' || r >= 127 {
-			err = StrKeyError("Invalid character in AssetCode")
+			err = stx.StrKeyError("Invalid character in AssetCode")
 			break
 		} else if r != '\\' {
 			out[i] = byte(r)
@@ -328,7 +330,7 @@ skipspace:
 	// XXX - might already have read space above
 	r, _, err = ss.ReadRune()
 	if err != io.EOF && !unicode.IsSpace(r) {
-		return StrKeyError("AssetCode too long")
+		return stx.StrKeyError("AssetCode too long")
 	}
 	return nil
 }
@@ -355,7 +357,7 @@ func (xs *xdrScan) report(line int, fmtstr string, args...interface{}) {
 	xs.err = append(xs.err, struct{Line int; Msg string}{ line, msg })
 }
 
-func (xs *xdrScan) Marshal(name string, i XdrType) {
+func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 	defer xs.track(i)()
 	lv, ok := xs.kvs[name]
 	val := lv.val
@@ -363,7 +365,7 @@ func (xs *xdrScan) Marshal(name string, i XdrType) {
 		init.XdrInitialize()
 	}
 	switch v := i.(type) {
-	case XdrArrayOpaque:
+	case stx.XdrArrayOpaque:
 		var err error
 		if xs.inAsset {
 			err = scanCode(v.GetByteSlice(), val)
@@ -385,7 +387,7 @@ func (xs *xdrScan) Marshal(name string, i XdrType) {
 		} else if len(val) > 0 && val[len(val)-1] == '?' {
 			xs.setHelp(name)
 		}
-	case XdrPtr:
+	case stx.XdrPtr:
 		val = "false"
 		field := name + xs.present()
 		fmt.Sscanf(xs.kvs[field].val, "%s", &val)
@@ -401,7 +403,7 @@ func (xs *xdrScan) Marshal(name string, i XdrType) {
 				"%s (%s) must be true or false", field, val)
 		}
 		v.XdrMarshalValue(xs, name)
-	case *XdrSize:
+	case *stx.XdrSize:
 		var size uint32
 		lv = xs.kvs[name + "." + ps_len]
 		fmt.Sscan(lv.val, &size)
@@ -412,7 +414,7 @@ func (xs *xdrScan) Marshal(name string, i XdrType) {
 			xs.report(lv.line, "%s.%s (%d) exceeds maximum size %d.",
 				name, ps_len, size, v.XdrBound())
 		}
-	case XdrAggregate:
+	case stx.XdrAggregate:
 		v.XdrMarshal(xs, name)
 	default:
 		if !ok { return }
@@ -471,7 +473,7 @@ func (xs *xdrScan) readKvs(in io.Reader) {
 // Parse input in Txrep format into an XdrAggregate type.  If the
 // XdrAggregate has a method named SetHelp(string), then it is called
 // for field names when the value ends with '?'.
-func XdrFromTxrep(in io.Reader, t XdrAggregate) (TxrepError) {
+func XdrFromTxrep(in io.Reader, t stx.XdrAggregate) (TxrepError) {
 	xs := &xdrScan{}
 	if sh, ok := t.(interface{ SetHelp(string) }); ok {
 		xs.setHelp = sh.SetHelp

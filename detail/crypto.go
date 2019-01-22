@@ -1,5 +1,5 @@
 
-package stc
+package detail
 
 import (
 	"bytes"
@@ -19,6 +19,8 @@ import (
 	"strings"
 	"stc/stx"
 )
+
+type PublicKey = stx.PublicKey
 
 // Computes the SHA-256 hash of an arbitrary XDR data structure.
 func xdrSHA256(t stx.XdrAggregate) []byte {
@@ -110,8 +112,9 @@ func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 
 // Signs a transaction and appends the signature to the Signatures
 // list in the TransactionEnvelope.
-func (sec *PrivateKey) SignTx(network string, e *TransactionEnvelope) error {
-	sig, err := sec.Sign(TxPayloadHash(network, e.TransactionEnvelope))
+func (sec *PrivateKey) SignTx(network string,
+	e *stx.TransactionEnvelope) error {
+	sig, err := sec.Sign(TxPayloadHash(network, e))
 	if err != nil {
 		return err
 	}
@@ -188,7 +191,7 @@ func GetPass(prompt string) []byte {
 		fmt.Fprintln(PassphrasePrompt, "")
 		return bytePassword
 	} else {
-		line, _ := stx.ReadTextLine(PassphraseFile)
+		line, _ := ReadTextLine(PassphraseFile)
 		return line
 	}
 }

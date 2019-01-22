@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"stc/stx"
+	"stc/detail"
 )
 
 type StellarNet struct {
@@ -34,7 +35,9 @@ func (net *StellarNet) AccountIDNote(acct *stx.AccountID) string {
 
 func (net *StellarNet) SignerNote(txe *stx.TransactionEnvelope,
 	sig *stx.DecoratedSignature) string {
-	if ski := net.Signers.Lookup(net.NetworkId, txe, sig); ski != nil {
+	if txe == nil {
+		return ""
+	} else if ski := net.Signers.Lookup(net.NetworkId, txe, sig); ski != nil {
 		return ski.String()
 	}
 	return fmt.Sprintf("bad signature/unknown key/%s is wrong network",
@@ -132,14 +135,14 @@ func (c *SignerCache) Load(filename string) error {
 }
 
 func (c SignerCache) Save(filename string) error {
-	return SafeWriteFile(filename, c.String(), 0666)
+	return detail.SafeWriteFile(filename, c.String(), 0666)
 }
 
 func (c SignerCache) Lookup(networkID string, e *stx.TransactionEnvelope,
 	ds *stx.DecoratedSignature) *SignerKeyInfo {
 	skis := c[ds.Hint]
 	for i := range skis {
-		if VerifyTx(&skis[i].Key, networkID, e,  ds.Signature) {
+		if detail.VerifyTx(&skis[i].Key, networkID, e,  ds.Signature) {
 			return &skis[i]
 		}
 	}
@@ -208,5 +211,5 @@ func (h *AccountHints) Load(filename string) error {
 }
 
 func (h *AccountHints) Save(filename string) error {
-	return SafeWriteFile(filename, h.String(), 0666)
+	return detail.SafeWriteFile(filename, h.String(), 0666)
 }

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"stc/stx"
+	"stc/detail"
 )
 
 func get(net *StellarNet, query string) []byte {
@@ -77,7 +78,7 @@ func GetLedgerHeader(net *StellarNet) *stx.LedgerHeader {
 	}
 
 	ret := &stx.LedgerHeader{}
-	if err := stx.XdrFromBase64(ret, lhx.Embedded.Records[0].Header_xdr);
+	if err := detail.XdrFromBase64(ret, lhx.Embedded.Records[0].Header_xdr);
 	err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return nil
@@ -91,7 +92,7 @@ func PostTransaction(net *StellarNet,
 		fmt.Fprintln(os.Stderr, "Missing or invalid horizon config file\n")
 		return nil
 	}
-	tx := stx.XdrToBase64(e)
+	tx := detail.XdrToBase64(e)
 	resp, err := http.PostForm(net.Horizon + "/transactions",
 		url.Values{"tx": {tx}})
 	if err != nil {
@@ -114,7 +115,7 @@ func PostTransaction(net *StellarNet,
 	if res.Result_xdr == "" { res.Result_xdr = res.Extras.Result_xdr }
 
 	var ret TransactionResult
-	if err = stx.XdrFromBase64(&ret, res.Result_xdr); err != nil {
+	if err = detail.XdrFromBase64(&ret, res.Result_xdr); err != nil {
 		fmt.Fprintf(os.Stderr, "Invalid result_xdr\n")
 		return nil
 	}

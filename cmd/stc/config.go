@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	. "stc"
+	"stc/detail"
 )
 
 var defaultNets = []StellarNet{
@@ -67,7 +68,7 @@ func printErr() bool {
 func CreateIfMissing(path string, contents string) {
 	defer printErr()
 	if !FileExists(path) {
-		SafeWriteFile(path, contents, 0666)
+		detail.SafeWriteFile(path, contents, 0666)
 	}
 }
 

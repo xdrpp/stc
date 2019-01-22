@@ -14,6 +14,7 @@ import (
 
 	. "stc"
 	"stc/stx"
+	"stc/detail"
 )
 
 type acctInfo struct {
@@ -77,7 +78,7 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 }
 
 func doKeyGen(outfile string) {
-	sk := KeyGen(stx.PUBLIC_KEY_TYPE_ED25519)
+	sk := detail.KeyGen(stx.PUBLIC_KEY_TYPE_ED25519)
 	if outfile == "" {
 		fmt.Println(sk)
 		fmt.Println(sk.Public())
@@ -87,7 +88,7 @@ func doKeyGen(outfile string) {
 			fmt.Fprintf(os.Stderr, "%s: file already exists\n", outfile)
 			return
 		}
-		bytePassword := GetPass2("Passphrase: ")
+		bytePassword := detail.GetPass2("Passphrase: ")
 		if FileExists(outfile) {
 			fmt.Fprintf(os.Stderr, "%s: file already exists\n", outfile)
 			return
@@ -106,9 +107,9 @@ func getSecKey(file string) (*PrivateKey, error) {
 	var sk *PrivateKey
 	var err error
 	if file == "" {
-		sk, err = PrivateKeyFromInput("Secret key: ")
+		sk, err = detail.PrivateKeyFromInput("Secret key: ")
 	} else {
-		sk, err = PrivateKeyFromFile(file)
+		sk, err = detail.PrivateKeyFromFile(file)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
@@ -168,7 +169,7 @@ func isCompiled(content string) bool {
 }
 
 type ParseError struct {
-	stx.TxrepError
+	detail.TxrepError
 	Filename string
 }
 
@@ -222,7 +223,7 @@ func writeTx(outfile string, e *TransactionEnvelope, net *StellarNet,
 	if outfile == "" {
 		fmt.Print(output)
 	} else {
-		if err := SafeWriteFile(outfile, output, 0666); err != nil {
+		if err := detail.SafeWriteFile(outfile, output, 0666); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			return err
 		}
@@ -245,7 +246,7 @@ func signTx(net *StellarNet, key string, e *TransactionEnvelope) error {
 		return err
 	}
 	net.Signers.Add(sk.Public().String(), "")
-	if err = sk.SignTx(net.NetworkId, e); err != nil {
+	if err = sk.SignTx(net.NetworkId, e.TransactionEnvelope); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return err
 	}
@@ -340,7 +341,7 @@ func doEdit(net *StellarNet, arg string) {
 		if err != nil {
 			fmt.Fprint(os.Stderr, err.Error())
 			fmt.Printf("Press return to run editor.")
-			stx.ReadTextLine(os.Stdin)
+			detail.ReadTextLine(os.Stdin)
 			if pe, ok := err.(ParseError); ok {
 				line = pe.TxrepError[0].Line
 			}
@@ -477,9 +478,9 @@ func main() {
 	}
 
 	if *opt_nopass {
-		PassphraseFile = io.MultiReader()
+		detail.PassphraseFile = io.MultiReader()
 	} else if arg == "-" {
-		PassphraseFile = nil
+		detail.PassphraseFile = nil
 	}
 
 	switch {
@@ -493,8 +494,8 @@ func main() {
 		return
 	case *opt_import_key:
 		arg = AdjustKeyName(arg)
-		sk, err := PrivateKeyFromInput("Secret key: ")
-		if err == nil { err = sk.Save(arg, GetPass2("Passphrase: ")) }
+		sk, err := detail.PrivateKeyFromInput("Secret key: ")
+		if err == nil { err = sk.Save(arg, detail.GetPass2("Passphrase: ")) }
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
@@ -502,7 +503,7 @@ func main() {
 		return
 	case *opt_export_key:
 		arg = AdjustKeyName(arg)
-		sk, err := PrivateKeyFromFile(arg)
+		sk, err := detail.PrivateKeyFromFile(arg)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
@@ -542,7 +543,7 @@ func main() {
 		}
 	case *opt_preauth, *opt_txhash:
 		sk := stx.SignerKey{ Type: stx.SIGNER_KEY_TYPE_PRE_AUTH_TX }
-		copy(sk.PreAuthTx()[:], TxPayloadHash(net.NetworkId, e.TransactionEnvelope))
+		copy(sk.PreAuthTx()[:], detail.TxPayloadHash(net.NetworkId, e.TransactionEnvelope))
 		if *opt_txhash { fmt.Printf("%x\n", *sk.PreAuthTx()) }
 		if *opt_preauth { fmt.Println(&sk) }
 	default:
