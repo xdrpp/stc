@@ -8,13 +8,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"stc/stx"
 	"stc/detail"
 )
 
 func get(net *StellarNet, query string) []byte {
 	if net.Horizon == "" {
-		fmt.Fprintln(os.Stderr, "Missing or invalid horizon config file\n")
+		fmt.Fprintln(os.Stderr, "Missing or invalid horizon URL\n")
 		return nil
 	}
 	resp, err := http.Get(net.Horizon + query)
@@ -45,7 +44,7 @@ type HorizonAccountEntry struct {
 	Signers []HorizonSigner
 }
 
-func GetAccountEntry(net *StellarNet, acct string) *HorizonAccountEntry {
+func (net *StellarNet) GetAccountEntry(acct string) *HorizonAccountEntry {
 	if body := get(net, "accounts/" + acct); body != nil {
 		var ae HorizonAccountEntry
 		if err := json.Unmarshal(body, &ae); err != nil {
@@ -56,7 +55,7 @@ func GetAccountEntry(net *StellarNet, acct string) *HorizonAccountEntry {
 	return nil
 }
 
-func GetLedgerHeader(net *StellarNet) *stx.LedgerHeader {
+func (net *StellarNet) GetLedgerHeader() *LedgerHeader {
 	body := get(net, "ledgers?limit=1&order=desc")
 	if body == nil {
 		return nil
@@ -77,8 +76,8 @@ func GetLedgerHeader(net *StellarNet) *stx.LedgerHeader {
 		return nil
 	}
 
-	ret := &stx.LedgerHeader{}
-	if err := detail.XdrFromBase64(ret, lhx.Embedded.Records[0].Header_xdr);
+	ret := &LedgerHeader{}
+	if err := detail.XdrFromBase64(ret, lhx.Embedded.Records[0].Header_xdr)
 	err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return nil
@@ -86,10 +85,9 @@ func GetLedgerHeader(net *StellarNet) *stx.LedgerHeader {
 	return ret
 }
 
-func PostTransaction(net *StellarNet,
-	e *TransactionEnvelope) *TransactionResult {
+func (net *StellarNet) Post(e *TransactionEnvelope) *TransactionResult {
 	if net.Horizon == "" {
-		fmt.Fprintln(os.Stderr, "Missing or invalid horizon config file\n")
+		fmt.Fprintln(os.Stderr, "Missing or invalid horizon URL\n")
 		return nil
 	}
 	tx := detail.XdrToBase64(e)

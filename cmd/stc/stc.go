@@ -48,7 +48,7 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 		go func(ac stx.AccountID, infp *acctInfo) {
 			var ae *HorizonAccountEntry
 			if usenet {
-				ae = GetAccountEntry(net, ac.String())
+				ae = net.GetAccountEntry(ac.String())
 			}
 			if ae != nil {
 				infp.signers = ae.Signers
@@ -127,7 +127,7 @@ func doSec2pub(file string) {
 func fixTx(net *StellarNet, e *TransactionEnvelope) {
 	feechan := make(chan uint32)
 	go func() {
-		if h := GetLedgerHeader(net); h != nil {
+		if h := net.GetLedgerHeader(); h != nil {
 			feechan <- h.BaseFee
 		} else {
 			feechan <- 0
@@ -139,7 +139,7 @@ func fixTx(net *StellarNet, e *TransactionEnvelope) {
 		var val stx.SequenceNumber
 		var zero stx.AccountID
 		if e.Tx.SourceAccount != zero {
-			if a := GetAccountEntry(net, e.Tx.SourceAccount.String());
+			if a := net.GetAccountEntry(e.Tx.SourceAccount.String());
 			a != nil {
 				if fmt.Sscan(a.Sequence.String(), &val); val != 0 {
 					val++
@@ -533,7 +533,7 @@ func main() {
 	e, _ := mustReadTx(arg)
 	switch {
 	case *opt_post:
-		res := PostTransaction(net, e)
+		res := net.Post(e)
 		if res != nil {
 			fmt.Print(stx.XdrToString(res))
 		}

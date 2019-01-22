@@ -29,21 +29,6 @@ type StellarNet struct {
 	Accounts AccountHints
 }
 
-func (net *StellarNet) AccountIDNote(acct *stx.AccountID) string {
-	return net.Accounts[acct.String()]
-}
-
-func (net *StellarNet) SignerNote(txe *stx.TransactionEnvelope,
-	sig *stx.DecoratedSignature) string {
-	if txe == nil {
-		return ""
-	} else if ski := net.Signers.Lookup(net.NetworkId, txe, sig); ski != nil {
-		return ski.String()
-	}
-	return fmt.Sprintf("bad signature/unknown key/%s is wrong network",
-		net.Name)
-}
-
 // Default parameters for the Stellar main net (including the address
 // of a Horizon instance hosted by SDF).
 var StellarMainNet = StellarNet{
@@ -58,6 +43,13 @@ var StellarTestNet = StellarNet{
 	Name: "test",
 	NetworkId: "Test SDF Network ; September 2015",
 	Horizon: "https://horizon-testnet.stellar.org/",
+}
+
+// Returns true only if sig is a valid signature on e for public key
+// pk.
+func (net *StellarNet) VerifySig(
+	pk *SignerKey, e *TransactionEnvelope, sig Signature) bool {
+	return detail.VerifyTx(pk, net.NetworkId, e.TransactionEnvelope, sig)
 }
 
 // An annotated SignerKey that can be used to authenticate
@@ -213,3 +205,4 @@ func (h *AccountHints) Load(filename string) error {
 func (h *AccountHints) Save(filename string) error {
 	return detail.SafeWriteFile(filename, h.String(), 0666)
 }
+

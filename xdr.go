@@ -8,6 +8,7 @@ between txrep format, and posting them.
 package stc
 
 import (
+	"fmt"
 	"strings"
 	"stc/stx"
 	"stc/detail"
@@ -16,7 +17,10 @@ import (
 type PrivateKey = detail.PrivateKey
 type TxrepError = detail.TxrepError
 type PublicKey = stx.PublicKey
+type SignerKey = stx.SignerKey
+type Signature = stx.Signature
 type TransactionResult = stx.TransactionResult
+type LedgerHeader = stx.LedgerHeader
 
 type TransactionEnvelope struct {
 	*stx.TransactionEnvelope
@@ -43,14 +47,49 @@ func (txe *TransactionEnvelope) SetHelp(name string) {
 	}
 }
 
-func (net *StellarNet) TxToRep(txe *TransactionEnvelope) string {
-	ntxe := struct{
-		*TransactionEnvelope
-		*StellarNet
-	}{ txe, net }
+type txrepHelper = StellarNet
+
+func (net *txrepHelper) SignerNote(txe *stx.TransactionEnvelope,
+	sig *stx.DecoratedSignature) string {
+	if txe == nil {
+		return ""
+	} else if ski := net.Signers.Lookup(net.NetworkId, txe, sig); ski != nil {
+		return ski.String()
+	}
+	return fmt.Sprintf("bad signature/unknown key/%s is wrong network",
+		net.Name)
+}
+
+func (net *txrepHelper) AccountIDNote(acct *stx.AccountID) string {
+	return net.Accounts[acct.String()]
+}
+
+func (net *StellarNet) ToRep(txe stx.XdrAggregate) string {
 	var out strings.Builder
-	detail.XdrToTxrep(&out, ntxe)
+
+	type helper interface{
+		stx.XdrAggregate
+		GetHelp(string) bool
+	}
+	if e, ok := txe.(helper); ok {
+		ntxe := struct{
+			helper
+			*txrepHelper
+		}{ e, (*txrepHelper)(net) }
+		detail.XdrToTxrep(&out, ntxe)
+	} else {
+		ntxe := struct{
+			stx.XdrAggregate
+			*txrepHelper
+		}{ txe, (*txrepHelper)(net) }
+		detail.XdrToTxrep(&out, ntxe)
+	}
+
 	return out.String()
+}
+
+func (net *StellarNet) TxToRep(txe *TransactionEnvelope) string {
+	return net.ToRep(txe)
 }
 
 func TxFromRep(rep string) (*TransactionEnvelope, TxrepError) {
