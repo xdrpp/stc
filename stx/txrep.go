@@ -69,7 +69,7 @@ func (x *trackTypes) track(i XdrType) (cleanup func()) {
 	switch v := i.(type) {
 	case XdrPtr:
 		x.ptrDepth++
-	case *Asset:
+	case *Asset, *AllowTrustOp:
 		x.inAsset = true
 	case *TransactionEnvelope:
 		// In case some XDR structure wraps TransactionEnvelope
@@ -95,10 +95,6 @@ func (xp *txStringCtx) Sprintf(f string, args ...interface{}) string {
 func (xp *txStringCtx) Marshal_SequenceNumber(name string,
 	v *SequenceNumber) {
 	fmt.Fprintf(xp.out, "%s: %d\n", name, *v)
-}
-
-type xdrPointer interface {
-	XdrPointer() interface{}
 }
 
 var exp10 [20]uint64
@@ -347,7 +343,6 @@ type xdrScan struct {
 	trackTypes
 	kvs map[string]lineval
 	err TxrepError
-	lastline int
 	setHelp func(string)
 }
 
@@ -362,25 +357,11 @@ func (xs *xdrScan) report(line int, fmtstr string, args...interface{}) {
 
 func (xs *xdrScan) Marshal(name string, i XdrType) {
 	defer xs.track(i)()
-/*
-	defer func(){
-		switch e := recover().(type) {
-		case nil:
-			return
-		case XdrError:
-			xs.report(xs.lastline, "%s", e.Error())
-		case StrKeyError:
-			xs.report(xs.lastline, "%s", e.Error())
-		default:
-			panic(e)
-		}
-	}()
-*/
 	lv, ok := xs.kvs[name]
-	if ok {
-		xs.lastline = lv.line
-	}
 	val := lv.val
+	if init, ok := i.(interface{XdrInitialize()}); ok {
+		init.XdrInitialize()
+	}
 	switch v := i.(type) {
 	case XdrArrayOpaque:
 		var err error
@@ -433,11 +414,9 @@ func (xs *xdrScan) Marshal(name string, i XdrType) {
 		}
 	case XdrAggregate:
 		v.XdrMarshal(xs, name)
-	case xdrPointer:
-		if !ok { return }
-		fmt.Sscan(val, v.XdrPointer())
 	default:
-		XdrPanic("xdrScan: Don't know how to parse %s (%T).\n", name, i)
+		if !ok { return }
+		fmt.Sscan(val, i.XdrPointer())
 	}
 	delete(xs.kvs, name)
 }
@@ -449,11 +428,12 @@ func (il *inputLine) Scan(ss fmt.ScanState, _ rune) error {
 	return e
 }
 
-// Read a line of text without using bufio
+// Read a line of text without using bufio.
 func ReadTextLine(r io.Reader) ([]byte, error) {
 	var line inputLine
 	var c rune
-	_, err := fmt.Fscanf(r, "%v%c", &line, &c)
+	fmt.Fscan(r, &line)
+	_, err := fmt.Fscanf(r, "%c", &c)
 	if err == nil && c != '\n' {
 		err = io.EOF
 	}
@@ -464,18 +444,13 @@ func ReadTextLine(r io.Reader) ([]byte, error) {
 }
 
 func (xs *xdrScan) readKvs(in io.Reader) {
-	kvs := map[string]lineval{}
+	xs.kvs = map[string]lineval{}
 	lineno := 0
-	var bad bool
 	for {
 		bline, err := ReadTextLine(in)
 		if err != nil && (err != io.EOF || len(bline) == 0) {
 			if err != io.EOF {
-				bad = true
 				xs.report(lineno, "%s", err.Error())
-			}
-			if !bad {
-				xs.kvs = kvs
 			}
 			return
 		}
@@ -486,40 +461,29 @@ func (xs *xdrScan) readKvs(in io.Reader) {
 		}
 		kv := strings.SplitN(line, ":", 2)
 		if len(kv) != 2 {
-			bad = true
 			xs.report(lineno, "syntax error")
 			continue
 		}
-		kvs[kv[0]] = lineval{lineno, kv[1]}
+		xs.kvs[kv[0]] = lineval{lineno, kv[1]}
 	}
 }
 
 // Parse input in Txrep format into an XdrAggregate type.  If the
 // XdrAggregate has a method named SetHelp(string), then it is called
 // for field names when the value ends with '?'.
-func XdrFromTxrep(in io.Reader, t XdrAggregate) (e TxrepError) {
+func XdrFromTxrep(in io.Reader, t XdrAggregate) (TxrepError) {
 	xs := &xdrScan{}
 	if sh, ok := t.(interface{ SetHelp(string) }); ok {
 		xs.setHelp = sh.SetHelp
 	} else {
 		xs.setHelp = func(string) {}
 	}
-	defer func() {
-		if i := recover(); i != nil {
-			switch i.(type) {
-			case XdrError, StrKeyError:
-				xs.report(0, "%s", i.(error).Error())
-			default:
-				panic(i)
-			}
-		}
-		if len(xs.err) != 0 {
-			e = xs.err
-		}
-	}()
 	xs.readKvs(in)
 	if xs.kvs != nil {
 		t.XdrMarshal(xs, "")
 	}
-	return
+	if len(xs.err) != 0 {
+		return xs.err
+	}
+	return nil
 }
