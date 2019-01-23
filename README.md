@@ -31,7 +31,7 @@ run:
 
 # Using `stc`
 
-See the [man page](stc.1.md)
+See the [man page](cmd/stc/stc.1.md)
 
 # Building `stc` for developers
 
