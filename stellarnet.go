@@ -102,12 +102,16 @@ func (ski *SignerKeyInfo) Scan(ss fmt.ScanState, c rune) error {
 	}
 }
 
-// A SignerCache maps 4-byte SignatureHint values to annotated
-// SignerKeys.
+// A SignerCache contains a set of possible Stellar signers.  Because
+// a TransactionEnvelope contains an array of signatures without
+// public keys, it is not possible to verify the signatures without
+// having the Signers.  The signatures in a TransactionEnvelope
+// envelope are, however, accompanied by a 4-byte SignatureHint,
+// making it efficient to look up signers if they are in a SignerCache.
 type SignerCache map[stx.SignatureHint][]SignerKeyInfo
 
 // Renders SignerCache as a a set of SignerKeyInfo structures, one per
-// line.
+// line, suitable for saving to a file.
 func (c SignerCache) String() string {
 	out := &strings.Builder{}
 	for _, ski := range c {
@@ -118,6 +122,8 @@ func (c SignerCache) String() string {
 	return out.String()
 }
 
+// Reads a SignerCache from a file, discarding the previous contents
+// of the cache.
 func (c *SignerCache) Load(filename string) error {
 	*c = make(SignerCache)
 	f, err := os.Open(filename)
@@ -147,10 +153,13 @@ func (c *SignerCache) Load(filename string) error {
 	return err
 }
 
+// Saves a SignerCache to a file.
 func (c SignerCache) Save(filename string) error {
 	return detail.SafeWriteFile(filename, c.String(), 0666)
 }
 
+// Finds the signer in a SignerCache that corresponds to a particular
+// signature on a transaction.
 func (c SignerCache) Lookup(networkID string, e *stx.TransactionEnvelope,
 	ds *stx.DecoratedSignature) *SignerKeyInfo {
 	skis := c[ds.Hint]
@@ -162,6 +171,9 @@ func (c SignerCache) Lookup(networkID string, e *stx.TransactionEnvelope,
 	return nil
 }
 
+// Adds a signer to a SignerCache if the signer is not already in the
+// cache.  If the signer is already in the cache, the comment is left
+// unchanged.
 func (c SignerCache) Add(strkey, comment string) error {
 	var signer stx.SignerKey
 	_, err := fmt.Sscan(strkey, &signer)
@@ -187,6 +199,8 @@ func (c SignerCache) Add(strkey, comment string) error {
 // AccountID values.
 type AccountHints map[string]string
 
+// Renders an account hint as the AccountID in StrKey format, a space,
+// and the comment (if any).
 func (h AccountHints) String() string {
 	out := &strings.Builder{}
 	for k, v := range h {
@@ -195,6 +209,8 @@ func (h AccountHints) String() string {
 	return out.String()
 }
 
+// Loads a set of account hints from a file, discarding any current
+// hints.
 func (h *AccountHints) Load(filename string) error {
 	*h = make(AccountHints)
 	f, err := os.Open(filename)
@@ -223,6 +239,7 @@ func (h *AccountHints) Load(filename string) error {
 	return nil
 }
 
+// Saves the set of account hints from a file.
 func (h *AccountHints) Save(filename string) error {
 	return detail.SafeWriteFile(filename, h.String(), 0666)
 }

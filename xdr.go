@@ -14,7 +14,6 @@ import (
 	"stc/detail"
 )
 
-type PrivateKey = detail.PrivateKey
 type TxrepError = detail.TxrepError
 type PublicKey = stx.PublicKey
 type SignerKey = stx.SignerKey
@@ -64,6 +63,8 @@ func (net *txrepHelper) AccountIDNote(acct *stx.AccountID) string {
 	return net.Accounts[acct.String()]
 }
 
+// Convert an arbitrary XDR data structure to human-readable Txrep
+// format.
 func (net *StellarNet) ToRep(txe stx.XdrAggregate) string {
 	var out strings.Builder
 
@@ -88,10 +89,13 @@ func (net *StellarNet) ToRep(txe stx.XdrAggregate) string {
 	return out.String()
 }
 
+// Convert a TransactionEnvelope to human-readable Txrep format.
 func (net *StellarNet) TxToRep(txe *TransactionEnvelope) string {
 	return net.ToRep(txe)
 }
 
+// Parse a transaction in human-readable Txrep format into a
+// TransactionEnvelope.
 func TxFromRep(rep string) (*TransactionEnvelope, TxrepError) {
 	in := strings.NewReader(rep)
 	txe := NewTransactionEnvelope()
@@ -114,14 +118,3 @@ func TxFromBase64(input string) (*TransactionEnvelope, error) {
 	}
 	return tx, nil
 }
-
-/*
-// Parse a TransactionEnvelope from base64-encoded binary XDR format.
-func MustTxFromBase64(input string) *TransactionEnvelope {
-	if tx, err := TxFromBase64(input); err != nil {
-		panic(err)
-	} else {
-		return tx
-	}
-}
-*/

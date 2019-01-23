@@ -78,7 +78,7 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 }
 
 func doKeyGen(outfile string) {
-	sk := detail.KeyGen(stx.PUBLIC_KEY_TYPE_ED25519)
+	sk := NewPrivateKey(stx.PUBLIC_KEY_TYPE_ED25519)
 	if outfile == "" {
 		fmt.Println(sk)
 		fmt.Println(sk.Public())
@@ -107,9 +107,9 @@ func getSecKey(file string) (*PrivateKey, error) {
 	var sk *PrivateKey
 	var err error
 	if file == "" {
-		sk, err = detail.PrivateKeyFromInput("Secret key: ")
+		sk, err = InputPrivateKey("Secret key: ")
 	} else {
-		sk, err = detail.PrivateKeyFromFile(file)
+		sk, err = LoadPrivateKey(file)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
@@ -494,7 +494,7 @@ func main() {
 		return
 	case *opt_import_key:
 		arg = AdjustKeyName(arg)
-		sk, err := detail.PrivateKeyFromInput("Secret key: ")
+		sk, err := InputPrivateKey("Secret key: ")
 		if err == nil { err = sk.Save(arg, detail.GetPass2("Passphrase: ")) }
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
@@ -503,7 +503,7 @@ func main() {
 		return
 	case *opt_export_key:
 		arg = AdjustKeyName(arg)
-		sk, err := detail.PrivateKeyFromFile(arg)
+		sk, err := LoadPrivateKey(arg)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)

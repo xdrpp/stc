@@ -44,6 +44,8 @@ type HorizonAccountEntry struct {
 	Signers []HorizonSigner
 }
 
+// Fetch the sequence number and signers of an account over the
+// network.
 func (net *StellarNet) GetAccountEntry(acct string) *HorizonAccountEntry {
 	if body := get(net, "accounts/" + acct); body != nil {
 		var ae HorizonAccountEntry
@@ -55,6 +57,7 @@ func (net *StellarNet) GetAccountEntry(acct string) *HorizonAccountEntry {
 	return nil
 }
 
+// Fetch the latest ledger header over the network.
 func (net *StellarNet) GetLedgerHeader() *LedgerHeader {
 	body := get(net, "ledgers?limit=1&order=desc")
 	if body == nil {
@@ -85,6 +88,7 @@ func (net *StellarNet) GetLedgerHeader() *LedgerHeader {
 	return ret
 }
 
+// Post a new transaction to the network.
 func (net *StellarNet) Post(e *TransactionEnvelope) *TransactionResult {
 	if net.Horizon == "" {
 		fmt.Fprintln(os.Stderr, "Missing or invalid horizon URL\n")

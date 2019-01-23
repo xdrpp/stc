@@ -6,17 +6,12 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
-	"golang.org/x/crypto/openpgp/packet"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"io/ioutil"
 	"os"
-	"strings"
 	"stc/stx"
 )
 
@@ -41,6 +36,7 @@ func TxPayloadHash(network string, e *stx.TransactionEnvelope) []byte {
 	return xdrSHA256(&payload)
 }
 
+/*
 func Verify(pk *PublicKey, message []byte, sig []byte) bool {
 	switch pk.Type {
 	case stx.PUBLIC_KEY_TYPE_ED25519:
@@ -49,6 +45,7 @@ func Verify(pk *PublicKey, message []byte, sig []byte) bool {
 		return false
 	}
 }
+*/
 
 // Verify the signature on a transaction.
 func VerifyTx(pk *stx.SignerKey, network string, e *stx.TransactionEnvelope,
@@ -66,70 +63,41 @@ func VerifyTx(pk *stx.SignerKey, network string, e *stx.TransactionEnvelope,
 	}
 }
 
-type ed25519Priv ed25519.PrivateKey
+type Ed25519Priv ed25519.PrivateKey
 
-func (sk ed25519Priv) String() string {
+func (sk Ed25519Priv) String() string {
 	return stx.ToStrKey(stx.STRKEY_SEED_ED25519, ed25519.PrivateKey(sk).Seed())
 }
 
-func (sk ed25519Priv) Sign(msg []byte) ([]byte, error) {
+func (sk Ed25519Priv) Sign(msg []byte) ([]byte, error) {
 	return ed25519.PrivateKey(sk).Sign(rand.Reader, msg, crypto.Hash(0))
 }
 
-func (sk ed25519Priv) Public() *PublicKey {
+func (sk Ed25519Priv) Public() *PublicKey {
 	ret := stx.PublicKey{ Type: stx.PUBLIC_KEY_TYPE_ED25519 }
 	copy(ret.Ed25519()[:], ed25519.PrivateKey(sk).Public().(ed25519.PublicKey))
 	return &ret
 }
 
-// Abstract type representing a Stellar private key.  Prints and scans
-// in StrKey format.
-type PrivateKey struct {
-	k interface {
-		String() string
-		Sign([]byte) ([]byte, error)
-		Public() *PublicKey
-	}
-}
-func (sk PrivateKey) String() string { return sk.k.String() }
-func (sk *PrivateKey) Sign(msg []byte) ([]byte, error) { return sk.k.Sign(msg) }
-func (sk *PrivateKey) Public() *PublicKey { return sk.k.Public() }
-
-func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
-	bs, err := ss.Token(true, stx.IsStrKeyChar)
+func NewEd25519Priv() Ed25519Priv {
+	_, sk, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	key, vers := stx.FromStrKey(string(bs))
-	switch vers {
-	case stx.STRKEY_SEED_ED25519:
-		sec.k = ed25519Priv(ed25519.NewKeyFromSeed(key))
-		return nil
-	default:
-		return stx.StrKeyError("Invalid private key")
-	}
+	return Ed25519Priv(sk)
 }
 
+
+/*
 func genEd25519() PrivateKey {
 	_, sk, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	return PrivateKey{ ed25519Priv(sk) }
+	return PrivateKey{ Ed25519Priv(sk) }
 }
-
-// Generates a new Stellar keypair and returns the PrivateKey.
-// Currently the only valid value for pkt is
-// stx.PUBLIC_KEY_TYPE_ED25519.
-func KeyGen(pkt stx.PublicKeyType) PrivateKey {
-	switch pkt {
-	case stx.PUBLIC_KEY_TYPE_ED25519:
-		return genEd25519()
-	default:
-		panic(fmt.Sprintf("KeyGen: unsupported PublicKeyType %v", pkt))
-	}
-}
+*/
 
 // PassphraseFile is the io.Reader from which passphrases should be
 // read.  If set to a terminal, then a prompt will be displayed and
@@ -197,36 +165,6 @@ func GetPass2(prompt string) []byte {
 	}
 }
 
-// Writes the a private key to a file in strkey format.  If passphrase
-// has non-zero length, then the key is symmetrically encrypted in
-// ASCII-armored GPG format.
-func (sk *PrivateKey) Save(file string, passphrase []byte) error {
-	out := &strings.Builder{}
-	if len(passphrase) == 0 {
-		fmt.Fprintln(out, sk.String())
-	} else {
-		w0, err := armor.Encode(out, "PGP MESSAGE", nil)
-		if err != nil {
-			return err
-		}
-		w, err := openpgp.SymmetricallyEncrypt(w0, passphrase, nil,
-			&packet.Config{
-				DefaultCipher: packet.CipherAES256,
-				DefaultCompressionAlgo: packet.CompressionNone,
-				S2KCount: 65011712,
-			})
-		if err != nil {
-			w0.Close()
-			return err
-		}
-		fmt.Fprintln(w, sk.String())
-		w.Close()
-		w0.Close()
-		out.WriteString("\n")
-	}
-	return SafeWriteFile(file, out.String(), 0600)
-}
-
 // Writes data tile filename in a safe way, similarly to how emacs
 // saves files.  Specifically, if filename is "foo", then data is
 // first written to a file called "foo#PID#" (where PID is the current
@@ -265,53 +203,4 @@ func SafeWriteFile(filename string, data string, perm os.FileMode) error {
 		tmp = ""
 	}
 	return err
-}
-
-var InvalidPassphrase = errors.New("Invalid passphrase")
-var InvalidKeyFile = errors.New("Invalid private key file")
-
-// Reads a private key from a file, prompting for a passphrase if the
-// key is in ASCII-armored symmetrically-encrypted GPG format.
-func PrivateKeyFromFile(file string) (*PrivateKey, error) {
-	input, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	ret := &PrivateKey{}
-	if _, err = fmt.Fscan(bytes.NewBuffer(input), ret); err == nil {
-		return ret, nil
-	}
-
-	block, err := armor.Decode(bytes.NewBuffer(input))
-	if err != nil {
-		return nil, InvalidKeyFile
-	}
-	md, err := openpgp.ReadMessage(block.Body, nil,
-		func(keys []openpgp.Key, symmetric bool) ([]byte, error) {
-			passphrase := GetPass(fmt.Sprintf("Passphrase for %s: ", file))
-			if len(passphrase) > 0 {
-				return passphrase, nil
-			}
-			return nil, InvalidPassphrase
-		}, nil)
-	if err != nil {
-		return nil, err
-	} else if _, err = fmt.Fscan(md.UnverifiedBody, ret); err != nil {
-		return nil, err
-	} else if io.Copy(ioutil.Discard, md.UnverifiedBody);
-	md.SignatureError != nil {
-		return nil, md.SignatureError
-	}
-	return ret, nil
-}
-
-// Reads a private key from PassphraseFile (default os.Stdin).  If
-// PassphraseFile is a terminal, then prints prompt and disables echo.
-func PrivateKeyFromInput(prompt string) (*PrivateKey, error) {
-	key := GetPass(prompt)
-	var sk PrivateKey
-	if _, err := fmt.Fscan(bytes.NewBuffer(key), &sk); err != nil {
-		return nil, err
-	}
-	return &sk, nil
 }
