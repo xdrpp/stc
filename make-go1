@@ -16,7 +16,7 @@ rm -f "$GIT_INDEX_FILE"
 
 git read-tree HEAD
 git add -u
-git add -f go.mod stx/xdr_generated.go cmd/stc/stc.1 xdr/*.x \
+git add -f go.sum stx/xdr_generated.go cmd/stc/stc.1 xdr/*.x \
     cmd/goxdr/header.go cmd/goxdr/parse.go cmd/goxdr/goxdr.1
 
 tree=$(git write-tree)
