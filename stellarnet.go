@@ -52,6 +52,27 @@ func (net *StellarNet) VerifySig(
 	return detail.VerifyTx(pk, net.NetworkId, e.TransactionEnvelope, sig)
 }
 
+// Return a transaction hash (which in Stellar is defined as the hash
+// of the constant ENVELOPE_TYPE_TX, the NetworkID, and the marshaled
+// XDR of the Transaction).
+func (net *StellarNet) HashTx(e *TransactionEnvelope) []byte {
+	return detail.TxPayloadHash(net.NetworkId, e.TransactionEnvelope)
+}
+
+// Sign a transaction and append the signature to the
+// TransactionEnvelope.
+func (net *StellarNet) SignTx(sk *PrivateKey, e *TransactionEnvelope) error {
+	sig, err := sk.Sign(net.HashTx(e))
+	if err != nil {
+		return err
+	}
+	e.Signatures = append(e.Signatures, stx.DecoratedSignature{
+		Hint: sk.Public().Hint(),
+		Signature: sig,
+	})
+	return nil
+}
+
 // An annotated SignerKey that can be used to authenticate
 // transactions.  Prints and Scans as a StrKey-format SignerKey, a
 // space, and then the comment.

@@ -246,7 +246,7 @@ func signTx(net *StellarNet, key string, e *TransactionEnvelope) error {
 		return err
 	}
 	net.Signers.Add(sk.Public().String(), "")
-	if err = sk.SignTx(net.NetworkId, e.TransactionEnvelope); err != nil {
+	if err = net.SignTx(sk, e); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return err
 	}
@@ -541,11 +541,12 @@ func main() {
 			fmt.Fprint(os.Stderr, "Post transaction failed\n")
 			os.Exit(1)
 		}
-	case *opt_preauth, *opt_txhash:
+	case *opt_txhash:
+		fmt.Printf("%x\n", net.HashTx(e))
+	case *opt_preauth:
 		sk := stx.SignerKey{ Type: stx.SIGNER_KEY_TYPE_PRE_AUTH_TX }
-		copy(sk.PreAuthTx()[:], detail.TxPayloadHash(net.NetworkId, e.TransactionEnvelope))
-		if *opt_txhash { fmt.Printf("%x\n", *sk.PreAuthTx()) }
-		if *opt_preauth { fmt.Println(&sk) }
+		copy(sk.PreAuthTx()[:], net.HashTx(e))
+		fmt.Println(&sk)
 	default:
 		getAccounts(net, e, *opt_learn)
 		if *opt_update { fixTx(net, e) }

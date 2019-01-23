@@ -110,22 +110,6 @@ func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 	}
 }
 
-// Signs a transaction and appends the signature to the Signatures
-// list in the TransactionEnvelope.
-func (sec *PrivateKey) SignTx(network string,
-	e *stx.TransactionEnvelope) error {
-	sig, err := sec.Sign(TxPayloadHash(network, e))
-	if err != nil {
-		return err
-	}
-
-	e.Signatures = append(e.Signatures, stx.DecoratedSignature{
-		Hint: sec.Public().Hint(),
-		Signature: sig,
-	})
-	return nil
-}
-
 func genEd25519() PrivateKey {
 	_, sk, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
