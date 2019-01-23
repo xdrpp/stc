@@ -1,4 +1,3 @@
-
 package detail
 
 import (
@@ -7,12 +6,12 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
+	"github.com/xdrpp/stc/stx"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"io/ioutil"
 	"os"
-	"stc/stx"
 )
 
 type PublicKey = stx.PublicKey
@@ -74,7 +73,7 @@ func (sk Ed25519Priv) Sign(msg []byte) ([]byte, error) {
 }
 
 func (sk Ed25519Priv) Public() *PublicKey {
-	ret := stx.PublicKey{ Type: stx.PUBLIC_KEY_TYPE_ED25519 }
+	ret := stx.PublicKey{Type: stx.PUBLIC_KEY_TYPE_ED25519}
 	copy(ret.Ed25519()[:], ed25519.PrivateKey(sk).Public().(ed25519.PublicKey))
 	return &ret
 }
@@ -86,7 +85,6 @@ func NewEd25519Priv() Ed25519Priv {
 	}
 	return Ed25519Priv(sk)
 }
-
 
 /*
 func genEd25519() PrivateKey {
@@ -107,6 +105,7 @@ func genEd25519() PrivateKey {
 // always returns EOF) to assume an empty passphrase every time
 // GetPass is called.
 var PassphraseFile io.Reader = os.Stdin
+
 // If PassphraseFile is a terminal, then the user will be prompted for
 // a password, and this is the terminal to which the prompt should be
 // written.  The default is os.Stderr.
@@ -178,8 +177,12 @@ func SafeWriteFile(filename string, data string, perm os.FileMode) error {
 		return err
 	}
 	defer func() {
-		if f != nil { f.Close() }
-		if tmp != "" { os.Remove(tmp) }
+		if f != nil {
+			f.Close()
+		}
+		if tmp != "" {
+			os.Remove(tmp)
+		}
 	}()
 
 	n, err := f.WriteString(data)
@@ -198,7 +201,7 @@ func SafeWriteFile(filename string, data string, perm os.FileMode) error {
 	}
 
 	os.Remove(filename + "~")
-	os.Link(filename, filename + "~")
+	os.Link(filename, filename+"~")
 	if err = os.Rename(tmp, filename); err == nil {
 		tmp = ""
 	}

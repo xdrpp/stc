@@ -1,21 +1,19 @@
-
 package detail
 
 import (
 	"fmt"
+	"github.com/xdrpp/stc/stx"
 	"io"
 	"strings"
 	"time"
 	"unicode"
-	"stc/stx"
 )
 
 // pseudo-selectors
 const (
-	ps_len = "len"
+	ps_len     = "len"
 	ps_present = "_present"
 )
-
 
 //
 // Generating TxRep
@@ -24,7 +22,7 @@ const (
 // Reports illegal values in an XDR structure.
 type XdrBadValue []struct {
 	Field string
-	Msg string
+	Msg   string
 }
 
 func (e XdrBadValue) Error() string {
@@ -57,13 +55,13 @@ func renderCode(bs []byte) string {
 
 type trackTypes struct {
 	ptrDepth int
-	inAsset bool
-	env *stx.TransactionEnvelope
-	err XdrBadValue
+	inAsset  bool
+	env      *stx.TransactionEnvelope
+	err      XdrBadValue
 }
 
 func (x *trackTypes) present() string {
-	return "." + strings.Repeat("_inner", x.ptrDepth-1) + ps_present;
+	return "." + strings.Repeat("_inner", x.ptrDepth-1) + ps_present
 }
 func (x *trackTypes) track(i stx.XdrType) (cleanup func()) {
 	oldx := *x
@@ -83,9 +81,9 @@ func (x *trackTypes) track(i stx.XdrType) (cleanup func()) {
 
 type txStringCtx struct {
 	accountIDNote func(*stx.AccountID) string
-	signerNote func(*stx.TransactionEnvelope, *stx.DecoratedSignature) string
-	getHelp func(string) bool
-	out io.Writer
+	signerNote    func(*stx.TransactionEnvelope, *stx.DecoratedSignature) string
+	getHelp       func(string) bool
+	out           io.Writer
 	trackTypes
 }
 
@@ -99,6 +97,7 @@ func (xp *txStringCtx) Marshal_SequenceNumber(name string,
 }
 
 var exp10 [20]uint64
+
 func init() {
 	val := uint64(1)
 	for i := 0; i < len(exp10); i++ {
@@ -109,19 +108,25 @@ func init() {
 
 func scalePrint(val int64, exp int) string {
 	mag := uint64(val)
-	if val < 0 { mag = uint64(-val) }
+	if val < 0 {
+		mag = uint64(-val)
+	}
 	unit := exp10[exp]
 
 	out := ""
-	for tmag := mag/unit;; tmag /= 1000 {
-		if out != "" { out = "," + out }
+	for tmag := mag / unit; ; tmag /= 1000 {
+		if out != "" {
+			out = "," + out
+		}
 		if tmag < 1000 {
 			out = fmt.Sprintf("%d", tmag) + out
 			break
 		}
-		out = fmt.Sprintf("%03d", tmag % 1000) + out
+		out = fmt.Sprintf("%03d", tmag%1000) + out
 	}
-	if val < 0 { out = "-" + out }
+	if val < 0 {
+		out = "-" + out
+	}
 
 	mag %= unit
 	if mag > 0 {
@@ -132,7 +137,9 @@ func scalePrint(val int64, exp int) string {
 
 func dateComment(ut uint64) string {
 	it := int64(ut)
-	if it <= 0 { return "" }
+	if it <= 0 {
+		return ""
+	}
 	return fmt.Sprintf(" (%s)", time.Unix(it, 0).Format(time.UnixDate))
 }
 
@@ -144,13 +151,16 @@ type xdrEnumNames interface {
 
 func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 	defer xp.track(i)()
-	defer func(){
+	defer func() {
 		switch v := recover().(type) {
 		case nil:
 			return
 		case stx.XdrError:
-			xp.err = append(xp.err, struct { Field string; Msg string }{
-				name, v.Error(), })
+			xp.err = append(xp.err, struct {
+				Field string
+				Msg   string
+			}{
+				name, v.Error()})
 		default:
 			panic(v)
 		}
@@ -229,22 +239,24 @@ func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 // Help comment for field fieldname:
 //   GetHelp(fieldname string) bool
 func XdrToTxrep(out io.Writer, t stx.XdrAggregate) XdrBadValue {
-	ctx := txStringCtx {
+	ctx := txStringCtx{
 		accountIDNote: func(*stx.AccountID) string { return "" },
 		signerNote: func(*stx.TransactionEnvelope,
 			*stx.DecoratedSignature) string {
 			return ""
 		},
 		getHelp: func(string) bool { return false },
-		out: out,
+		out:     out,
 	}
 	ctx.env, _ = t.XdrPointer().(*stx.TransactionEnvelope)
 
 	if i, ok := t.(interface{ AccountIDNote(*stx.AccountID) string }); ok {
 		ctx.accountIDNote = i.AccountIDNote
 	}
-	if i, ok := t.(interface{ SignerNote(*stx.TransactionEnvelope,
-		*stx.DecoratedSignature) string }); ok {
+	if i, ok := t.(interface {
+		SignerNote(*stx.TransactionEnvelope,
+			*stx.DecoratedSignature) string
+	}); ok {
 		ctx.signerNote = i.SignerNote
 	}
 	if i, ok := t.(interface{ GetHelp(string) bool }); ok {
@@ -258,7 +270,6 @@ func XdrToTxrep(out io.Writer, t stx.XdrAggregate) XdrBadValue {
 	return nil
 }
 
-
 //
 // Parsing TxRep
 //
@@ -267,7 +278,7 @@ func XdrToTxrep(out io.Writer, t stx.XdrAggregate) XdrBadValue {
 // structures.
 type TxrepError []struct {
 	Line int
-	Msg string
+	Msg  string
 }
 
 func (e TxrepError) render(prefix string) string {
@@ -335,16 +346,15 @@ skipspace:
 	return nil
 }
 
-
 type lineval struct {
 	line int
-	val string
+	val  string
 }
 
 type xdrScan struct {
 	trackTypes
-	kvs map[string]lineval
-	err TxrepError
+	kvs     map[string]lineval
+	err     TxrepError
 	setHelp func(string)
 }
 
@@ -352,16 +362,19 @@ func (*xdrScan) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
 
-func (xs *xdrScan) report(line int, fmtstr string, args...interface{}) {
+func (xs *xdrScan) report(line int, fmtstr string, args ...interface{}) {
 	msg := fmt.Sprintf(fmtstr, args...)
-	xs.err = append(xs.err, struct{Line int; Msg string}{ line, msg })
+	xs.err = append(xs.err, struct {
+		Line int
+		Msg  string
+	}{line, msg})
 }
 
 func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 	defer xs.track(i)()
 	lv, ok := xs.kvs[name]
 	val := lv.val
-	if init, ok := i.(interface{XdrInitialize()}); ok {
+	if init, ok := i.(interface{ XdrInitialize() }); ok {
 		init.XdrInitialize()
 	}
 	switch v := i.(type) {
@@ -379,7 +392,9 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 			xs.report(lv.line, "%s", err.Error())
 		}
 	case fmt.Scanner:
-		if !ok { return }
+		if !ok {
+			return
+		}
 		_, err := fmt.Sscan(val, v)
 		if err != nil {
 			xs.setHelp(name)
@@ -405,7 +420,7 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 		v.XdrMarshalValue(xs, name)
 	case *stx.XdrSize:
 		var size uint32
-		lv = xs.kvs[name + "." + ps_len]
+		lv = xs.kvs[name+"."+ps_len]
 		fmt.Sscan(lv.val, &size)
 		if size <= v.XdrBound() {
 			v.SetU32(size)
@@ -417,13 +432,16 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 	case stx.XdrAggregate:
 		v.XdrMarshal(xs, name)
 	default:
-		if !ok { return }
+		if !ok {
+			return
+		}
 		fmt.Sscan(val, i.XdrPointer())
 	}
 	delete(xs.kvs, name)
 }
 
 type inputLine []byte
+
 func (il *inputLine) Scan(ss fmt.ScanState, _ rune) error {
 	t, e := ss.Token(false, func(r rune) bool { return r != '\n' })
 	*il = inputLine(t)
@@ -473,7 +491,7 @@ func (xs *xdrScan) readKvs(in io.Reader) {
 // Parse input in Txrep format into an XdrAggregate type.  If the
 // XdrAggregate has a method named SetHelp(string), then it is called
 // for field names when the value ends with '?'.
-func XdrFromTxrep(in io.Reader, t stx.XdrAggregate) (TxrepError) {
+func XdrFromTxrep(in io.Reader, t stx.XdrAggregate) TxrepError {
 	xs := &xdrScan{}
 	if sh, ok := t.(interface{ SetHelp(string) }); ok {
 		xs.setHelp = sh.SetHelp

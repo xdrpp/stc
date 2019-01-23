@@ -1,19 +1,18 @@
-
 package stc
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"strings"
+	"github.com/xdrpp/stc/detail"
+	"github.com/xdrpp/stc/stx"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/packet"
-	"stc/detail"
-	"stc/stx"
+	"io"
+	"io/ioutil"
+	"strings"
 )
 
 // Abstract type representing a Stellar private key.  Prints and scans
@@ -58,7 +57,7 @@ func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 func NewPrivateKey(pkt stx.PublicKeyType) PrivateKey {
 	switch pkt {
 	case stx.PUBLIC_KEY_TYPE_ED25519:
-		return PrivateKey { detail.NewEd25519Priv() }
+		return PrivateKey{detail.NewEd25519Priv()}
 	default:
 		panic(fmt.Sprintf("KeyGen: unsupported PublicKeyType %v", pkt))
 	}
@@ -78,9 +77,9 @@ func (sk *PrivateKey) Save(file string, passphrase []byte) error {
 		}
 		w, err := openpgp.SymmetricallyEncrypt(w0, passphrase, nil,
 			&packet.Config{
-				DefaultCipher: packet.CipherAES256,
+				DefaultCipher:          packet.CipherAES256,
 				DefaultCompressionAlgo: packet.CompressionNone,
-				S2KCount: 65011712,
+				S2KCount:               65011712,
 			})
 		if err != nil {
 			w0.Close()
@@ -126,8 +125,7 @@ func LoadPrivateKey(file string) (*PrivateKey, error) {
 		return nil, err
 	} else if _, err = fmt.Fscan(md.UnverifiedBody, ret); err != nil {
 		return nil, err
-	} else if io.Copy(ioutil.Discard, md.UnverifiedBody);
-	md.SignatureError != nil {
+	} else if io.Copy(ioutil.Discard, md.UnverifiedBody); md.SignatureError != nil {
 		return nil, md.SignatureError
 	}
 	return ret, nil

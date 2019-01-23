@@ -1,14 +1,13 @@
-
 package main
 
 import (
 	"bytes"
 	"fmt"
+	. "github.com/xdrpp/stc"
+	"github.com/xdrpp/stc/detail"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	. "stc"
-	"stc/detail"
 )
 
 var defaultNets = []StellarNet{
@@ -31,7 +30,7 @@ func init() {
 }
 
 func ConfigPath(net *StellarNet, names ...string) string {
-	args := make([]string, 3, 3 + len(names))
+	args := make([]string, 3, 3+len(names))
 	args[0] = ConfigRoot
 	args[1] = "networks"
 	args[2] = net.Name
@@ -76,9 +75,9 @@ func netInit() {
 	for i := range defaultNets {
 		os.MkdirAll(ConfigPath(&defaultNets[i]), 0777)
 		CreateIfMissing(ConfigPath(&defaultNets[i], "network_id"),
-			defaultNets[i].NetworkId + "\n")
+			defaultNets[i].NetworkId+"\n")
 		CreateIfMissing(ConfigPath(&defaultNets[i], "horizon"),
-			defaultNets[i].Horizon + "\n")
+			defaultNets[i].Horizon+"\n")
 	}
 	os.Symlink(defaultNets[0].Name,
 		filepath.Join(ConfigRoot, "networks", "default"))
@@ -97,7 +96,7 @@ func head(path string) (string, error) {
 
 func GetStellarNet(name string) *StellarNet {
 	netInit()
-	net := &StellarNet{ Name: name }
+	net := &StellarNet{Name: name}
 	var err error
 	net.NetworkId, err = head(ConfigPath(net, "network_id"))
 	if err != nil {

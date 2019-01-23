@@ -9,9 +9,9 @@ package stc
 
 import (
 	"fmt"
+	"github.com/xdrpp/stc/detail"
+	"github.com/xdrpp/stc/stx"
 	"strings"
-	"stc/stx"
-	"stc/detail"
 )
 
 type TxrepError = detail.TxrepError
@@ -29,7 +29,7 @@ type TransactionEnvelope struct {
 func NewTransactionEnvelope() *TransactionEnvelope {
 	return &TransactionEnvelope{
 		TransactionEnvelope: &stx.TransactionEnvelope{},
-		Help: nil,
+		Help:                nil,
 	}
 }
 
@@ -40,7 +40,7 @@ func (txe *TransactionEnvelope) GetHelp(name string) bool {
 
 func (txe *TransactionEnvelope) SetHelp(name string) {
 	if txe.Help == nil {
-		txe.Help = map[string]struct{}{ name: struct{}{} }
+		txe.Help = map[string]struct{}{name: struct{}{}}
 	} else {
 		txe.Help[name] = struct{}{}
 	}
@@ -68,21 +68,21 @@ func (net *txrepHelper) AccountIDNote(acct *stx.AccountID) string {
 func (net *StellarNet) ToRep(txe stx.XdrAggregate) string {
 	var out strings.Builder
 
-	type helper interface{
+	type helper interface {
 		stx.XdrAggregate
 		GetHelp(string) bool
 	}
 	if e, ok := txe.(helper); ok {
-		ntxe := struct{
+		ntxe := struct {
 			helper
 			*txrepHelper
-		}{ e, (*txrepHelper)(net) }
+		}{e, (*txrepHelper)(net)}
 		detail.XdrToTxrep(&out, ntxe)
 	} else {
-		ntxe := struct{
+		ntxe := struct {
 			stx.XdrAggregate
 			*txrepHelper
-		}{ txe, (*txrepHelper)(net) }
+		}{txe, (*txrepHelper)(net)}
 		detail.XdrToTxrep(&out, ntxe)
 	}
 
@@ -99,7 +99,7 @@ func (net *StellarNet) TxToRep(txe *TransactionEnvelope) string {
 func TxFromRep(rep string) (*TransactionEnvelope, TxrepError) {
 	in := strings.NewReader(rep)
 	txe := NewTransactionEnvelope()
-    if err := detail.XdrFromTxrep(in, txe); err != nil {
+	if err := detail.XdrFromTxrep(in, txe); err != nil {
 		return txe, err
 	}
 	return txe, nil

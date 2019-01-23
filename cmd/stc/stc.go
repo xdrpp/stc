@@ -12,14 +12,14 @@ import (
 	"os/exec"
 	"strings"
 
-	. "stc"
-	"stc/stx"
-	"stc/detail"
+	. "github.com/xdrpp/stc"
+	"github.com/xdrpp/stc/detail"
+	"github.com/xdrpp/stc/stx"
 )
 
 type acctInfo struct {
-	field string
-	name string
+	field   string
+	name    string
 	signers []HorizonSigner
 }
 type xdrGetAccounts struct {
@@ -33,7 +33,7 @@ func (xp *xdrGetAccounts) Marshal(field string, i stx.XdrType) {
 	switch v := i.(type) {
 	case *stx.AccountID:
 		if _, ok := xp.accounts[*v]; !ok {
-			xp.accounts[*v] = &acctInfo{ field: field }
+			xp.accounts[*v] = &acctInfo{field: field}
 		}
 	case stx.XdrAggregate:
 		v.XdrMarshal(xp, field)
@@ -41,7 +41,7 @@ func (xp *xdrGetAccounts) Marshal(field string, i stx.XdrType) {
 }
 
 func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
-	xga := xdrGetAccounts{ map[stx.AccountID]*acctInfo{} }
+	xga := xdrGetAccounts{map[stx.AccountID]*acctInfo{}}
 	e.XdrMarshal(&xga, "")
 	c := make(chan struct{})
 	for ac, infp := range xga.accounts {
@@ -139,8 +139,7 @@ func fixTx(net *StellarNet, e *TransactionEnvelope) {
 		var val stx.SequenceNumber
 		var zero stx.AccountID
 		if e.Tx.SourceAccount != zero {
-			if a := net.GetAccountEntry(e.Tx.SourceAccount.String());
-			a != nil {
+			if a := net.GetAccountEntry(e.Tx.SourceAccount.String()); a != nil {
 				if fmt.Sscan(a.Sequence.String(), &val); val != 0 {
 					val++
 				}
@@ -160,7 +159,7 @@ func fixTx(net *StellarNet, e *TransactionEnvelope) {
 // Guess whether input is key: value lines or compiled base64
 func isCompiled(content string) bool {
 	if len(content) != 0 && strings.IndexByte(content, ':') == -1 {
-		bs, err := base64.StdEncoding.DecodeString(content);
+		bs, err := base64.StdEncoding.DecodeString(content)
 		if err == nil && len(bs) > 0 {
 			return true
 		}
@@ -195,7 +194,7 @@ func readTx(infile string) (
 		compiled = true
 		txe, err = TxFromBase64(sinput)
 	} else if newe, pe := TxFromRep(sinput); pe != nil {
-		err = ParseError{ pe, infile }
+		err = ParseError{pe, infile}
 	} else {
 		txe = newe
 	}
@@ -240,7 +239,9 @@ func mustWriteTx(outfile string, e *TransactionEnvelope, net *StellarNet,
 }
 
 func signTx(net *StellarNet, key string, e *TransactionEnvelope) error {
-	if key != "" { key = AdjustKeyName(key) }
+	if key != "" {
+		key = AdjustKeyName(key)
+	}
 	sk, err := getSecKey(key)
 	if err != nil {
 		return err
@@ -282,7 +283,7 @@ func firstDifferentLine(a []byte, b []byte) (lineno int) {
 		m = n
 	}
 	lineno = 1
-	for i := 0;; i++ {
+	for i := 0; ; i++ {
 		if i >= n {
 			if i >= m {
 				lineno = 0
@@ -366,7 +367,7 @@ func doEdit(net *StellarNet, arg string) {
 		}
 		err = nil
 		if newe, pe := TxFromRep(string(contents)); pe != nil {
-			err = ParseError{ pe, path }
+			err = ParseError{pe, path}
 		} else {
 			e = newe
 		}
@@ -422,7 +423,7 @@ func main() {
 	}
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
-`Usage: %[1]s [-net=ID] [-sign] [-c] [-l] [-u] [-i | -o FILE] INPUT-FILE
+			`Usage: %[1]s [-net=ID] [-sign] [-c] [-l] [-u] [-i | -o FILE] INPUT-FILE
        %[1]s -edit [-net=ID] FILE
        %[1]s -post [-net=ID] INPUT-FILE
        %[1]s -preauth [-net=ID] INPUT-FILE
@@ -435,17 +436,16 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
-	if (*opt_help) {
+	if *opt_help {
 		flag.CommandLine.SetOutput(os.Stdout)
 		flag.Usage()
 		return
 	}
 
 	if n := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit, *opt_keygen,
-		*opt_sec2pub, *opt_import_key, *opt_export_key, *opt_list_keys);
-	n > 1 || len(flag.Args()) > 1 ||
+		*opt_sec2pub, *opt_import_key, *opt_export_key, *opt_list_keys); n > 1 || len(flag.Args()) > 1 ||
 		(len(flag.Args()) == 0 &&
-		!(*opt_keygen || *opt_sec2pub || *opt_list_keys)) {
+			!(*opt_keygen || *opt_sec2pub || *opt_list_keys)) {
 		flag.Usage()
 		os.Exit(2)
 	} else if n == 1 {
@@ -485,17 +485,23 @@ func main() {
 
 	switch {
 	case *opt_keygen:
-		if arg != "" { arg = AdjustKeyName(arg) }
+		if arg != "" {
+			arg = AdjustKeyName(arg)
+		}
 		doKeyGen(arg)
 		return
 	case *opt_sec2pub:
-		if arg != "" { arg = AdjustKeyName(arg) }
+		if arg != "" {
+			arg = AdjustKeyName(arg)
+		}
 		doSec2pub(arg)
 		return
 	case *opt_import_key:
 		arg = AdjustKeyName(arg)
 		sk, err := InputPrivateKey("Secret key: ")
-		if err == nil { err = sk.Save(arg, detail.GetPass2("Passphrase: ")) }
+		if err == nil {
+			err = sk.Save(arg, detail.GetPass2("Passphrase: "))
+		}
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
@@ -517,8 +523,12 @@ func main() {
 		return
 	}
 
-	if *opt_netname == "" { *opt_netname = os.Getenv("STCNET") }
-	if *opt_netname == "" { *opt_netname = "default" }
+	if *opt_netname == "" {
+		*opt_netname = os.Getenv("STCNET")
+	}
+	if *opt_netname == "" {
+		*opt_netname = "default"
+	}
 	net := GetStellarNet(*opt_netname)
 	if net == nil {
 		fmt.Fprintf(os.Stderr, "unknown network %q\n", *opt_netname)
@@ -544,19 +554,25 @@ func main() {
 	case *opt_txhash:
 		fmt.Printf("%x\n", net.HashTx(e))
 	case *opt_preauth:
-		sk := stx.SignerKey{ Type: stx.SIGNER_KEY_TYPE_PRE_AUTH_TX }
+		sk := stx.SignerKey{Type: stx.SIGNER_KEY_TYPE_PRE_AUTH_TX}
 		copy(sk.PreAuthTx()[:], net.HashTx(e))
 		fmt.Println(&sk)
 	default:
 		getAccounts(net, e, *opt_learn)
-		if *opt_update { fixTx(net, e) }
+		if *opt_update {
+			fixTx(net, e)
+		}
 		if *opt_sign || *opt_key != "" {
 			if err := signTx(net, *opt_key, e); err != nil {
 				os.Exit(1)
 			}
 		}
-		if *opt_learn { SaveSigners(net) }
-		if *opt_inplace { *opt_output = arg }
+		if *opt_learn {
+			SaveSigners(net)
+		}
+		if *opt_inplace {
+			*opt_output = arg
+		}
 		mustWriteTx(*opt_output, e, net, *opt_compile)
 	}
 }

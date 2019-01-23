@@ -1,14 +1,13 @@
-
 package stc
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/xdrpp/stc/detail"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"stc/detail"
 )
 
 func get(net *StellarNet, query string) []byte {
@@ -31,14 +30,14 @@ func get(net *StellarNet, query string) []byte {
 }
 
 type HorizonSigner struct {
-	Key string
+	Key    string
 	Weight uint32
 }
 type HorizonAccountEntry struct {
-	Sequence json.Number
+	Sequence   json.Number
 	Thresholds struct {
-		Low_threshold uint8
-		Med_threshold uint8
+		Low_threshold  uint8
+		Med_threshold  uint8
 		High_threshold uint8
 	}
 	Signers []HorizonSigner
@@ -47,7 +46,7 @@ type HorizonAccountEntry struct {
 // Fetch the sequence number and signers of an account over the
 // network.
 func (net *StellarNet) GetAccountEntry(acct string) *HorizonAccountEntry {
-	if body := get(net, "accounts/" + acct); body != nil {
+	if body := get(net, "accounts/"+acct); body != nil {
 		var ae HorizonAccountEntry
 		if err := json.Unmarshal(body, &ae); err != nil {
 			return nil
@@ -80,8 +79,7 @@ func (net *StellarNet) GetLedgerHeader() *LedgerHeader {
 	}
 
 	ret := &LedgerHeader{}
-	if err := detail.XdrFromBase64(ret, lhx.Embedded.Records[0].Header_xdr)
-	err != nil {
+	if err := detail.XdrFromBase64(ret, lhx.Embedded.Records[0].Header_xdr); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return nil
 	}
@@ -95,7 +93,7 @@ func (net *StellarNet) Post(e *TransactionEnvelope) *TransactionResult {
 		return nil
 	}
 	tx := detail.XdrToBase64(e)
-	resp, err := http.PostForm(net.Horizon + "/transactions",
+	resp, err := http.PostForm(net.Horizon+"/transactions",
 		url.Values{"tx": {tx}})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -106,7 +104,7 @@ func (net *StellarNet) Post(e *TransactionEnvelope) *TransactionResult {
 	js := json.NewDecoder(resp.Body)
 	var res struct {
 		Result_xdr string
-		Extras struct {
+		Extras     struct {
 			Result_xdr string
 		}
 	}
@@ -114,7 +112,9 @@ func (net *StellarNet) Post(e *TransactionEnvelope) *TransactionResult {
 		fmt.Fprintf(os.Stderr, "PostTransaction: %s\n", err.Error())
 		return nil
 	}
-	if res.Result_xdr == "" { res.Result_xdr = res.Extras.Result_xdr }
+	if res.Result_xdr == "" {
+		res.Result_xdr = res.Extras.Result_xdr
+	}
 
 	var ret TransactionResult
 	if err = detail.XdrFromBase64(&ret, res.Result_xdr); err != nil {

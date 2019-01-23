@@ -1,13 +1,12 @@
-
 package stc
 
 import (
 	"bufio"
 	"fmt"
+	"github.com/xdrpp/stc/detail"
+	"github.com/xdrpp/stc/stx"
 	"os"
 	"strings"
-	"stc/stx"
-	"stc/detail"
 )
 
 type StellarNet struct {
@@ -32,17 +31,17 @@ type StellarNet struct {
 // Default parameters for the Stellar main net (including the address
 // of a Horizon instance hosted by SDF).
 var StellarMainNet = StellarNet{
-	Name: "main",
+	Name:      "main",
 	NetworkId: "Public Global Stellar Network ; September 2015",
-	Horizon: "https://horizon.stellar.org/",
+	Horizon:   "https://horizon.stellar.org/",
 }
 
 // Default parameters for the Stellar test network (including the
 // address of a Horizon instance hosted by SDF).
 var StellarTestNet = StellarNet{
-	Name: "test",
+	Name:      "test",
 	NetworkId: "Test SDF Network ; September 2015",
-	Horizon: "https://horizon-testnet.stellar.org/",
+	Horizon:   "https://horizon-testnet.stellar.org/",
 }
 
 // Returns true only if sig is a valid signature on e for public key
@@ -67,7 +66,7 @@ func (net *StellarNet) SignTx(sk *PrivateKey, e *TransactionEnvelope) error {
 		return err
 	}
 	e.Signatures = append(e.Signatures, stx.DecoratedSignature{
-		Hint: sk.Public().Hint(),
+		Hint:      sk.Public().Hint(),
 		Signature: sig,
 	})
 	return nil
@@ -77,7 +76,7 @@ func (net *StellarNet) SignTx(sk *PrivateKey, e *TransactionEnvelope) error {
 // transactions.  Prints and Scans as a StrKey-format SignerKey, a
 // space, and then the comment.
 type SignerKeyInfo struct {
-	Key stx.SignerKey
+	Key     stx.SignerKey
 	Comment string
 }
 
@@ -92,7 +91,7 @@ func (ski *SignerKeyInfo) Scan(ss fmt.ScanState, c rune) error {
 	if err := ski.Key.Scan(ss, c); err != nil {
 		return err
 	}
-	if t, err := ss.Token(true, func (r rune) bool {
+	if t, err := ss.Token(true, func(r rune) bool {
 		return !strings.ContainsRune("\r\n", r)
 	}); err != nil {
 		return err
@@ -164,7 +163,7 @@ func (c SignerCache) Lookup(networkID string, e *stx.TransactionEnvelope,
 	ds *stx.DecoratedSignature) *SignerKeyInfo {
 	skis := c[ds.Hint]
 	for i := range skis {
-		if detail.VerifyTx(&skis[i].Key, networkID, e,  ds.Signature) {
+		if detail.VerifyTx(&skis[i].Key, networkID, e, ds.Signature) {
 			return &skis[i]
 		}
 	}
@@ -243,4 +242,3 @@ func (h *AccountHints) Load(filename string) error {
 func (h *AccountHints) Save(filename string) error {
 	return detail.SafeWriteFile(filename, h.String(), 0666)
 }
-

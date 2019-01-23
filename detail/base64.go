@@ -1,10 +1,9 @@
-
 package detail
 
 import (
 	"encoding/base64"
+	"github.com/xdrpp/stc/stx"
 	"strings"
-	"stc/stx"
 )
 
 // Convert an XDR aggregate to base64-encoded binary format.  Calls
