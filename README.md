@@ -1,6 +1,6 @@
 # Stellar transaction compiler
 
-stc is a command-line tool that translates
+stc is a library and command-line tool that translates
 [Stellar](https://www.stellar.org/) blockchain transactions back and
 forth between human-readable
 [txrep](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0011.md)
@@ -31,7 +31,14 @@ run:
 
 # Using `stc`
 
-See the [man page](cmd/stc/stc.1.md)
+See the [man page](cmd/stc/stc.1.md) for the command-line tool.
+
+See the [godoc](https://godoc.org/github.com/xdrpp/stc) documentation
+to use the library in your own applications.  To see the documentation
+on the transaction format, you'll have to look at documentation
+locally, or on the [go1
+branch](https://godoc.org/gopkg.in/xdrpp/stc.v0/stx#TransactionEnvelope),
+which has the go interface files generated from stellar's XDR files.
 
 # Building `stc` for developers
 
