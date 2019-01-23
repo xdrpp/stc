@@ -6,7 +6,6 @@
 # generate.
 
 make
-make cmd/stc/stc.1
 for cmd in goxdr stc; do
     (cd cmd/$cmd && make $cmd.1)
 done
