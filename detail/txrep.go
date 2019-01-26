@@ -11,8 +11,8 @@ import (
 
 // pseudo-selectors
 const (
-	ps_len     = "len"
-	ps_present = "_present"
+	ps_len       = "len"
+	ps_present   = "_present"
 )
 
 //
@@ -149,6 +149,16 @@ type xdrEnumNames interface {
 	XdrEnumNames() map[int32]string
 }
 
+// Show an empty vector as "0 bytes", since we need to show it as
+// something.  (Note the bytes is a comment, but just "0" might be
+// unintuitive.)
+func PrintVecOpaque(bs []byte) string {
+	if len(bs) == 0 {
+		return "0 bytes"
+	}
+	return fmt.Sprintf("%x", bs)
+}
+
 func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 	defer xp.track(i)()
 	defer func() {
@@ -202,6 +212,8 @@ func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 	case *stx.XdrInt64:
 		fmt.Fprintf(xp.out, "%s: %s (%s)\n", name, v.String(),
 			scalePrint(int64(*v), 7))
+	case stx.XdrVecOpaque:
+		fmt.Fprintf(xp.out, "%s: %s\n", name, PrintVecOpaque(v.GetByteSlice()))
 	case fmt.Stringer:
 		fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
 	case stx.XdrPtr:
@@ -217,8 +229,8 @@ func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 		} else {
 			hint = fmt.Sprintf("%x", v.Hint)
 		}
-		fmt.Fprintf(xp.out, "%[1]s.hint: %[2]s\n%[1]s.signature: %[3]x\n",
-			name, hint, v.Signature)
+		fmt.Fprintf(xp.out, "%[1]s.hint: %[2]s\n%[1]s.signature: %[3]s\n",
+			name, hint, PrintVecOpaque(v.Signature))
 	case stx.XdrAggregate:
 		v.XdrMarshal(xp, name)
 	default:
@@ -391,6 +403,22 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 			xs.setHelp(name)
 			xs.report(lv.line, "%s", err.Error())
 		}
+	case stx.XdrVecOpaque:
+		if !ok {
+			return
+		}
+		_, err := fmt.Sscan(val, v)
+		if err != nil {
+			var word string
+			if fmt.Sscanf(val, "%s", &word); word == "0" {
+				v.SetByteSlice([]byte{})
+			} else {
+				xs.setHelp(name)
+				xs.report(lv.line, "%s", err.Error())
+			}
+		} else if len(val) > 0 && val[len(val)-1] == '?' {
+			xs.setHelp(name)
+		}
 	case fmt.Scanner:
 		if !ok {
 			return
@@ -405,7 +433,19 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 	case stx.XdrPtr:
 		val = "false"
 		field := name + xs.present()
-		fmt.Sscanf(xs.kvs[field].val, "%s", &val)
+		if _, err := fmt.Sscanf(xs.kvs[field].val, "%s", &val); err != nil {
+			if ok {
+				val = "true"
+			} else {
+				field = name + "."
+				for f := range xs.kvs {
+					if strings.HasPrefix(f, field) {
+						val = "true"
+						break
+					}
+				}
+			}
+		}
 		switch val {
 		case "false":
 			v.SetPresent(false)

@@ -309,6 +309,7 @@ func doEdit(net *StellarNet, arg string) {
 	e, compiled, err := readTx(arg)
 	if os.IsNotExist(err) {
 		e = NewTransactionEnvelope()
+		compiled = true
 	} else if err != nil {
 		fmt.Fprint(os.Stderr, err.Error())
 		os.Exit(1)
@@ -443,7 +444,8 @@ func main() {
 	}
 
 	if n := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit, *opt_keygen,
-		*opt_sec2pub, *opt_import_key, *opt_export_key, *opt_list_keys); n > 1 || len(flag.Args()) > 1 ||
+		*opt_sec2pub, *opt_import_key, *opt_export_key,
+		*opt_list_keys); n > 1 || len(flag.Args()) > 1 ||
 		(len(flag.Args()) == 0 &&
 			!(*opt_keygen || *opt_sec2pub || *opt_list_keys)) {
 		flag.Usage()
