@@ -56,7 +56,8 @@ maintainer-clean:
 	done
 	go clean
 	rm -f *~ .*~ */*~ go.sum $(BUILT_SOURCES)
-	rm -rf xdr
+	# Git clean avoids removing xdr if it's a git repository
+	git clean -fxd xdr
 
 go1:
 	./make-go1
