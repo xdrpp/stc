@@ -40,7 +40,7 @@ var StellarMainNet = StellarNet{
 // address of a Horizon instance hosted by SDF).
 var StellarTestNet = StellarNet{
 	Name:      "test",
-	NetworkId: "Test SDF Network ; September 2015",
+	NetworkId: "",
 	Horizon:   "https://horizon-testnet.stellar.org/",
 }
 
@@ -48,14 +48,14 @@ var StellarTestNet = StellarNet{
 // pk.
 func (net *StellarNet) VerifySig(
 	pk *SignerKey, e *TransactionEnvelope, sig Signature) bool {
-	return detail.VerifyTx(pk, net.NetworkId, e.TransactionEnvelope, sig)
+	return detail.VerifyTx(pk, net.GetNetworkId(), e.TransactionEnvelope, sig)
 }
 
 // Return a transaction hash (which in Stellar is defined as the hash
 // of the constant ENVELOPE_TYPE_TX, the NetworkID, and the marshaled
 // XDR of the Transaction).
 func (net *StellarNet) HashTx(e *TransactionEnvelope) []byte {
-	return detail.TxPayloadHash(net.NetworkId, e.TransactionEnvelope)
+	return detail.TxPayloadHash(net.GetNetworkId(), e.TransactionEnvelope)
 }
 
 // Sign a transaction and append the signature to the

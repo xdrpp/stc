@@ -52,7 +52,8 @@ func (net *txrepHelper) SignerNote(txe *stx.TransactionEnvelope,
 	sig *stx.DecoratedSignature) string {
 	if txe == nil {
 		return ""
-	} else if ski := net.Signers.Lookup(net.NetworkId, txe, sig); ski != nil {
+	} else if ski := net.Signers.Lookup(net.GetNetworkId(), txe, sig);
+	ski != nil {
 		return ski.String()
 	}
 	return fmt.Sprintf("bad signature/unknown key/%s is wrong network",

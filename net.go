@@ -56,6 +56,24 @@ func (net *StellarNet) GetAccountEntry(acct string) *HorizonAccountEntry {
 	return nil
 }
 
+func (net *StellarNet) GetNetworkId() string {
+	if net.NetworkId != "" {
+		return net.NetworkId
+	}
+	body := get(net, "/")
+	if body == nil {
+		return ""
+	}
+	var np struct {
+		Network_passphrase string
+	}
+	if err := json.Unmarshal(body, &np); err != nil {
+		return ""
+	}
+	net.NetworkId = np.Network_passphrase
+	return net.NetworkId
+}
+
 // Fetch the latest ledger header over the network.
 func (net *StellarNet) GetLedgerHeader() *LedgerHeader {
 	body := get(net, "ledgers?limit=1&order=desc")

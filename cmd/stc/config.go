@@ -74,10 +74,12 @@ func CreateIfMissing(path string, contents string) {
 func netInit() {
 	for i := range defaultNets {
 		os.MkdirAll(ConfigPath(&defaultNets[i]), 0777)
-		CreateIfMissing(ConfigPath(&defaultNets[i], "network_id"),
-			defaultNets[i].NetworkId+"\n")
-		CreateIfMissing(ConfigPath(&defaultNets[i], "horizon"),
-			defaultNets[i].Horizon+"\n")
+		if path := ConfigPath(&defaultNets[i], "network_id");
+		!FileExists(path) {
+			if id := defaultNets[i].GetNetworkId(); id != "" {
+				CreateIfMissing(path, id+"\n")
+			}
+		}
 	}
 	os.Symlink(defaultNets[0].Name,
 		filepath.Join(ConfigRoot, "networks", "default"))
