@@ -24,9 +24,11 @@ build-depend:
 update-depend:
 	go get -u $(GO_DEPENDS)
 
-$(XDRS):
+xdr:
 	git fetch --depth=1 https://github.com/stellar/stellar-core.git master
 	git archive --prefix=xdr/ FETCH_HEAD:src/xdr | tar xf -
+
+$(XDRS): xdr
 
 cmd/goxdr/goxdr:
 	cd cmd/goxdr && GOARCH=$$(go env GOHOSTARCH) $(MAKE)
