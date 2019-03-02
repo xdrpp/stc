@@ -127,8 +127,9 @@ func doSec2pub(file string) {
 func fixTx(net *StellarNet, e *TransactionEnvelope) {
 	feechan := make(chan uint32)
 	go func() {
-		if h := net.GetLedgerHeader(); h != nil {
-			feechan <- h.BaseFee
+		if h := net.GetFeeStats(); h != nil {
+			// 20 should be a parameter
+			feechan <- h.Percentile(20)
 		} else {
 			feechan <- 0
 		}
@@ -417,6 +418,8 @@ func main() {
 		"Export signing key from your $STCDIR directory")
 	opt_list_keys := flag.Bool("list-keys", false,
 		"List keys that have been stored in $STCDIR")
+	opt_fee_stats := flag.Bool("fee-stats", false,
+		"Dump fee stats from network")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
 	} else {
@@ -445,9 +448,10 @@ func main() {
 
 	if n := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit, *opt_keygen,
 		*opt_sec2pub, *opt_import_key, *opt_export_key,
-		*opt_list_keys); n > 1 || len(flag.Args()) > 1 ||
+		*opt_list_keys, *opt_fee_stats); n > 1 || len(flag.Args()) > 1 ||
 		(len(flag.Args()) == 0 &&
-			!(*opt_keygen || *opt_sec2pub || *opt_list_keys)) {
+			!(*opt_keygen || *opt_sec2pub || *opt_list_keys ||
+			*opt_fee_stats)) {
 		flag.Usage()
 		os.Exit(2)
 	} else if n == 1 {
@@ -535,6 +539,16 @@ func main() {
 	if net == nil {
 		fmt.Fprintf(os.Stderr, "unknown network %q\n", *opt_netname)
 		os.Exit(1)
+	}
+
+	if *opt_fee_stats {
+		fs := net.GetFeeStats()
+		if fs == nil {
+			fmt.Fprintf(os.Stderr, "error fetching fee stats\n")
+			os.Exit(1)
+		}
+		fmt.Printf("%+v\n", *fs)
+		return
 	}
 
 	if *opt_edit {
