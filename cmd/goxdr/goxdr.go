@@ -299,9 +299,9 @@ func (v *$VEC) XdrMarshalN(x XDR, name string, n uint32) {
 	}
 }
 func (v *$VEC) XdrMarshal(x XDR, name string) {
-	size := XdrSize{ size: uint32(len(*v)), bound: $BOUND }
+	size := XdrSize{ Size: uint32(len(*v)), Bound: $BOUND }
 	x.Marshal(name, &size)
-	v.XdrMarshalN(x, name, size.size)
+	v.XdrMarshalN(x, name, size.Size)
 }
 func (v *$VEC) XdrPointer() interface{} { return (*[]$TYPE)(v) }
 func (v *$VEC) XdrValue() interface{} { return ([]$TYPE)(*v) }

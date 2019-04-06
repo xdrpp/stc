@@ -279,22 +279,22 @@ func XDR_float32(x XDR, name string, v *float32) {
 }
 
 type XdrSize struct {
-	size uint32
-	bound uint32
+	Size uint32
+	Bound uint32
 }
-func (v *XdrSize) String() string { return fmt.Sprintf("%v", v.size) }
-func (v *XdrSize) GetU32() uint32 { return v.size }
+func (v *XdrSize) String() string { return fmt.Sprintf("%v", v.Size) }
+func (v *XdrSize) GetU32() uint32 { return v.Size }
 func (v *XdrSize) SetU32(nv uint32) {
-	if nv > v.bound {
-		XdrPanic("size %d greater than bound %d", nv, v.bound)
+	if nv > v.Bound {
+		XdrPanic("size %d greater than bound %d", nv, v.Bound)
 	} else if int(nv) < 0 {
 		XdrPanic("size %d greater than max slice len", nv)
 	}
-	v.size = nv
+	v.Size = nv
 }
-func (v *XdrSize) XdrPointer() interface{} { return &v.size }
-func (v *XdrSize) XdrValue() interface{} { return v.size }
-func (v *XdrSize) XdrBound() uint32 { return v.bound }
+func (v *XdrSize) XdrPointer() interface{} { return &v.Size }
+func (v *XdrSize) XdrValue() interface{} { return v.Size }
+func (v *XdrSize) XdrBound() uint32 { return v.Bound }
 
 type XdrInt64 int64
 func (v *XdrInt64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
