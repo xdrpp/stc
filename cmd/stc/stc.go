@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -124,6 +125,12 @@ func doSec2pub(file string) {
 	}
 }
 
+var u256zero stx.Uint256
+func isZeroAccount(ac *stx.AccountID) bool {
+	return ac.Type == stx.PUBLIC_KEY_TYPE_ED25519 &&
+		bytes.Compare(ac.Ed25519()[:], u256zero[:]) == 0
+}
+
 func fixTx(net *StellarNet, e *TransactionEnvelope) {
 	feechan := make(chan uint32)
 	go func() {
@@ -138,12 +145,9 @@ func fixTx(net *StellarNet, e *TransactionEnvelope) {
 	seqchan := make(chan stx.SequenceNumber)
 	go func() {
 		var val stx.SequenceNumber
-		var zero stx.AccountID
-		if e.Tx.SourceAccount != zero {
+		if !isZeroAccount(&e.Tx.SourceAccount) {
 			if a := net.GetAccountEntry(e.Tx.SourceAccount.String()); a != nil {
-				if fmt.Sscan(a.Sequence.String(), &val); val != 0 {
-					val++
-				}
+				val = a.NextSeq()
 			}
 		}
 		seqchan <- val
