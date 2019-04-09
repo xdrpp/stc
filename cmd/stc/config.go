@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	. "github.com/xdrpp/stc"
-	"github.com/xdrpp/stc/detail"
+	"github.com/xdrpp/stc/stcdetail"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -67,7 +67,7 @@ func printErr() bool {
 func CreateIfMissing(path string, contents string) {
 	defer printErr()
 	if !FileExists(path) {
-		detail.SafeWriteFile(path, contents, 0666)
+		stcdetail.SafeWriteFile(path, contents, 0666)
 	}
 }
 

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/xdrpp/stc/detail"
+	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/openpgp"
@@ -44,7 +44,7 @@ func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 	key, vers := stx.FromStrKey(string(bs))
 	switch vers {
 	case stx.STRKEY_SEED_ED25519:
-		sec.K = detail.Ed25519Priv(ed25519.NewKeyFromSeed(key))
+		sec.K = stcdetail.Ed25519Priv(ed25519.NewKeyFromSeed(key))
 		return nil
 	default:
 		return stx.StrKeyError("Invalid private key")
@@ -57,7 +57,7 @@ func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 func NewPrivateKey(pkt stx.PublicKeyType) PrivateKey {
 	switch pkt {
 	case stx.PUBLIC_KEY_TYPE_ED25519:
-		return PrivateKey{detail.NewEd25519Priv()}
+		return PrivateKey{stcdetail.NewEd25519Priv()}
 	default:
 		panic(fmt.Sprintf("KeyGen: unsupported PublicKeyType %v", pkt))
 	}
@@ -90,7 +90,7 @@ func (sk *PrivateKey) Save(file string, passphrase []byte) error {
 		w0.Close()
 		out.WriteString("\n")
 	}
-	return detail.SafeWriteFile(file, out.String(), 0600)
+	return stcdetail.SafeWriteFile(file, out.String(), 0600)
 }
 
 var InvalidPassphrase = errors.New("Invalid passphrase")
@@ -115,7 +115,7 @@ func LoadPrivateKey(file string) (*PrivateKey, error) {
 	md, err := openpgp.ReadMessage(block.Body, nil,
 		func(keys []openpgp.Key, symmetric bool) ([]byte, error) {
 			passphrase :=
-				detail.GetPass(fmt.Sprintf("Passphrase for %s: ", file))
+				stcdetail.GetPass(fmt.Sprintf("Passphrase for %s: ", file))
 			if len(passphrase) > 0 {
 				return passphrase, nil
 			}
@@ -134,7 +134,7 @@ func LoadPrivateKey(file string) (*PrivateKey, error) {
 // Reads a private key from standard input.  If standard input is a
 // terminal, disables echo and prints prompt to standard error.
 func InputPrivateKey(prompt string) (*PrivateKey, error) {
-	key := detail.GetPass(prompt)
+	key := stcdetail.GetPass(prompt)
 	var sk PrivateKey
 	if _, err := fmt.Fscan(bytes.NewBuffer(key), &sk); err != nil {
 		return nil, err

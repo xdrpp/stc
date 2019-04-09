@@ -9,12 +9,12 @@ package stc
 
 import (
 	"fmt"
-	"github.com/xdrpp/stc/detail"
+	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
 	"strings"
 )
 
-type TxrepError = detail.TxrepError
+type TxrepError = stcdetail.TxrepError
 type PublicKey = stx.PublicKey
 type SignerKey = stx.SignerKey
 type Signature = stx.Signature
@@ -78,13 +78,13 @@ func (net *StellarNet) ToRep(txe stx.XdrAggregate) string {
 			helper
 			*txrepHelper
 		}{e, (*txrepHelper)(net)}
-		detail.XdrToTxrep(&out, ntxe)
+		stcdetail.XdrToTxrep(&out, ntxe)
 	} else {
 		ntxe := struct {
 			stx.XdrAggregate
 			*txrepHelper
 		}{txe, (*txrepHelper)(net)}
-		detail.XdrToTxrep(&out, ntxe)
+		stcdetail.XdrToTxrep(&out, ntxe)
 	}
 
 	return out.String()
@@ -100,7 +100,7 @@ func (net *StellarNet) TxToRep(txe *TransactionEnvelope) string {
 func TxFromRep(rep string) (*TransactionEnvelope, TxrepError) {
 	in := strings.NewReader(rep)
 	txe := NewTransactionEnvelope()
-	if err := detail.XdrFromTxrep(in, txe); err != nil {
+	if err := stcdetail.XdrFromTxrep(in, txe); err != nil {
 		return txe, err
 	}
 	return txe, nil
@@ -108,13 +108,13 @@ func TxFromRep(rep string) (*TransactionEnvelope, TxrepError) {
 
 // Convert a TransactionEnvelope to base64-encoded binary XDR format.
 func TxToBase64(tx *TransactionEnvelope) string {
-	return detail.XdrToBase64(tx)
+	return stcdetail.XdrToBase64(tx)
 }
 
 // Parse a TransactionEnvelope from base64-encoded binary XDR format.
 func TxFromBase64(input string) (*TransactionEnvelope, error) {
 	tx := NewTransactionEnvelope()
-	if err := detail.XdrFromBase64(tx, input); err != nil {
+	if err := stcdetail.XdrFromBase64(tx, input); err != nil {
 		return nil, err
 	}
 	return tx, nil

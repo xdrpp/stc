@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	. "github.com/xdrpp/stc"
-	"github.com/xdrpp/stc/detail"
+	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
 )
 
@@ -64,10 +64,10 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 	}
 
 	for ac, infp := range xga.accounts {
-		acs := ac.String()
-		if acs == "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF" {
+		if isZeroAccount(&ac) {
 			continue
 		}
+		acs := ac.String()
 		for _, signer := range infp.signers {
 			var comment string
 			if acs != signer.Key {
@@ -89,7 +89,7 @@ func doKeyGen(outfile string) {
 			fmt.Fprintf(os.Stderr, "%s: file already exists\n", outfile)
 			return
 		}
-		bytePassword := detail.GetPass2("Passphrase: ")
+		bytePassword := stcdetail.GetPass2("Passphrase: ")
 		if FileExists(outfile) {
 			fmt.Fprintf(os.Stderr, "%s: file already exists\n", outfile)
 			return
@@ -132,33 +132,21 @@ func isZeroAccount(ac *stx.AccountID) bool {
 }
 
 func fixTx(net *StellarNet, e *TransactionEnvelope) {
-	feechan := make(chan uint32)
-	go func() {
+	var async stcdetail.Async
+	async.RunVoid(func(){
 		if h := net.GetFeeStats(); h != nil {
 			// 20 should be a parameter
-			feechan <- h.Percentile(20)
-		} else {
-			feechan <- 0
+			e.Tx.Fee = h.Percentile(20)
 		}
-	}()
-
-	seqchan := make(chan stx.SequenceNumber)
-	go func() {
-		var val stx.SequenceNumber
-		if !isZeroAccount(&e.Tx.SourceAccount) {
+	})
+	if !isZeroAccount(&e.Tx.SourceAccount) {
+		async.RunVoid(func(){
 			if a := net.GetAccountEntry(e.Tx.SourceAccount.String()); a != nil {
-				val = a.NextSeq()
+				e.Tx.SeqNum = a.NextSeq()
 			}
-		}
-		seqchan <- val
-	}()
-
-	if newfee := uint32(len(e.Tx.Operations)) * <-feechan; newfee > e.Tx.Fee {
-		e.Tx.Fee = newfee
+		})
 	}
-	if newseq := <-seqchan; newseq > e.Tx.SeqNum {
-		e.Tx.SeqNum = newseq
-	}
+	async.Wait()
 }
 
 // Guess whether input is key: value lines or compiled base64
@@ -173,7 +161,7 @@ func isCompiled(content string) bool {
 }
 
 type ParseError struct {
-	detail.TxrepError
+	stcdetail.TxrepError
 	Filename string
 }
 
@@ -227,7 +215,7 @@ func writeTx(outfile string, e *TransactionEnvelope, net *StellarNet,
 	if outfile == "" {
 		fmt.Print(output)
 	} else {
-		if err := detail.SafeWriteFile(outfile, output, 0666); err != nil {
+		if err := stcdetail.SafeWriteFile(outfile, output, 0666); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			return err
 		}
@@ -348,7 +336,7 @@ func doEdit(net *StellarNet, arg string) {
 		if err != nil {
 			fmt.Fprint(os.Stderr, err.Error())
 			fmt.Printf("Press return to run editor.")
-			detail.ReadTextLine(os.Stdin)
+			stcdetail.ReadTextLine(os.Stdin)
 			if pe, ok := err.(ParseError); ok {
 				line = pe.TxrepError[0].Line
 			}
@@ -488,9 +476,9 @@ func main() {
 	}
 
 	if *opt_nopass {
-		detail.PassphraseFile = io.MultiReader()
+		stcdetail.PassphraseFile = io.MultiReader()
 	} else if arg == "-" {
-		detail.PassphraseFile = nil
+		stcdetail.PassphraseFile = nil
 	}
 
 	switch {
@@ -510,7 +498,7 @@ func main() {
 		arg = AdjustKeyName(arg)
 		sk, err := InputPrivateKey("Secret key: ")
 		if err == nil {
-			err = sk.Save(arg, detail.GetPass2("Passphrase: "))
+			err = sk.Save(arg, stcdetail.GetPass2("Passphrase: "))
 		}
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())

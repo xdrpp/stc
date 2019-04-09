@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/xdrpp/stc/detail"
+	"github.com/xdrpp/stc/stcdetail"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -252,7 +252,7 @@ func (net *StellarNet) GetLedgerHeader() *LedgerHeader {
 	}
 
 	ret := &LedgerHeader{}
-	if err := detail.XdrFromBase64(ret, lhx.Embedded.Records[0].Header_xdr);
+	if err := stcdetail.XdrFromBase64(ret, lhx.Embedded.Records[0].Header_xdr);
 	err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return nil
@@ -266,7 +266,7 @@ func (net *StellarNet) Post(e *TransactionEnvelope) *TransactionResult {
 		fmt.Fprintln(os.Stderr, "Missing or invalid horizon URL\n")
 		return nil
 	}
-	tx := detail.XdrToBase64(e)
+	tx := stcdetail.XdrToBase64(e)
 	resp, err := http.PostForm(net.Horizon+"/transactions",
 		url.Values{"tx": {tx}})
 	if err != nil {
@@ -291,7 +291,7 @@ func (net *StellarNet) Post(e *TransactionEnvelope) *TransactionResult {
 	}
 
 	var ret TransactionResult
-	if err = detail.XdrFromBase64(&ret, res.Result_xdr); err != nil {
+	if err = stcdetail.XdrFromBase64(&ret, res.Result_xdr); err != nil {
 		fmt.Fprintf(os.Stderr, "Invalid result_xdr\n")
 		return nil
 	}

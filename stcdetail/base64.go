@@ -1,4 +1,4 @@
-package detail
+package stcdetail
 
 import (
 	"encoding/base64"

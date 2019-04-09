@@ -3,7 +3,7 @@ package stc
 import (
 	"bufio"
 	"fmt"
-	"github.com/xdrpp/stc/detail"
+	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
 	"os"
 	"strings"
@@ -48,14 +48,15 @@ var StellarTestNet = StellarNet{
 // pk.
 func (net *StellarNet) VerifySig(
 	pk *SignerKey, e *TransactionEnvelope, sig Signature) bool {
-	return detail.VerifyTx(pk, net.GetNetworkId(), e.TransactionEnvelope, sig)
+	return stcdetail.VerifyTx(pk, net.GetNetworkId(),
+		e.TransactionEnvelope, sig)
 }
 
 // Return a transaction hash (which in Stellar is defined as the hash
 // of the constant ENVELOPE_TYPE_TX, the NetworkID, and the marshaled
 // XDR of the Transaction).
 func (net *StellarNet) HashTx(e *TransactionEnvelope) []byte {
-	return detail.TxPayloadHash(net.GetNetworkId(), e.TransactionEnvelope)
+	return stcdetail.TxPayloadHash(net.GetNetworkId(), e.TransactionEnvelope)
 }
 
 // Sign a transaction and append the signature to the
@@ -154,7 +155,7 @@ func (c *SignerCache) Load(filename string) error {
 
 // Saves a SignerCache to a file.
 func (c SignerCache) Save(filename string) error {
-	return detail.SafeWriteFile(filename, c.String(), 0666)
+	return stcdetail.SafeWriteFile(filename, c.String(), 0666)
 }
 
 // Finds the signer in a SignerCache that corresponds to a particular
@@ -163,7 +164,7 @@ func (c SignerCache) Lookup(networkID string, e *stx.TransactionEnvelope,
 	ds *stx.DecoratedSignature) *SignerKeyInfo {
 	skis := c[ds.Hint]
 	for i := range skis {
-		if detail.VerifyTx(&skis[i].Key, networkID, e, ds.Signature) {
+		if stcdetail.VerifyTx(&skis[i].Key, networkID, e, ds.Signature) {
 			return &skis[i]
 		}
 	}
@@ -240,5 +241,5 @@ func (h *AccountHints) Load(filename string) error {
 
 // Saves the set of account hints from a file.
 func (h *AccountHints) Save(filename string) error {
-	return detail.SafeWriteFile(filename, h.String(), 0666)
+	return stcdetail.SafeWriteFile(filename, h.String(), 0666)
 }
