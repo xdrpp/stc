@@ -49,7 +49,7 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 		go func(ac stx.AccountID, infp *acctInfo) {
 			var ae *HorizonAccountEntry
 			if usenet {
-				ae = net.GetAccountEntry(ac.String())
+				ae, _ = net.GetAccountEntry(ac.String())
 			}
 			if ae != nil {
 				infp.signers = ae.Signers
@@ -134,14 +134,15 @@ func isZeroAccount(ac *stx.AccountID) bool {
 func fixTx(net *StellarNet, e *TransactionEnvelope) {
 	var async stcdetail.Async
 	async.RunVoid(func(){
-		if h := net.GetFeeStats(); h != nil {
+		if h, err := net.GetFeeStats(); err == nil {
 			// 20 should be a parameter
 			e.Tx.Fee = h.Percentile(20)
 		}
 	})
 	if !isZeroAccount(&e.Tx.SourceAccount) {
 		async.RunVoid(func(){
-			if a := net.GetAccountEntry(e.Tx.SourceAccount.String()); a != nil {
+			if a, _ := net.GetAccountEntry(e.Tx.SourceAccount.String());
+			a != nil {
 				e.Tx.SeqNum = a.NextSeq()
 			}
 		})
@@ -534,12 +535,13 @@ func main() {
 	}
 
 	if *opt_fee_stats {
-		fs := net.GetFeeStats()
-		if fs == nil {
-			fmt.Fprintf(os.Stderr, "error fetching fee stats\n")
+		fs, err := net.GetFeeStats()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error fetching fee stats: %s\n",
+				err.Error())
 			os.Exit(1)
 		}
-		fmt.Printf("%+v\n", *fs)
+		fmt.Print(fs)
 		return
 	}
 
@@ -551,12 +553,11 @@ func main() {
 	e, _ := mustReadTx(arg)
 	switch {
 	case *opt_post:
-		res := net.Post(e)
-		if res != nil {
+		res, err := net.Post(e)
+		if err == nil {
 			fmt.Print(stx.XdrToString(res))
-		}
-		if res == nil || res.Result.Code != stx.TxSUCCESS {
-			fmt.Fprint(os.Stderr, "Post transaction failed\n")
+		} else {
+			fmt.Fprintf(os.Stderr, "Post transaction failed: %s\n", err)
 			os.Exit(1)
 		}
 	case *opt_txhash:

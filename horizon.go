@@ -4,34 +4,39 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/xdrpp/stc/stcdetail"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
+	"github.com/xdrpp/stc/stcdetail"
+	"github.com/xdrpp/stc/stx"
 )
 
-func get(net *StellarNet, query string) []byte {
+// A communication error with horizon
+type horizonFailure string
+func (e horizonFailure) Error() string {
+	return string(e)
+}
+
+const badHorizonURL horizonFailure = "Missing or invalid horizon URL"
+
+func get(net *StellarNet, query string) ([]byte, error) {
 	if net.Horizon == "" {
-		fmt.Fprintln(os.Stderr, "Missing or invalid horizon URL\n")
-		return nil
+		return nil, badHorizonURL
 	}
 	resp, err := http.Get(net.Horizon + query)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return nil
+		return nil, err
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return nil
+		return nil, err
 	}
-	return body
+	return body, nil
 }
 
 type HorizonSigner struct {
@@ -59,7 +64,7 @@ func JsonNumberToI64(n json.Number) (int64, error) {
 	return val, nil
 }
 
-// Return the next sequence (1 + Sequence) number as an int64 (or 0 if
+// Return the next sequence number (1 + Sequence) as an int64 (or 0 if
 // an invalid sequence number was returned by horizon).
 func (ae *HorizonAccountEntry) NextSeq() int64 {
 	if val, err := JsonNumberToI64(ae.Sequence); err != nil || val + 1 <= 0 {
@@ -71,33 +76,33 @@ func (ae *HorizonAccountEntry) NextSeq() int64 {
 
 // Fetch the sequence number and signers of an account over the
 // network.
-func (net *StellarNet) GetAccountEntry(acct string) *HorizonAccountEntry {
-	if body := get(net, "accounts/"+acct); body != nil {
+func (net *StellarNet) GetAccountEntry(acct string) (
+	*HorizonAccountEntry, error) {
+	if body, err := get(net, "accounts/" + acct); err != nil {
+		return nil, err
+	} else {
 		var ae HorizonAccountEntry
-		if err := json.Unmarshal(body, &ae); err != nil {
-			return nil
+		if err = json.Unmarshal(body, &ae); err != nil {
+			return nil, err
 		}
-		return &ae
+		return &ae, nil
 	}
-	return nil
 }
 
 func (net *StellarNet) GetNetworkId() string {
 	if net.NetworkId != "" {
 		return net.NetworkId
 	}
-	body := get(net, "/")
-	if body == nil {
+	if body, err := get(net, "/"); err != nil {
 		return ""
+	} else {
+		var np struct { Network_passphrase string }
+		if err = json.Unmarshal(body, &np); err != nil {
+			return ""
+		}
+		net.NetworkId = np.Network_passphrase
+		return net.NetworkId
 	}
-	var np struct {
-		Network_passphrase string
-	}
-	if err := json.Unmarshal(body, &np); err != nil {
-		return ""
-	}
-	net.NetworkId = np.Network_passphrase
-	return net.NetworkId
 }
 
 var feeSuffix string = "_accepted_fee"
@@ -120,6 +125,25 @@ type FeeStats struct {
 		Percentile int
 		Fee uint32
 	}
+}
+
+func (fs FeeStats) String() string {
+	out := strings.Builder{}
+	rv := reflect.ValueOf(&fs).Elem()
+	tp := rv.Type()
+	for i := 0; i < tp.NumField(); i++ {
+		field := tp.Field(i).Name
+		if field != "Percentiles" {
+			fmt.Fprintf(&out, "%24s: %v\n", strings.ToLower(field),
+				rv.Field(i).Interface())
+		}
+	}
+	for i := range fs.Percentiles {
+		fmt.Fprintf(&out, "%9d_percentile_fee: %d\n",
+			fs.Percentiles[i].Percentile,
+			fs.Percentiles[i].Fee)
+	}
+	return out.String()
 }
 
 // Conservatively returns a fee that is a known fee for the target or
@@ -170,16 +194,16 @@ func getU32(i interface{}) (uint32, error) {
 }
 
 // Queries the network for the latest fee statistics.
-func (net *StellarNet) GetFeeStats() *FeeStats {
-	body := get(net, "fee_stats")
-	if body == nil {
-		return nil
+func (net *StellarNet) GetFeeStats() (*FeeStats, error) {
+	body, err := get(net, "fee_stats")
+	if err != nil {
+		return nil, err
 	}
 	dec := json.NewDecoder(bytes.NewReader(body))
 	dec.UseNumber()
 	var obj map[string]interface{}
-	if err := dec.Decode(&obj); err != nil {
-		return nil
+	if err = dec.Decode(&obj); err != nil {
+		return nil, err
 	}
 
 	var fs FeeStats
@@ -220,20 +244,20 @@ func (net *StellarNet) GetFeeStats() *FeeStats {
 	if fs.Min_accepted_fee == 0 || fs.Last_ledger_base_fee == 0 ||
 		len(fs.Percentiles) == 0 {
 		// Something's wrong; don't return garbage
-		return nil
+		return nil, horizonFailure("Garbled fee_stats")
 	}
 
 	sort.Slice(fs.Percentiles, func(i, j int) bool {
 		return fs.Percentiles[i].Percentile < fs.Percentiles[j].Percentile
 	})
-	return &fs
+	return &fs, nil
 }
 
 // Fetch the latest ledger header over the network.
-func (net *StellarNet) GetLedgerHeader() *LedgerHeader {
-	body := get(net, "ledgers?limit=1&order=desc")
-	if body == nil {
-		return nil
+func (net *StellarNet) GetLedgerHeader() (*LedgerHeader, error) {
+	body, err := get(net, "ledgers?limit=1&order=desc")
+	if err != nil {
+		return nil, err
 	}
 
 	var lhx struct {
@@ -243,35 +267,70 @@ func (net *StellarNet) GetLedgerHeader() *LedgerHeader {
 			}
 		} `json:"_embedded"`
 	}
-	if err := json.Unmarshal(body, &lhx); err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		return nil
+	if err = json.Unmarshal(body, &lhx); err != nil {
+		return nil, err
 	} else if len(lhx.Embedded.Records) == 0 {
-		fmt.Fprintln(os.Stderr, "Horizon returned no ledgers")
-		return nil
+		return nil, horizonFailure("Horizon returned no ledgers")
 	}
 
 	ret := &LedgerHeader{}
-	if err := stcdetail.XdrFromBase64(ret, lhx.Embedded.Records[0].Header_xdr);
+	if err = stcdetail.XdrFromBase64(ret, lhx.Embedded.Records[0].Header_xdr);
 	err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		return nil
+		return nil, err
 	}
-	return ret
+	return ret, nil
+}
+
+// An error representing the failure of a transaction submitted to the
+// Stellar network
+type TxFailure struct {
+	*TransactionResult
+}
+func (e TxFailure) Error() string {
+	switch e.Result.Code {
+	case stx.TxSUCCESS:
+		return "all operations succeeded"
+	case stx.TxFAILED:
+		out := strings.Builder{}
+		fmt.Println(&out, "one of the operations failed (none were applied)")
+		stcdetail.XdrToTxrep(&out, &e.Result)
+		return out.String()
+	case stx.TxTOO_EARLY:
+		return "ledger closeTime before minTime"
+	case stx.TxTOO_LATE:
+		return "ledger closeTime after maxTime"
+	case stx.TxMISSING_OPERATION:
+		return "no operation was specified"
+	case stx.TxBAD_SEQ:
+		return "sequence number does not match source account"
+	case stx.TxBAD_AUTH:
+		return "too few valid signatures / wrong network"
+	case stx.TxINSUFFICIENT_BALANCE:
+		return "fee would bring account below reserve"
+	case stx.TxNO_ACCOUNT:
+		return "source account not found"
+	case stx.TxINSUFFICIENT_FEE:
+		return "fee is too small"
+	case stx.TxBAD_AUTH_EXTRA:
+		return "unused signatures attached to transaction"
+	case stx.TxINTERNAL_ERROR:
+		return "an unknown error occured"
+	default:
+		return e.Result.Code.String()
+	}
 }
 
 // Post a new transaction to the network.
-func (net *StellarNet) Post(e *TransactionEnvelope) *TransactionResult {
+func (net *StellarNet) Post(e *TransactionEnvelope) (
+	*TransactionResult, error) {
 	if net.Horizon == "" {
-		fmt.Fprintln(os.Stderr, "Missing or invalid horizon URL\n")
-		return nil
+		return nil, badHorizonURL
 	}
 	tx := stcdetail.XdrToBase64(e)
-	resp, err := http.PostForm(net.Horizon+"/transactions",
+	resp, err := http.PostForm(net.Horizon + "/transactions",
 		url.Values{"tx": {tx}})
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return nil
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -283,8 +342,7 @@ func (net *StellarNet) Post(e *TransactionEnvelope) *TransactionResult {
 		}
 	}
 	if err = js.Decode(&res); err != nil {
-		fmt.Fprintf(os.Stderr, "PostTransaction: %s\n", err.Error())
-		return nil
+		return nil, err
 	}
 	if res.Result_xdr == "" {
 		res.Result_xdr = res.Extras.Result_xdr
@@ -292,8 +350,10 @@ func (net *StellarNet) Post(e *TransactionEnvelope) *TransactionResult {
 
 	var ret TransactionResult
 	if err = stcdetail.XdrFromBase64(&ret, res.Result_xdr); err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid result_xdr\n")
-		return nil
+		return nil, err
 	}
-	return &ret
+	if ret.Result.Code != stx.TxSUCCESS {
+		return nil, TxFailure{&ret}
+	}
+	return &ret, nil
 }
