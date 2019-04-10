@@ -4,6 +4,8 @@ import "fmt"
 import "os"
 import "strings"
 
+const tabwidth = 8
+
 type TokenType = int
 
 type Token struct {
@@ -18,7 +20,8 @@ const EOFRune rune = -1
 type Lexer struct {
 	filename string
 	input string
-	lineno int
+	lineno, colno int
+	lastTokLine, lastTokCol int
 	midline bool
 	output *rpc_syms
 	blockComment string
@@ -77,11 +80,22 @@ func (l *Lexer) advance(length int) {
 	if length < 0 || length > len(l.input) {
 		panic("Lexer::advance: length out of range")
 	}
-	if length > 0 {
-		l.midline = l.input[length-1] != '\n'
-		l.lineno += strings.Count(l.input[:length], "\n")
-		l.input = l.input[length:]
+	for i := 0; i < length; i++ {
+		switch l.input[i] {
+		case '\n':
+			l.lineno++
+			l.colno = 0
+			l.midline = false
+		case '\t':
+			l.colno = (l.colno + tabwidth) % tabwidth
+		case ' ':
+			l.colno++
+		default:
+			l.colno++
+			l.midline = true
+		}
 	}
+	l.input = l.input[length:]
 }
 
 func (l *Lexer) findEOL() int {
@@ -92,6 +106,14 @@ func (l *Lexer) findEOL() int {
 		return n
 	}
 	return len(l.input)
+}
+
+func (l *Lexer) RestOfLine() string {
+	i := l.findEOL()
+	ret := l.input[:i]
+	l.advance(i)
+	l.skipLine()
+	return ret
 }
 
 func (l *Lexer) skipWS() bool {
@@ -119,90 +141,78 @@ func (l *Lexer) skipWSNL() bool {
 	return false
 }
 
-func (l *Lexer) findSlash() (pos int, column int) {
-	for i := 0;; i++ {
-		switch {
-		case i + 2 >= len(l.input):
-			return -1, -1
-		case l.input[i] == ' ':
-			column++
-		case l.input[i] == '\t':
-			column += 8
-		case l.input[i] == '/':
-			return i, column
-		default:
-			return -1, -1
-		}
+// Find a comment start, where tp should be '*' for block comments and
+// '/' for line comments.
+func (l *Lexer) findCommentStart(tp byte) bool {
+	i := strings.IndexFunc(l.input, func(c rune) bool {
+		return c != ' ' && c != '\t'
+	})
+	if i >= 0 && len(l.input) - i >= 2 &&
+		l.input[i] == '/' && l.input[i+1] == tp {
+		l.advance(i)
+		return true
 	}
+	return false
 }
 
-func (l *Lexer) getLineComment() (comment string, column int) {
-	i, column := l.findSlash()
-	if i >= 0 && l.input[i+1] == '/' {
-		comment = l.input[i:l.findEOL()]
-		l.skipLine()
+func (l *Lexer) getLineComment() string {
+	if !l.findCommentStart('/') {
+		return ""
 	}
-	return
+	if l.midline {
+		return l.RestOfLine()
+	}
+	out, column := strings.Builder{}, -1
+	for l.findCommentStart('/') {
+		if l.colno != column {
+			out.Reset()
+			column = l.colno
+		} else {
+			out.WriteByte('\n')
+		}
+		out.WriteString(l.RestOfLine())
+	}
+	return out.String()
 }
 
-func stripIndent(columns int, input string) string {
-	var i int
-loop:
-	for i = 0; columns > 0 && i < len(input); i++ {
-		switch input[i] {
-		case ' ':
-			columns--
-		case '\t':
-			columns -= 8
-		default:
-			break loop
+func stripToColumn(column int, input string) string {
+	i, c := 0, 0
+	for ; c < column && i < len(input); i++ {
+		if input[i] == '\t' {
+			c = (c + tabwidth) % tabwidth
+		} else if input[i] == ' ' {
+			c++
+		} else {
+			break
 		}
 	}
-	return input[i:]
+	if c <= column {
+		return input[i:]
+	}
+	return strings.Repeat(" ", c - column) + input[i:]
 }
 
 func (l *Lexer) skipComment() bool {
-	i, column := l.findSlash()
-	if i < 0 || (l.input[i+1] != '*' && l.input[i+1] != '/') {
+	wasMidline := l.midline
+	if comment := l.getLineComment(); comment != "" {
+		l.clearComment()
+		if !wasMidline {
+			l.blockComment = comment
+		}
+		return true
+	}
+	if !l.findCommentStart('*') {
 		return false
 	}
 
 	l.clearComment()
-	out := &strings.Builder{}
-
-	if l.input[i+1] == '/' {
-		if l.midline {
-			l.skipLine()
-			return true
-		}
-		com, col := l.getLineComment()
-		out.WriteString(com)
-		for {
-			com, col2 := l.getLineComment()
-			if col2 < 0 {
-				break
-			}
-			if col2 == col {
-				out.WriteByte('\n')
-				out.WriteString(com)
-			} else {
-				out.Reset()
-				out.WriteString(com)
-				col = col2
-			}
-		}
-		l.blockComment = out.String()
-		return true
-	}
-
-	j := strings.Index(l.input[i+2:], "*/")
+	column, out := l.colno, &strings.Builder{}
+	j := strings.Index(l.input[2:], "*/")
 	if j < 0 {
-		l.advance(i)
 		return true
 	}
-	comment := l.input[i:i+j+4]
-	wasMidline := l.midline
-	l.advance(i+j+4)
+	comment := l.input[:j+4]
+	l.advance(j+4)
 	if wasMidline || !l.skipWSNL() {
 		return true
 	}
@@ -213,7 +223,7 @@ func (l *Lexer) skipComment() bool {
 			first = false
 		} else {
 			out.WriteByte('\n')
-			line = stripIndent(column, line)
+			line = stripToColumn(column, line)
 		}
 		line = strings.TrimSuffix(line, "\r")
 		out.WriteString(line)
@@ -226,6 +236,8 @@ func (l *Lexer) makeToken(typ TokenType, n int) *Token {
 	if n <= 0 || n > len(l.input) {
 		panic("Lexer::makeToken: length out of range")
 	}
+	l.lastTokLine = l.lineno
+	l.lastTokCol = l.colno
 	t := Token {
 		Type: typ,
 		Value: l.input[:n],
@@ -233,7 +245,7 @@ func (l *Lexer) makeToken(typ TokenType, n int) *Token {
 	}
 	l.clearComment()
 	l.advance(n)
-	if com, col := l.getLineComment(); col >= 0 {
+	if com := l.getLineComment(); com != "" {
 		t.LineComment = com
 	}
 	return &t
@@ -316,27 +328,27 @@ func (l *Lexer) integer() *Token {
 }
 
 func (l *Lexer) next() *Token {
-again:
-	l.skipSpace()
-	switch c := l.at(0); {
-	case c == EOFRune:
-		return nil
-	case strings.ContainsRune("=;{}<>[]*,:()", c):
-		return l.makeToken(TokenType(c), 1)
-	case isIdStart(c):
-		t := l.identifier()
-		if kw, ok := keywords[t.Value]; ok {
-			t.Type = kw
+	for {
+		l.skipSpace()
+		switch c := l.at(0); {
+		case c == EOFRune:
+			return nil
+		case strings.ContainsRune("=;{}<>[]*,:()", c):
+			return l.makeToken(TokenType(c), 1)
+		case isIdStart(c):
+			t := l.identifier()
+			if kw, ok := keywords[t.Value]; ok {
+				t.Type = kw
+			}
+			return t
+		case isDigit(c) || c == '+' || c == '-':
+			return l.integer()
+		case c == '%' && l.colno == 0:
+			l.skipLine()
+		default:
+			l.makeToken(-1, 1)
+			l.Error(fmt.Sprintf("bad character %q", c))
 		}
-		return t
-	case isDigit(c) || c == '+' || c == '-':
-		return l.integer()
-	case c == '%' && !l.midline:
-		l.skipLine()
-		goto again
-	default:
-		panic(fmt.Sprintf("%s:%d: bad character %q",
-			l.filename, l.lineno, c))
 	}
 }
 
@@ -363,5 +375,6 @@ func (l *Lexer) Error(e string) {
 }
 
 func (l *Lexer) Warn(e string) {
-	fmt.Fprintf(os.Stderr, "%s:%d: %s\n", l.filename, l.lineno, e)
+	fmt.Fprintf(os.Stderr, "%s:%d:%d: %s\n", l.filename, l.lastTokLine,
+		l.lastTokCol+1, e)
 }

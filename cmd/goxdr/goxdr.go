@@ -467,7 +467,7 @@ func (v *%[1]s) XdrValue() interface{} {
 `func (v *%[1]s) XdrInitialize() {
 	switch %[1]s(0) {
 	case %[2]s:
-    default:
+	default:
 		if *v == %[1]s(0) { *v = %[3]s }
 	}
 }
