@@ -136,7 +136,7 @@ func fixTx(net *StellarNet, e *TransactionEnvelope) {
 	async.RunVoid(func(){
 		if h, err := net.GetFeeStats(); err == nil {
 			// 20 should be a parameter
-			e.Tx.Fee = h.Percentile(20)
+			e.Tx.Fee = h.Percentile(20) * uint32(len(e.Tx.Operations))
 		}
 	})
 	if !isZeroAccount(&e.Tx.SourceAccount) {
