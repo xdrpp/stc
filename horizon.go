@@ -292,7 +292,7 @@ func (e TxFailure) Error() string {
 		return "all operations succeeded"
 	case stx.TxFAILED:
 		out := strings.Builder{}
-		fmt.Println(&out, "one of the operations failed (none were applied)")
+		fmt.Fprintln(&out, "one of the operations failed (none were applied)")
 		stcdetail.XdrToTxrep(&out, &e.Result)
 		return out.String()
 	case stx.TxTOO_EARLY:
