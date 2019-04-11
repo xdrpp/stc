@@ -8,7 +8,7 @@ goxdr - Go XDR compiler
 
 # SYNOPSIS
 
-goxdr [-b] [-o _output.go_] [-p _package_] [_file1.x_ [_file2.x_ ...]]
+goxdr [-b] [-o _output.go_] [-i _import_] [-p _package_] [_file.x_ ...]
 
 # DESCRIPTION
 
@@ -117,6 +117,22 @@ func (u *Myunion) One() *int32 {...}
 func (u *Myunion) Two() *string {...}
 func XDR_Myunion(x XDR, name string, v *Myunion) {...}
 ~~~~
+
+## Convenience methods
+
+XDR `enum` types have a method `XdrEnumNames() map[int32]string` that
+returns a mapping from numeric values to the names assigned to those
+values.
+
+XDR `union` types have an `XdrValid() bool` method that returns
+whether the discriminant is in a valid state.  For `union` types that
+are not valid by default, because go's default 0 value does not
+correspond to a valid discriminant, a method `XdrInitialize()` places
+them in a valid state.  Similarly, `enum` types that can't be
+statically verified to be valid with value 0 (either because no name
+is assigned to constant 0, or because names are assigned to constants
+in a different file), have an `XdrInitialize()` method that sets them
+to the first name in the `enum` definition.
 
 ## The XDR interface
 
@@ -349,9 +365,13 @@ each XDR input file to avoid including the boilerplate, then run goxdr
 with no input files (`goxdr -o goxdr_boilerplate.go`) to get one copy
 of the boilerplate.
 
-`-i` _path_
+`-i` _import_path_
 :	Add the directive <tt>import . "_path_"</tt> at the top of the
-output file.
+output file.  This is needed when XDR files in the current package
+require XDR structures defined in a different package, since XDR
+itself provides no way to specify package scoping.  Note that when
+importing generated XDR from another package, you will want to use the
+`-b` flag to avoid duplicating the boilerplate code.
 
 `-o` _output.go_
 :	Write the output to file _output.go_ instead of standard output.
