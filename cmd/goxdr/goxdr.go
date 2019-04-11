@@ -732,7 +732,7 @@ func (v *%[1]s) XdrMarshal(x XDR, name string) {
 		for i := range r.fields {
 			for j := range r.fields[i].cases {
 				tag := r.fields[i].cases[j]
-				if val, _ := e.get_bound(tag); val == "0" {
+				if val, _ := e.get_bound(tag); val == "0" || val == "FALSE" {
 					goto skip
 				}
 				if alltags.Len() > 0 {
@@ -741,12 +741,16 @@ func (v *%[1]s) XdrMarshal(x XDR, name string) {
 				alltags.WriteString(tag.String())
 			}
 		}
+		// Note we declare a variable zero so that it works with
+		// built-in types, especially bool, because go won't allow
+		// bool(0) as an expression.
 		fmt.Fprintf(out,
 `func (v *%[1]s) XdrInitialize() {
-	switch %[2]s(0) {
+	var zero %[2]s
+	switch zero {
 	case %[3]s:
 	default:
-		if v.%[4]s == %[2]s(0) { v.%[4]s = %[5]s }
+		if v.%[4]s == zero { v.%[4]s = %[5]s }
 	}
 }
 `, r.id, r.tagtype, alltags.String(), r.tagid, r.fields[0].cases[0])
