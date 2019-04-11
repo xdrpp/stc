@@ -22,7 +22,7 @@ represent identical go types.
 goxdr-compiled XDR types map to the most intuitive go equivalent:
 strings map to strings, pointers map to pointers, fixed-size arrays
 map to arrays, and variable-length arrays map to slices, without new
-type declarations that might complicating assignment.  E.g., the XDR
+type declarations that might complicate assignment.  E.g., the XDR
 `typedef string mystring<32>` is just a string, and so can be assigned
 from a string.  This does mean you can assign a string longer than 32
 bytes, but length limits are rigorously enforced during both
@@ -356,14 +356,18 @@ goxdr supports the following options:
 
 `-b`
 :	goxdr outputs boilerplate code to assist in marshaling and
-unmarshaling values.  Only one copy of this boilerplate should be
-included in a package.  If you use goxdr to compile all XDR input
-files to a single go file (the recommended usage), then you will get
-only one copy of the boilerplate.  However, if you compile different
-XDR files into different go files, you will need to specify `-b` with
-each XDR input file to avoid including the boilerplate, then run goxdr
-with no input files (`goxdr -o goxdr_boilerplate.go`) to get one copy
-of the boilerplate.
+unmarshaling values, including code for interfaces such as `XDR` and
+`XdrNum32` as well as helper types implementing these interfaces, such
+as `XdrInt32`.  Only one copy of this boilerplate should be included
+in a package.  If you use goxdr to compile all XDR input files to a
+single go file (the recommended usage), then you will get only one
+copy of the boilerplate.  However, if you compile different XDR files
+into different go files, you will need to specify `-b` with each XDR
+input file to avoid including the boilerplate, then run goxdr with no
+input files (`goxdr -o goxdr_boilerplate.go`) to get one copy of the
+boilerplate.  You should also use this option if you are importing
+another package that already includes the boilerplate using the `-i`
+option below.
 
 `-i` _import_path_
 :	Add the directive <tt>import . "_path_"</tt> at the top of the
