@@ -18,57 +18,37 @@ import (
 	"github.com/xdrpp/stc/stx"
 )
 
-type acctInfo struct {
-	field   string
-	name    string
-	signers []HorizonSigner
-}
-type xdrGetAccounts struct {
-	accounts map[stx.AccountID]*acctInfo
-}
-
-func (xp *xdrGetAccounts) Sprintf(f string, args ...interface{}) string {
-	return fmt.Sprintf(f, args...)
-}
-func (xp *xdrGetAccounts) Marshal(field string, i stx.XdrType) {
-	switch v := i.(type) {
-	case *stx.AccountID:
-		if _, ok := xp.accounts[*v]; !ok {
-			xp.accounts[*v] = &acctInfo{field: field}
-		}
-	case stx.XdrAggregate:
-		v.XdrMarshal(xp, field)
-	}
-}
-
 func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
-	xga := xdrGetAccounts{map[stx.AccountID]*acctInfo{}}
-	e.XdrMarshal(&xga, "")
-	c := make(chan struct{})
-	for ac, infp := range xga.accounts {
-		go func(ac stx.AccountID, infp *acctInfo) {
-			var ae *HorizonAccountEntry
-			if usenet {
-				ae, _ = net.GetAccountEntry(ac.String())
+	accounts := make(map[stx.AccountID][]HorizonSigner)
+	ForEachXdr(e, func(t stx.XdrType)bool {
+		if ac, ok := t.(*stx.AccountID); ok {
+			if !isZeroAccount(ac) {
+				accounts[*ac] = []HorizonSigner{{Key: ac.String()}}
 			}
-			if ae != nil {
-				infp.signers = ae.Signers
-			} else {
-				infp.signers = []HorizonSigner{{Key: ac.String()}}
-			}
-			c <- struct{}{}
-		}(ac, infp)
-	}
-	for i := 0; i < len(xga.accounts); i++ {
-		<-c
+			return true
+		}
+		return false
+	})
+
+	if usenet {
+		c := make(chan func())
+		for ac := range accounts {
+			go func(ac stx.AccountID) {
+				if ae, err := net.GetAccountEntry(ac.String()); err == nil {
+					c <- func() { accounts[ac] = ae.Signers }
+				} else {
+					c <- func() {}
+				}
+			}(ac)
+		}
+		for i := len(accounts); i > 0; i-- {
+			(<-c)()
+		}
 	}
 
-	for ac, infp := range xga.accounts {
-		if isZeroAccount(&ac) {
-			continue
-		}
+	for ac, signers := range accounts {
 		acs := ac.String()
-		for _, signer := range infp.signers {
+		for _, signer := range signers {
 			var comment string
 			if acs != signer.Key {
 				comment = fmt.Sprintf("signer for account %s", acs)

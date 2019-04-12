@@ -24,7 +24,7 @@ type Async struct {
 }
 
 func (a *Async) Run(fn func()error) {
-	c := make(chan error)
+	c := make(chan error, 1)
 	a.jobs = append(a.jobs, c)
 	go func() {
 		c <- fn()
@@ -32,7 +32,7 @@ func (a *Async) Run(fn func()error) {
 }
 
 func (a *Async) RunVoid(fn func()) {
-	c := make(chan error)
+	c := make(chan error, 1)
 	a.jobs = append(a.jobs, c)
 	go func() {
 		fn()
@@ -42,7 +42,7 @@ func (a *Async) RunVoid(fn func()) {
 
 // Wait for all jobs that have been run and return their errors (if
 // any).  Leaves the Async in a pristine state that can be reused.
-func (a *Async) Wait() Errors {
+func (a *Async) Wait() error {
 	jobs := a.jobs
 	a.jobs = nil
 	var errs Errors
@@ -52,5 +52,8 @@ func (a *Async) Wait() Errors {
 			errs = append(errs, e)
 		}
 	}
-	return errs
+	if errs != nil {
+		return errs
+	}
+	return nil
 }
