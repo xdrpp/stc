@@ -46,7 +46,7 @@ func camelize(s string) string {
 	return ret.String()
 }
 
-func gen(prefix string, u union) {
+func gen(prefix string, u union, useArmName bool) {
 	typ := reflect.TypeOf(u.XdrValue()).Name()
 	tag := u.XdrUnionTag().(enum)
 	var evs enumVals
@@ -57,6 +57,11 @@ func gen(prefix string, u union) {
 	for _, ev := range evs {
 		tag.SetU32(uint32(ev.val))
 		gentype := camelize(ev.symbol)
+		if useArmName {
+			if armname := u.XdrUnionBodyName(); armname != "" {
+				gentype = armname
+			}
+		}
 		arm := u.XdrUnionBody()
 		if arm == nil {
 			fmt.Printf(
@@ -69,6 +74,11 @@ func (%[1]s) To%[2]s() (ret %[3]s) {
 `, gentype, typ, prefix+typ, u.XdrUnionTagName(), prefix+ev.symbol)
 		} else {
 			armtype := reflect.TypeOf(arm).Elem().Name()
+			if armtype == "" {
+				armtype = reflect.TypeOf(arm).Elem().String()
+			} else if unicode.IsUpper(rune(armtype[0])) {
+				armtype = prefix + armtype
+			}
 			fmt.Printf(
 `type %[1]s %[7]s
 func (arg %[1]s) To%[2]s() (ret %[3]s) {
@@ -78,14 +88,8 @@ func (arg %[1]s) To%[2]s() (ret %[3]s) {
 }
 
 `, gentype, typ, prefix+typ, u.XdrUnionTagName(), prefix+ev.symbol,
-				u.XdrUnionBodyName(), prefix+armtype)
+				u.XdrUnionBodyName(), armtype)
 		}
-	}
-}
-
-func dotypes(prefix string, tps ...union) {
-	for _, t := range tps {
-		gen(prefix, t)
 	}
 }
 
@@ -95,7 +99,7 @@ func main() {
 import "github.com/xdrpp/stc/stx"
 
 `)
-	dotypes("stx.",
-		&stx.XdrAnon_Operation_Body{},
-	)
+	gen("stx.", &stx.XdrAnon_Operation_Body{}, false)
+	gen("stx.", &stx.SignerKey{}, false)
+	gen("stx.", &stx.Memo{}, false)
 }

@@ -17,10 +17,47 @@ import (
 
 type TxrepError = stcdetail.TxrepError
 type PublicKey = stx.PublicKey
+type AccountID = stx.AccountID
 type SignerKey = stx.SignerKey
 type Signature = stx.Signature
 type TransactionResult = stx.TransactionResult
 type LedgerHeader = stx.LedgerHeader
+
+func NativeAsset() stx.Asset {
+	return stx.Asset {
+		Type: stx.ASSET_TYPE_NATIVE,
+	}
+}
+
+func MkAsset(acc AccountID, code string) stx.Asset {
+	var ret stx.Asset
+	if len(code) <= 4 {
+		ret.Type = stx.ASSET_TYPE_CREDIT_ALPHANUM4
+		copy(ret.AlphaNum4().AssetCode[:], code)
+		ret.AlphaNum4().Issuer = acc
+	} else if len(code) <= 12 {
+		ret.Type = stx.ASSET_TYPE_CREDIT_ALPHANUM12
+		copy(ret.AlphaNum12().AssetCode[:], code)
+		ret.AlphaNum4().Issuer = acc
+	} else {
+		stx.XdrPanic("MkAsset: %q exceeds 12 characters", code)
+	}
+	return ret
+}
+
+func MkAllowTrustAsset(code string) stx.AllowTrustAsset {
+	var ret stx.AllowTrustAsset
+	if len(code) <= 4 {
+		ret.Type = stx.ASSET_TYPE_CREDIT_ALPHANUM4
+		copy(ret.AssetCode4()[:], code)
+	} else if len(code) <= 12 {
+		ret.Type = stx.ASSET_TYPE_CREDIT_ALPHANUM12
+		copy(ret.AssetCode12()[:], code)
+	} else {
+		stx.XdrPanic("MkAllowTrustAsset: %q exceeds 12 characters", code)
+	}
+	return ret
+}
 
 type TransactionEnvelope struct {
 	*stx.TransactionEnvelope
@@ -32,6 +69,29 @@ func NewTransactionEnvelope() *TransactionEnvelope {
 		TransactionEnvelope: &stx.TransactionEnvelope{},
 		Help:                nil,
 	}
+}
+
+// Interface for placeholder types that are named by camel-cased
+// versions of the OperationType enum and can be transformed into the
+// body of an Operation
+type OperationBody interface {
+	ToXdrAnon_Operation_Body() stx.XdrAnon_Operation_Body
+}
+
+// Append an operation to a transaction envelope.
+func (txe *TransactionEnvelope) Append(
+	sourceAccount *stx.AccountID,
+	body OperationBody) {
+	if len(txe.Tx.Operations) >= stx.MAX_OPS_PER_TX {
+		stx.XdrPanic("TransactionEnvelope.Op: attempt to exceed %d operations",
+			stx.MAX_OPS_PER_TX)
+	} else if len(txe.Signatures) > 0 {
+		stx.XdrPanic("TransactionEnvelope.Op: transaction already signed")
+	}
+	txe.Tx.Operations = append(txe.Tx.Operations, stx.Operation {
+		SourceAccount: sourceAccount,
+		Body: body.ToXdrAnon_Operation_Body(),
+	})
 }
 
 func (txe *TransactionEnvelope) GetHelp(name string) bool {
@@ -179,7 +239,14 @@ func (ax *assignXdr) Marshal(name string, val stx.XdrType) {
 	}
 	if v := reflect.ValueOf(val.XdrPointer()); v.Kind() == reflect.Ptr &&
 		reflect.TypeOf(ax.fields[0]).AssignableTo(v.Type().Elem()) {
-		v.Elem().Set(reflect.ValueOf(ax.fields[0]))
+		f := reflect.ValueOf(ax.fields[0])
+		if b, ok := val.(interface{XdrBound() uint32}); ok &&
+			(f.Kind() == reflect.Slice || f.Kind() == reflect.String) &&
+			uint(f.Len()) > uint(b.XdrBound()) {
+			stx.XdrPanic("Set: length %d exceeded for %s",
+				b.XdrBound(), name)
+		}
+		v.Elem().Set(f)
 		ax.fields = ax.fields[1:]
 		return
 	}

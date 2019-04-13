@@ -192,17 +192,3 @@ func (pk *SignerKey) Hint() SignatureHint {
 		panic(StrKeyError("Invalid signer key type"))
 	}
 }
-
-func (pk *SignerKey) ToSignerKey() *SignerKey {
-	return pk
-}
-
-func (pk *PublicKey) ToSignerKey() *SignerKey {
-	switch pk.Type {
-	case PUBLIC_KEY_TYPE_ED25519:
-		ret := SignerKey { Type: SIGNER_KEY_TYPE_ED25519 }
-		*ret.Ed25519() = *pk.Ed25519()
-		return &ret
-	}
-	panic(StrKeyError("Invalid public key type"))
-}
