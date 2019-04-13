@@ -2,7 +2,7 @@ DESTDIR =
 PREFIX = /usr/local
 MANDIR = $(PREFIX)/share/man
 
-BUILT_SOURCES = stx/xdr_generated.go
+BUILT_SOURCES = stx/xdr_generated.go uhelper.go
 XDRS = xdr/Stellar-SCP.x xdr/Stellar-ledger-entries.x			\
 xdr/Stellar-ledger.x xdr/Stellar-overlay.x xdr/Stellar-transaction.x	\
 xdr/Stellar-types.x
@@ -44,6 +44,10 @@ stx/xdr_generated.go: cmd/goxdr/goxdr $(XDRS)
 		echo mv -f $@~ $@; \
 		mv -f $@~ $@; \
 	fi
+
+uhelper.go: stx/xdr_generated.go uniontool/uniontool.go
+	go run uniontool/uniontool.go > $@~
+	mv -f $@~ $@
 
 clean:
 	for dir in cmd/goxdr cmd/stc; do \

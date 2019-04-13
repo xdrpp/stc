@@ -1,4 +1,5 @@
 *~
 go.sum
+uhelper.go
 xdr
 xdr_generated.go

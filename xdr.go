@@ -253,6 +253,6 @@ current aggregate.  For example, it is valid to say:
 	Set(&asset, ASSET_TYPE_CREDIT_ALPHANUM12, otherAsset.AlphaNum12)
 
 */
-func
-Set(t stx.XdrAggregate, fieldValues ...interface{}) {
-t.XdrMarshal(&assignXdr{fieldValues}, "") }
+func Set(t stx.XdrAggregate, fieldValues ...interface{}) {
+	t.XdrMarshal(&assignXdr{fieldValues}, "")
+}
