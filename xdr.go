@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
+	"reflect"
 	"strings"
 )
 
@@ -139,3 +140,119 @@ func (forEachXdr) Sprintf(string, ...interface{}) string {
 func ForEachXdr(t stx.XdrAggregate, fn func(stx.XdrType)bool) {
 	t.XdrMarshal(forEachXdr{fn}, "")
 }
+
+type assignXdr struct {
+	fields []interface{}
+}
+
+func copyOpaqueArray(to stx.XdrArrayOpaque, from interface{}, name string) {
+	switch f := from.(type) {
+	case []byte:
+		if len(f) > len(to) {
+			stx.XdrPanic("Set: length %d exceeded for %s",
+				len(to), name)
+		}
+		n := copy(to, f)
+		copy(to[n:], make([]byte, len(to)-n))
+	case string:
+		if len(f) > len(to) {
+			stx.XdrPanic("Set: length %d exceeded for %s",
+				len(to), name)
+		}
+		n := copy(to, f)
+		copy(to[n:], make([]byte, len(to)-n))
+	default:
+		vf := reflect.ValueOf(from)
+		if vf.Kind() != reflect.Array ||
+			vf.Elem().Kind() != reflect.Uint8 ||
+			vf.Len() != len(to) {
+			stx.XdrPanic("Set: cannot assign %T to %s (type opaque[%d])",
+				from, name, len(to))
+		}
+		reflect.Copy(reflect.ValueOf(to), vf)
+	}
+}
+
+func (ax *assignXdr) Marshal(name string, val stx.XdrType) {
+	if len(ax.fields) == 0 {
+		stx.XdrPanic("Set: too few arguments at %s", name)
+	}
+	if v := reflect.ValueOf(val.XdrPointer()); v.Kind() == reflect.Ptr &&
+		reflect.TypeOf(ax.fields[0]).AssignableTo(v.Type().Elem()) {
+		v.Elem().Set(reflect.ValueOf(ax.fields[0]))
+		ax.fields = ax.fields[1:]
+		return
+	}
+	switch t := val.(type) {
+	case stx.XdrPtr:
+		// Don't recurse, val should have been a pointer
+		break
+	case stx.XdrVec:
+		// Don't recurse, val should have been a slice
+		break
+	case stx.XdrArrayOpaque:
+		copyOpaqueArray(t, ax.fields[0], name)
+		ax.fields = ax.fields[1:]
+		return
+	case stx.XdrAggregate:
+		t.XdrMarshal(ax, name)
+		return
+	}
+	stx.XdrPanic("Set: cannot assign %T to %s (type %T)",
+		ax.fields[0], name, val.XdrValue())
+}
+
+func (*assignXdr) Sprintf(format string, args ...interface{}) string {
+	return fmt.Sprintf(format, args...)
+}
+
+/*
+
+Assign a set of values to successive fields of an XDR structure in a
+type-safe way, flattening out nested structures.  For example, given
+the following XDR:
+
+	union Asset switch (AssetType type) {
+	case ASSET_TYPE_NATIVE: // Not credit
+		void;
+
+	case ASSET_TYPE_CREDIT_ALPHANUM4:
+		struct {
+			opaque assetCode[4]; // 1 to 4 characters
+			AccountID issuer;
+		} alphaNum4;
+
+	case ASSET_TYPE_CREDIT_ALPHANUM12:
+		struct {
+			opaque assetCode[12]; // 5 to 12 characters
+			AccountID issuer;
+		} alphaNum12;
+	};
+
+You can initalize it with the following:
+
+	var asset Asset
+	Set(&asset, ASSET_TYPE_CREDIT_ALPHANUM12, "Asset Code", AccountID{})
+
+Fixed-length arrays of size n must be assigned from n successive
+arguments passed to Set and cannot be passed as an array.  Slices, by
+contrast, must be assigned from slices.  The one exception is
+fixed-size array of bytes opaque[n], which can be initialized from a
+string, a slice []byte, or an array [n]byte.  The string or slice may
+be shorter than n (in which case the remainig bytes are filled with
+0), but a byte array must be exactly the same length.  (If you really
+must assign from a shorter fixed-length byte array, just slice the
+array.)
+
+Note that aggregates can be passed as arguments to assign, in which
+case Set will take fewer arguments.  The recursive traversal of
+structures stops when it is possible to assign the next value to the
+current aggregate.  For example, it is valid to say:
+
+	var asset Asset
+	Set(&asset, ASSET_TYPE_CREDIT_ALPHANUM12, otherAsset.AlphaNum12)
+
+*/
+func
+Set(t stx.XdrAggregate, fieldValues ...interface{}) {
+t.XdrMarshal(&assignXdr{fieldValues}, "") }
