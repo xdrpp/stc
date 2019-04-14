@@ -46,7 +46,7 @@ func camelize(s string) string {
 	return ret.String()
 }
 
-func gen(prefix string, u union, useArmName bool,
+func genTypes(prefix string, u union, useArmName bool,
 	comfn func([]interface{})) {
 	typ := reflect.TypeOf(u.XdrValue()).Name()
 	tag := u.XdrUnionTag().(enum)
@@ -101,8 +101,64 @@ func (arg %[1]s) To%[2]s() (ret %[3]s) {
 	}
 }
 
+func genFuncs(prefix string, u union, useArmName bool,
+	comfn func([]interface{})) {
+	typ := reflect.TypeOf(u.XdrValue()).Name()
+	tag := u.XdrUnionTag().(enum)
+	var evs enumVals
+	for k, v := range tag.XdrEnumNames() {
+		evs = append(evs, enumVal{k, v})
+	}
+	sort.Sort(evs)
+	for _, ev := range evs {
+		tag.SetU32(uint32(ev.val))
+		gentype := camelize(ev.symbol)
+		armname := u.XdrUnionBodyName()
+		if useArmName && armname != "" {
+			gentype = armname
+		}
+		arm := u.XdrUnionBody()
+		if arm == nil {
+			if comfn != nil {
+				comfn([]interface{}{typ, u.XdrUnionTagName(),
+					gentype, ev.symbol})
+			}
+			fmt.Printf(
+`func %[1]s() %[3]s {
+	return %[3]s {
+		%[4]s: %[5]s,
+	}
+}
+
+`, gentype, typ, prefix+typ, u.XdrUnionTagName(), prefix+ev.symbol)
+		} else {
+			armtype := reflect.TypeOf(arm).Elem().Name()
+			if armtype == "" {
+				armtype = reflect.TypeOf(arm).Elem().String()
+			} else if unicode.IsUpper(rune(armtype[0])) {
+				armtype = prefix + armtype
+			}
+			if comfn != nil {
+				comfn([]interface{}{typ, u.XdrUnionTagName(),
+					gentype, ev.symbol, armname, armtype})
+			}
+			fmt.Printf(
+`func %[1]s(arg %[7]s) (ret %[3]s) {
+	ret.%[4]s = %[5]s
+	*ret.%[6]s() = arg
+	return
+}
+
+`, gentype, typ, prefix+typ, u.XdrUnionTagName(), prefix+ev.symbol,
+				u.XdrUnionBodyName(), armtype)
+		}
+	}
+}
+
+
 func genericComment(args []interface{}) {
-	fmt.Printf("// Helper type for initializing a %[1]s with %[2]s == %[4]s\n",
+	fmt.Printf("// Helper function for initializing a %[1]s with\n" +
+		"// %[2]s == %[4]s\n",
 		args...)
 }
 
@@ -112,7 +168,8 @@ func main() {
 import "github.com/xdrpp/stc/stx"
 
 `)
-	gen("stx.", &stx.XdrAnon_Operation_Body{}, false, func(args []interface{}) {
+	genTypes("stx.", &stx.XdrAnon_Operation_Body{}, false,
+		func(args []interface{}) {
 		if len(args) <= 4 {
 			fmt.Printf(
 `// %[3]s is an empty type that can be passed to
@@ -128,6 +185,6 @@ import "github.com/xdrpp/stc/stx"
 `, args...)
 		}
 	})
-	gen("stx.", &stx.SignerKey{}, false, genericComment)
-	gen("stx.", &stx.Memo{}, false, genericComment)
+	genFuncs("stx.", &stx.SignerKey{}, false, genericComment)
+	genFuncs("stx.", &stx.Memo{}, false, genericComment)
 }

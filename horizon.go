@@ -53,21 +53,11 @@ type HorizonAccountEntry struct {
 	Signers []HorizonSigner
 }
 
-// Convert a json.Number to an int64 by scanning the textual
-// representation of the number.  (The simpler approach of going
-// through a double risks losing precision.)
-func JsonNumberToI64(n json.Number) (int64, error) {
-	val := int64(-1)
-	if _, err := fmt.Sscan(n.String(), &val); err != nil {
-		return -1, err
-	}
-	return val, nil
-}
-
 // Return the next sequence number (1 + Sequence) as an int64 (or 0 if
 // an invalid sequence number was returned by horizon).
 func (ae *HorizonAccountEntry) NextSeq() int64 {
-	if val, err := JsonNumberToI64(ae.Sequence); err != nil || val + 1 <= 0 {
+	if val, err := stcdetail.JsonNumberToI64(ae.Sequence);
+	err != nil || val + 1 <= 0 {
 		return 0
 	} else {
 		return val + 1

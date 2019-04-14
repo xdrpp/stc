@@ -42,12 +42,18 @@ func TestInvalidDefault(t *testing.T) {
 }
 
 func TestAppend(t *testing.T) {
+	acct := AccountID{}
 	txe := NewTransactionEnvelope()
 	txe.Append(nil, CreateAccount{
 		Destination: AccountID{},
 		StartingBalance: 15000000,
 	})
-	txe.Tx.Operations = make([]stx.Operation, stx.MAX_OPS_PER_TX)
+	txe.Tx.Operations = make([]stx.Operation, stx.MAX_OPS_PER_TX - 1)
+	txe.Append(nil, AllowTrust{
+		Trustor: acct,
+		Asset: MkAllowTrustAsset("ABCDE"),
+		Authorize: true,
+	})
 	defer failUnlessPanic(t)
 	txe.Append(nil, CreateAccount{
 		Destination: AccountID{},

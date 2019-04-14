@@ -50,7 +50,7 @@ uhelper.go: stx/xdr_generated.go uniontool/uniontool.go
 	mv -f $@~ $@
 
 test: $(BUILT_SOURCES)
-	go test
+	go test -v
 
 clean:
 	for dir in cmd/goxdr cmd/stc; do \

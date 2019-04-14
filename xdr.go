@@ -92,18 +92,38 @@ type OperationBody interface {
 	ToXdrAnon_Operation_Body() stx.XdrAnon_Operation_Body
 }
 
-// Append an operation to a transaction envelope.  To facilitate
-// initialization of the transaction body (which is a union and so
-// doesn't support direct initialization), a suite of helper types
-// have the same fields as each of the operation types.  The helper
-// types are named after camel-cased versions of the OperationType
-// constants.  E.g., to append an operation of type CREATE_ACCOUNT,
-// use type type CreateAccount:
-//
-//   txe.Append(nil, CreateAccount{
-//       Destination: myNewAccountID,
-//       StartingBalance: 15000000,
-//   })
+/*
+
+Append an operation to a transaction envelope.  To facilitate
+initialization of the transaction body (which is a union and so
+doesn't support direct initialization), a suite of helper types
+have the same fields as each of the operation types.  The helper
+types are named after camel-cased versions of the OperationType
+constants.  E.g., to append an operation of type CREATE_ACCOUNT,
+use type type CreateAccount:
+
+	txe.Append(nil, CreateAccount{
+		Destination: myNewAccountID,
+		StartingBalance: 15000000,
+	})
+
+The helper types are:
+
+	type CreateAccount stx.CreateAccountOp
+	type Payment stx.PaymentOp
+	type PathPayment stx.PathPaymentOp
+	type ManageSellOffer stx.ManageSellOfferOp
+	type CreatePassiveSellOffer stx.CreatePassiveSellOfferOp
+	type SetOptions stx.SetOptionsOp
+	type ChangeTrust stx.ChangeTrustOp
+	type AllowTrust stx.AllowTrustOp
+	type AccountMerge stx.PublicKey
+	type Inflation struct{}
+	type ManageData stx.ManageDataOp
+	type BumpSequence stx.BumpSequenceOp
+	type ManageBuyOffer stx.ManageBuyOfferOp
+
+*/
 func (txe *TransactionEnvelope) Append(
 	sourceAccount *stx.AccountID,
 	body OperationBody) {
