@@ -57,7 +57,7 @@ clean:
 		(cd $$dir && $(MAKE) $@); \
 	done
 	go clean
-	rm -f *~ .*~ */*~
+	rm -f *~ .*~ */*~ goroot gh-pages
 
 maintainer-clean:
 	for dir in cmd/goxdr cmd/stc; do \

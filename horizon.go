@@ -36,6 +36,9 @@ func get(net *StellarNet, query string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if resp.StatusCode != 200 {
+		return nil, horizonFailure(body)
+	}
 	return body, nil
 }
 
