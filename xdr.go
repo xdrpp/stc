@@ -59,8 +59,8 @@ func MkAllowTrustAsset(code string) stx.AllowTrustAsset {
 	return ret
 }
 
-// Allocate an int32 when initializing types that take an XDR int*.
-func NewInt(v int32) *int32 { return &v }
+// Allocate a uint32 when initializing types that take an XDR int*.
+func NewUint(v int32) *int32 { return &v }
 
 // Allocate an int64 when initializing types that take an XDR hyper*.
 func NewHyper(v int64) *int64 { return &v }
