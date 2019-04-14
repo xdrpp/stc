@@ -42,12 +42,13 @@ you can also run, depending on context, one of:
 
 See the [man page](cmd/stc/stc.1.md) for the command-line tool.
 
-See the godoc documentation for the library.  Because `stc` contains
-auto-generated source files that are not on the master branch in git,
-it is best to view the documentation locally, rather than through
-on-line godoc viewers that will not show you the correct branch.  To
-view godoc, after installing `stc` with `go get` as described above,
-start a local godoc server and open it in your browser as follows:
+See the [godoc documentation][gh-pages] for the library.  Because
+`stc` contains auto-generated source files that are not on the master
+branch in git, it is best to view the documentation locally, rather
+than through on-line godoc viewers that will not show you the correct
+branch.  To view godoc, after installing `stc` with `go get` as
+described above, start a local godoc server and open it in your
+browser as follows:
 
     godoc -index -http localhost:6060 &
     xdg-open http://localhost:6060/pkg/github.com/xdrpp/stc
@@ -103,3 +104,5 @@ not limited to loss of data or data being rendered inaccurate or
 losses sustained by you or third parties or a failure of the program
 to operate with any other programs), even if such holder or other
 party has been advised of the possibility of such damages.
+
+[gh-pages]: https://xdrpp.github.io/stc/pkg/github.com/xdrpp/stc/

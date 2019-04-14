@@ -71,6 +71,9 @@ maintainer-clean:
 go1:
 	./make-go1
 
-.PHONY: all test install clean maintainer-clean go1
+gh-pages:
+	./make-gh-pages
+
+.PHONY: all test install clean maintainer-clean go1 gh-pages
 .PHONY: build-depend update-depend always
 .PHONY: cmd/goxdr/goxdr cmd/goxdr/stc
