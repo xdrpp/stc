@@ -59,6 +59,38 @@ func MkAllowTrustAsset(code string) stx.AllowTrustAsset {
 	return ret
 }
 
+// Create a signer for a particular public key and weight
+func MkSignerKey(pk PublicKey, weight uint32) (ret stx.Signer) {
+	ret.Key = pk.ToSignerKey()
+	ret.Weight = weight
+	return
+}
+
+// Create a pre-signed transaction from a transaction hash and weight.
+// Use StellarNet.HashTx() to produce the hash.
+func MkSignerPreauth(txhash []byte, weight uint32) (ret stx.Signer) {
+	ret.Key.Type = stx.SIGNER_KEY_TYPE_PRE_AUTH_TX
+	if len(*ret.Key.PreAuthTx()) != len(txhash) {
+		stx.XdrPanic("MkSignerPreauth: invalid length %d (should be %d)",
+			len(txhash), len(*ret.Key.PreAuthTx()))
+	}
+	copy(ret.Key.PreAuthTx()[:], txhash)
+	ret.Weight = weight
+	return
+}
+
+// Create a signer that requires the hash pre-image of some hash value x
+func MkSignerHashX(x []byte, weight uint32) (ret stx.Signer) {
+	ret.Key.Type = stx.SIGNER_KEY_TYPE_PRE_AUTH_TX
+	if len(*ret.Key.PreAuthTx()) != len(x) {
+		stx.XdrPanic("MkSignerPreauth: invalid length %d (should be %d)",
+			len(x), len(*ret.Key.PreAuthTx()))
+	}
+	copy(ret.Key.PreAuthTx()[:], x)
+	ret.Weight = weight
+	return
+}
+
 // Allocate a uint32 when initializing types that take an XDR int*.
 func NewUint(v uint32) *uint32 { return &v }
 

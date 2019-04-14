@@ -185,6 +185,5 @@ import "github.com/xdrpp/stc/stx"
 `, args...)
 		}
 	})
-	genFuncs("stx.", &stx.SignerKey{}, false, genericComment)
 	genFuncs("stx.", &stx.Memo{}, false, genericComment)
 }
