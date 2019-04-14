@@ -178,7 +178,7 @@ import "github.com/xdrpp/stc/stx"
 `, args...)
 		} else {
 			fmt.Printf(
-`// %[3]s is type with the same fields as %[6]s that
+`// %[3]s is a type with the same fields as %[6]s that
 // can be passed to TransactionEnvelope.Append() to append a new
 // operation with Body.Type == %[4]s and *Body.%[5]s()
 // initialized from the fields of the %[3]s.
