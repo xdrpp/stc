@@ -59,6 +59,15 @@ func MkAllowTrustAsset(code string) stx.AllowTrustAsset {
 	return ret
 }
 
+// Allocate an int32 when initializing types that take an XDR int*.
+func NewInt(v int32) *int32 { return &v }
+
+// Allocate an int64 when initializing types that take an XDR hyper*.
+func NewHyper(v int64) *int64 { return &v }
+
+// Allocate an int64 when initializing types that take an XDR *string<>.
+func NewString(v string) *string { return &v }
+
 type TransactionEnvelope struct {
 	*stx.TransactionEnvelope
 	Help map[string]struct{}
@@ -249,6 +258,18 @@ func (ax *assignXdr) Marshal(name string, val stx.XdrType) {
 		v.Elem().Set(f)
 		ax.fields = ax.fields[1:]
 		return
+	} else if i, ok := ax.fields[0].(int); ok {
+		// Numbers will get passed as int, convert to [u]int{32,64}
+		switch v.Type().Elem().Kind() {
+		case reflect.Int32, reflect.Int64:
+			v.Elem().SetInt(int64(i))
+			ax.fields = ax.fields[1:]
+			return
+		case reflect.Uint32, reflect.Uint64:
+			v.Elem().SetUint(uint64(i))
+			ax.fields = ax.fields[1:]
+			return
+		}
 	}
 	switch t := val.(type) {
 	case stx.XdrPtr:

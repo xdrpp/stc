@@ -49,6 +49,9 @@ uhelper.go: stx/xdr_generated.go uniontool/uniontool.go
 	go run uniontool/uniontool.go > $@~
 	mv -f $@~ $@
 
+test: $(BUILT_SOURCES)
+	go test
+
 clean:
 	for dir in cmd/goxdr cmd/stc; do \
 		(cd $$dir && $(MAKE) $@); \
@@ -68,6 +71,6 @@ maintainer-clean:
 go1:
 	./make-go1
 
-.PHONY: all install clean maintainer-clean go1
+.PHONY: all test install clean maintainer-clean go1
 .PHONY: build-depend update-depend always
 .PHONY: cmd/goxdr/goxdr cmd/goxdr/stc
