@@ -40,3 +40,17 @@ func TestInvalidDefault(t *testing.T) {
 		t.Error("Could not translate default AllowTrustOp to/from Txrep")
 	}
 }
+
+func TestAppend(t *testing.T) {
+	txe := NewTransactionEnvelope()
+	txe.Append(nil, CreateAccount{
+		Destination: AccountID{},
+		StartingBalance: 15000000,
+	})
+	txe.Tx.Operations = make([]stx.Operation, stx.MAX_OPS_PER_TX)
+	defer failUnlessPanic(t)
+	txe.Append(nil, CreateAccount{
+		Destination: AccountID{},
+		StartingBalance: 15000000,
+	})
+}

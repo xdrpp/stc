@@ -46,7 +46,8 @@ func camelize(s string) string {
 	return ret.String()
 }
 
-func gen(prefix string, u union, useArmName bool) {
+func gen(prefix string, u union, useArmName bool,
+	comfn func([]interface{})) {
 	typ := reflect.TypeOf(u.XdrValue()).Name()
 	tag := u.XdrUnionTag().(enum)
 	var evs enumVals
@@ -57,13 +58,16 @@ func gen(prefix string, u union, useArmName bool) {
 	for _, ev := range evs {
 		tag.SetU32(uint32(ev.val))
 		gentype := camelize(ev.symbol)
-		if useArmName {
-			if armname := u.XdrUnionBodyName(); armname != "" {
-				gentype = armname
-			}
+		armname := u.XdrUnionBodyName()
+		if useArmName && armname != "" {
+			gentype = armname
 		}
 		arm := u.XdrUnionBody()
 		if arm == nil {
+			if comfn != nil {
+				comfn([]interface{}{typ, u.XdrUnionTagName(),
+					gentype, ev.symbol})
+			}
 			fmt.Printf(
 `type %[1]s struct{}
 func (%[1]s) To%[2]s() (ret %[3]s) {
@@ -79,6 +83,10 @@ func (%[1]s) To%[2]s() (ret %[3]s) {
 			} else if unicode.IsUpper(rune(armtype[0])) {
 				armtype = prefix + armtype
 			}
+			if comfn != nil {
+				comfn([]interface{}{typ, u.XdrUnionTagName(),
+					gentype, ev.symbol, armname, armtype})
+			}
 			fmt.Printf(
 `type %[1]s %[7]s
 func (arg %[1]s) To%[2]s() (ret %[3]s) {
@@ -93,13 +101,33 @@ func (arg %[1]s) To%[2]s() (ret %[3]s) {
 	}
 }
 
+func genericComment(args []interface{}) {
+	fmt.Printf("// Helper type for initializing a %[1]s with %[2]s == %[4]s\n",
+		args...)
+}
+
 func main() {
 	fmt.Printf(`package stc
 
 import "github.com/xdrpp/stc/stx"
 
 `)
-	gen("stx.", &stx.XdrAnon_Operation_Body{}, false)
-	gen("stx.", &stx.SignerKey{}, false)
-	gen("stx.", &stx.Memo{}, false)
+	gen("stx.", &stx.XdrAnon_Operation_Body{}, false, func(args []interface{}) {
+		if len(args) <= 4 {
+			fmt.Printf(
+`// %[3]s is an empty type that can be passed to
+// TransactionEnvelope.Append() to append a new Operation
+// with Body.Type == %[4]s.
+`, args...)
+		} else {
+			fmt.Printf(
+`// %[3]s is type with the same fields as %[6]s that
+// can be passed to TransactionEnvelope.Append() to append a new
+// operation with Body.Type == %[4]s and *Body.%[5]s()
+// initialized from the fields of the %[3]s.
+`, args...)
+		}
+	})
+	gen("stx.", &stx.SignerKey{}, false, genericComment)
+	gen("stx.", &stx.Memo{}, false, genericComment)
 }

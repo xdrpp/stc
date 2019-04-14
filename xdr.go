@@ -68,6 +68,11 @@ func NewHyper(v int64) *int64 { return &v }
 // Allocate an int64 when initializing types that take an XDR *string<>.
 func NewString(v string) *string { return &v }
 
+// This is a wrapper around the XDR TransactionEnvelope structure.
+// The wrapper allows transactions to be built up more easily via the
+// Append() method and various helper types.  When parsing and
+// generating Txrep format, it also keeps track of which enums were
+// followed by '?' indicating a request for help.
 type TransactionEnvelope struct {
 	*stx.TransactionEnvelope
 	Help map[string]struct{}
@@ -87,7 +92,18 @@ type OperationBody interface {
 	ToXdrAnon_Operation_Body() stx.XdrAnon_Operation_Body
 }
 
-// Append an operation to a transaction envelope.
+// Append an operation to a transaction envelope.  To facilitate
+// initialization of the transaction body (which is a union and so
+// doesn't support direct initialization), a suite of helper types
+// have the same fields as each of the operation types.  The helper
+// types are named after camel-cased versions of the OperationType
+// constants.  E.g., to append an operation of type CREATE_ACCOUNT,
+// use type type CreateAccount:
+//
+//   txe.Append(nil, CreateAccount{
+//       Destination: myNewAccountID,
+//       StartingBalance: 15000000,
+//   })
 func (txe *TransactionEnvelope) Append(
 	sourceAccount *stx.AccountID,
 	body OperationBody) {

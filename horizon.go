@@ -89,6 +89,15 @@ func (net *StellarNet) GetAccountEntry(acct string) (
 	}
 }
 
+// Returns the network ID, a string that is hashed into transaction
+// IDs to ensure that signature are not valid across networks (e.g., a
+// testnet signature cannot work on the public network).  If the
+// network ID is not cached in the StellarNet structure itself, then
+// this function fetches it from the network.
+//
+// Note StellarMainNet already contains the network ID, while
+// StellarTestNet requires fetching the network ID since the Stellar
+// test network is periodically reset.
 func (net *StellarNet) GetNetworkId() string {
 	if net.NetworkId != "" {
 		return net.NetworkId
@@ -282,7 +291,8 @@ func (net *StellarNet) GetLedgerHeader() (*LedgerHeader, error) {
 }
 
 // An error representing the failure of a transaction submitted to the
-// Stellar network
+// Stellar network, and from which you can extract the full
+// TransactionResult.
 type TxFailure struct {
 	*TransactionResult
 }
@@ -320,7 +330,10 @@ func (e TxFailure) Error() string {
 	}
 }
 
-// Post a new transaction to the network.
+// Post a new transaction to the network.  In the event that the
+// transaction is successfully submitted to horizon but rejected by
+// the Stellar network, the error will be of type TxFailure, which
+// contains the transaction result.
 func (net *StellarNet) Post(e *TransactionEnvelope) (
 	*TransactionResult, error) {
 	if net.Horizon == "" {
