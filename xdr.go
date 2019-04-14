@@ -65,7 +65,7 @@ func NewInt(v int32) *int32 { return &v }
 // Allocate an int64 when initializing types that take an XDR hyper*.
 func NewHyper(v int64) *int64 { return &v }
 
-// Allocate an int64 when initializing types that take an XDR *string<>.
+// Allocate a string when initializing types that take an XDR *string<>.
 func NewString(v string) *string { return &v }
 
 // This is a wrapper around the XDR TransactionEnvelope structure.
