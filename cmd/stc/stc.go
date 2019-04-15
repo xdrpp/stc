@@ -579,7 +579,7 @@ func main() {
 		fmt.Printf("%x\n", net.HashTx(e))
 	case *opt_preauth:
 		sk := stx.SignerKey{Type: stx.SIGNER_KEY_TYPE_PRE_AUTH_TX}
-		copy(sk.PreAuthTx()[:], net.HashTx(e))
+		*sk.PreAuthTx() = *net.HashTx(e)
 		fmt.Println(&sk)
 	default:
 		getAccounts(net, e, *opt_learn)

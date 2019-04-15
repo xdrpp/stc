@@ -17,22 +17,24 @@ import (
 type PublicKey = stx.PublicKey
 
 // Computes the SHA-256 hash of an arbitrary XDR data structure.
-func xdrSHA256(t stx.XdrAggregate) []byte {
+func xdrSHA256(t stx.XdrAggregate) (ret stx.Hash) {
 	sha := sha256.New()
 	t.XdrMarshal(&stx.XdrOut{sha}, "")
-	return sha.Sum(nil)
+	copy(ret[:], sha.Sum(nil))
+	return
 }
 
 // Returns the transaction hash for a transaction.  The first
 // argument, network, is the network name, since the transaction hash
 // depends on the particular instantiation of the Stellar network.
-func TxPayloadHash(network string, e *stx.TransactionEnvelope) []byte {
+func TxPayloadHash(network string, tx *stx.Transaction) *stx.Hash {
 	payload := stx.TransactionSignaturePayload{
 		NetworkId: sha256.Sum256(([]byte)(network)),
 	}
 	payload.TaggedTransaction.Type = stx.ENVELOPE_TYPE_TX
-	*payload.TaggedTransaction.Tx() = e.Tx
-	return xdrSHA256(&payload)
+	*payload.TaggedTransaction.Tx() = *tx
+	ret := xdrSHA256(&payload)
+	return &ret
 }
 
 /*
@@ -47,13 +49,14 @@ func Verify(pk *PublicKey, message []byte, sig []byte) bool {
 */
 
 // Verify the signature on a transaction.
-func VerifyTx(pk *stx.SignerKey, network string, e *stx.TransactionEnvelope,
+func VerifyTx(pk *stx.SignerKey, network string, tx *stx.Transaction,
 	sig []byte) bool {
 	switch pk.Type {
 	case stx.SIGNER_KEY_TYPE_ED25519:
-		return ed25519.Verify(pk.Ed25519()[:], TxPayloadHash(network, e), sig)
+		return ed25519.Verify(pk.Ed25519()[:],
+			TxPayloadHash(network, tx)[:], sig)
 	case stx.SIGNER_KEY_TYPE_PRE_AUTH_TX:
-		return bytes.Equal(TxPayloadHash(network, e), pk.PreAuthTx()[:])
+		return bytes.Equal(TxPayloadHash(network, tx)[:], pk.PreAuthTx()[:])
 	case stx.SIGNER_KEY_TYPE_HASH_X:
 		x := sha256.Sum256(sig)
 		return bytes.Equal(x[:], pk.HashX()[:])

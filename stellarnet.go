@@ -47,22 +47,21 @@ var StellarTestNet = StellarNet{
 // Returns true only if sig is a valid signature on e for public key
 // pk.
 func (net *StellarNet) VerifySig(
-	pk *SignerKey, e *TransactionEnvelope, sig Signature) bool {
-	return stcdetail.VerifyTx(pk, net.GetNetworkId(),
-		e.TransactionEnvelope, sig)
+	pk *SignerKey, tx stx.IsTransaction, sig Signature) bool {
+	return stcdetail.VerifyTx(pk, net.GetNetworkId(), tx.ToTransaction(), sig)
 }
 
 // Return a transaction hash (which in Stellar is defined as the hash
 // of the constant ENVELOPE_TYPE_TX, the NetworkID, and the marshaled
 // XDR of the Transaction).
-func (net *StellarNet) HashTx(e *TransactionEnvelope) []byte {
-	return stcdetail.TxPayloadHash(net.GetNetworkId(), e.TransactionEnvelope)
+func (net *StellarNet) HashTx(tx stx.IsTransaction) *stx.Hash {
+	return stcdetail.TxPayloadHash(net.GetNetworkId(), tx.ToTransaction())
 }
 
 // Sign a transaction and append the signature to the
 // TransactionEnvelope.
 func (net *StellarNet) SignTx(sk *PrivateKey, e *TransactionEnvelope) error {
-	sig, err := sk.Sign(net.HashTx(e))
+	sig, err := sk.Sign(net.HashTx(e)[:])
 	if err != nil {
 		return err
 	}
@@ -164,7 +163,7 @@ func (c SignerCache) Lookup(networkID string, e *stx.TransactionEnvelope,
 	ds *stx.DecoratedSignature) *SignerKeyInfo {
 	skis := c[ds.Hint]
 	for i := range skis {
-		if stcdetail.VerifyTx(&skis[i].Key, networkID, e, ds.Signature) {
+		if stcdetail.VerifyTx(&skis[i].Key, networkID, &e.Tx, ds.Signature) {
 			return &skis[i]
 		}
 	}

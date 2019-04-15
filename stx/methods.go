@@ -36,3 +36,15 @@ type AllowTrustAsset = XdrAnon_AllowTrustOp_Asset
 func (code AllowTrustAsset) ToAllowTrustAsset() AllowTrustAsset {
 	return code
 }
+
+type IsTransaction interface {
+	ToTransaction() *Transaction
+}
+
+func (txe *TransactionEnvelope) ToTransaction() *Transaction {
+	return &txe.Tx
+}
+
+func (tx *Transaction) ToTransaction() *Transaction {
+	return tx
+}

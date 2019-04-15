@@ -67,28 +67,20 @@ func NewSignerKey(pk PublicKey, weight uint32) *stx.Signer {
 	}
 }
 
-// Create a pre-signed transaction from a transaction hash and weight.
-// Use StellarNet.HashTx() to produce the hash.
-func NewSignerPreauth(txhash []byte, weight uint32) *stx.Signer {
+// Create a pre-signed transaction from a transaction and weight.
+func (net *StellarNet) NewSignerPreauth(tx stx.IsTransaction,
+	weight uint32) *stx.Signer {
 	ret := stx.Signer{ Weight: weight }
 	ret.Key.Type = stx.SIGNER_KEY_TYPE_PRE_AUTH_TX
-	if len(*ret.Key.PreAuthTx()) != len(txhash) {
-		stx.XdrPanic("MkSignerPreauth: invalid length %d (should be %d)",
-			len(txhash), len(*ret.Key.PreAuthTx()))
-	}
-	copy(ret.Key.PreAuthTx()[:], txhash)
+	*ret.Key.PreAuthTx() = *net.HashTx(tx)
 	return &ret
 }
 
 // Create a signer that requires the hash pre-image of some hash value x
-func NewSignerHashX(x []byte, weight uint32) *stx.Signer {
+func NewSignerHashX(x stx.Hash, weight uint32) *stx.Signer {
 	ret := stx.Signer{ Weight: weight }
 	ret.Key.Type = stx.SIGNER_KEY_TYPE_PRE_AUTH_TX
-	if len(*ret.Key.PreAuthTx()) != len(x) {
-		stx.XdrPanic("MkSignerPreauth: invalid length %d (should be %d)",
-			len(x), len(*ret.Key.PreAuthTx()))
-	}
-	copy(ret.Key.PreAuthTx()[:], x)
+	*ret.Key.HashX() = x
 	return &ret
 }
 
@@ -109,6 +101,10 @@ func NewString(v string) *string { return &v }
 type TransactionEnvelope struct {
 	*stx.TransactionEnvelope
 	Help map[string]struct{}
+}
+
+func (txe *TransactionEnvelope) ToTransaction() *stx.Transaction {
+	return txe.TransactionEnvelope.ToTransaction()
 }
 
 func NewTransactionEnvelope() *TransactionEnvelope {
