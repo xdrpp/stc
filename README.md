@@ -81,7 +81,7 @@ To install `stc`, you will also need [pandoc](https://pandoc.org/) to
 format the man page.
 
 To understand the included [`goxdr`](cmd/goxdr) XDR compiler, see the
-[goxdr(1)][goxdr.1]).
+[goxdr(1)][goxdr.1] man page.
 
 # Disclaimer
 
