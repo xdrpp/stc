@@ -69,6 +69,9 @@ type HorizonAccountEntry struct {
 	Balances []HorizonBalance
 	Signers []HorizonSigner
 }
+func (hs *HorizonAccountEntry) String() string {
+	return stcdetail.PrettyPrint(hs)
+}
 
 // Return the next sequence number (1 + Sequence) as an int64 (or 0 if
 // an invalid sequence number was returned by horizon).

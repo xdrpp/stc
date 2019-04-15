@@ -531,7 +531,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		} else {
-			fmt.Printf("%#v\n", *ae)
+			fmt.Print(ae)
 		}
 		return
 	}
