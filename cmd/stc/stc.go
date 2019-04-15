@@ -395,8 +395,8 @@ func main() {
 		"Dump fee stats from network")
 	opt_acctinfo := flag.Bool("q", false,
 		"Query Horizon for information on account")
-	opt_friendbot := flag.Bool("fund", false,
-		"Fund account (on testnet only)")
+	opt_friendbot := flag.Bool("create", false,
+		"Create and fund account (on testnet only)")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
 	} else {
@@ -409,7 +409,7 @@ func main() {
        %[1]s -post [-net=ID] INPUT-FILE
        %[1]s -preauth [-net=ID] INPUT-FILE
        %[1]s -q [-net=ID] ACCT
-       %[1]s -fund [-net=ID] ACCT
+       %[1]s -create [-net=ID] ACCT
        %[1]s -keygen [NAME]
        %[1]s -sec2pub [NAME]
        %[1]s -import-key NAME
