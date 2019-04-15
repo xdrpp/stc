@@ -283,6 +283,25 @@ func (net *StellarNet) GetLedgerHeader() (*LedgerHeader, error) {
 	return ret, nil
 }
 
+type enum interface {
+	fmt.Stringer
+	stx.XdrNum32
+	XdrEnumNames() map[int32]string
+}
+
+type enumComments interface {
+	XdrEnumComments() map[int32]string
+}
+
+func enumDesc(e enum) string {
+	if ec, ok := e.(enumComments); ok {
+		if c, ok := ec.XdrEnumComments()[int32(e.GetU32())]; ok {
+			return c
+		}
+	}
+	return e.String()
+}
+
 // An error representing the failure of a transaction submitted to the
 // Stellar network, and from which you can extract the full
 // TransactionResult.
@@ -290,36 +309,18 @@ type TxFailure struct {
 	*TransactionResult
 }
 func (e TxFailure) Error() string {
+	msg := enumDesc(&e.Result.Code)
 	switch e.Result.Code {
-	case stx.TxSUCCESS:
-		return "all operations succeeded"
 	case stx.TxFAILED:
 		out := strings.Builder{}
-		fmt.Fprintln(&out, "one of the operations failed (none were applied)")
-		stcdetail.XdrToTxrep(&out, &e.Result)
+		out.WriteString(msg)
+		for i := range *e.Result.Results() {
+			fmt.Fprintf(&out, "\noperation %d: %s", i,
+				enumDesc(&(*e.Result.Results())[i].Code))
+		}
 		return out.String()
-	case stx.TxTOO_EARLY:
-		return "ledger closeTime before minTime"
-	case stx.TxTOO_LATE:
-		return "ledger closeTime after maxTime"
-	case stx.TxMISSING_OPERATION:
-		return "no operation was specified"
-	case stx.TxBAD_SEQ:
-		return "sequence number does not match source account"
-	case stx.TxBAD_AUTH:
-		return "too few valid signatures / wrong network"
-	case stx.TxINSUFFICIENT_BALANCE:
-		return "fee would bring account below reserve"
-	case stx.TxNO_ACCOUNT:
-		return "source account not found"
-	case stx.TxINSUFFICIENT_FEE:
-		return "fee is too small"
-	case stx.TxBAD_AUTH_EXTRA:
-		return "unused signatures attached to transaction"
-	case stx.TxINTERNAL_ERROR:
-		return "an unknown error occured"
 	default:
-		return e.Result.Code.String()
+		return msg
 	}
 }
 
