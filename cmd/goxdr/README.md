@@ -25,20 +25,23 @@ for many situations:
   as arrays for arrays, slices for vectors, strings for strings.
   Union discriminants are ordinary fields, while arms (case
   statements) are methods that lazily allocate the necessary body
-  based on the discriminant.
+  based on the discriminant.  Unlike some approaches that waste memory
+  by transforming unions into structs, memory is only required for one
+  arm of a union at a time.
 
 * String, vector, and variable opaque bounds are strictly enforced by
-  generated `XDR` functions, rather than encoded in types (which makes
-  assignment annoying) or struct field tags (which requires use of
-  reflection).
+  generated `XDR` functions, rather than being encoded in the types
+  (which would make assignment annoying) or in struct field tags
+  (which requires use of reflection).
 
-* No use of reflection and the associated overhead and complexity.
-  You can generically traverse XDR data structures using simple
-  interface methods.
+* You can generically traverse XDR data structures using simple
+  interface methods.  Marshaling and traversal make no use of
+  reflection, and hence avoid incurring the associated overhead and
+  complexity.
 
 * In addition to standard binary XDR serialization, generic traversal
-  allows concise implementation of pretty printing or extracting all
-  occurrences of a particular type at any level of struct/union
+  allows concise implementation of pretty printing, or extraction of
+  all occurrences of a particular type at any level of struct/union
   nesting.  Traversal functions have access to field names.
 
 * Traversal can special-case particular typdefs.  Even though typedefs
@@ -46,13 +49,18 @@ for many situations:
   alias-name-specific marshaling methods that can differentiate
   treatment of identical go types.
 
-* No runtime package dependency.  The output does contains a small
+* No runtime package dependency.  The output does contain a small
   amount of boilerplate wich can be suppressed and/or generated
   separately.
 
+* An option to make comments on enum constants available at runtime
+  allows you to specify things like human-readable error messages for
+  error codes right in the source code of your XDR file, avoiding the
+  need for manual synchronization between your XDR and go sources.
+
 # Installation
 
-To install outside of a go module, run:
+To install goxdr outside of a go module, run:
 
     go get github.com/xdrpp/cmd/goxdr
 
@@ -63,8 +71,8 @@ To install it from within a go module (i.e., below a directory with a
 
 # Documentation
 
-The compiler options and generated code are detailed in the
-[goxdr(1)][goxdr.1] man page.
+The compiler's command-line usage and its generated code are both
+detailed in the [goxdr(1)][goxdr.1] man page.
 
 # Copyright and warranty disclaimer
 
