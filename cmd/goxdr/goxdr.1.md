@@ -370,8 +370,8 @@ another package that already includes the boilerplate using the `-i`
 option below.
 
 `-enum-comments`
-:	When enums an enum has one or more constants annotated with a
-comment, this options causes goxdr to emit a method `XdrEnumComments()
+:	When an enum has one or more constants annotated with a comment,
+this options causes goxdr to emit a method `XdrEnumComments()
 map[int32]string` that contains the comment turned into a string.  The
 option is useful if, for instance, you have an enum encoding various
 error conditions.  In that case you can put a human-readable
