@@ -1,5 +1,6 @@
 // Please see the goxdr.1 man page for complete documentation of this
-// command.
+// command.  The man page is included in the release and available at
+// https://xdrpp.github.io/stc/pkg/github.com/xdrpp/stc/cmd/goxdr/goxdr.1.html
 package main
 
 import (

@@ -1,5 +1,5 @@
 % stc(1)
-% David Mazieres
+% David Mazi&egrave;res
 %
 
 # NAME

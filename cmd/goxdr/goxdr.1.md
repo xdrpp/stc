@@ -1,5 +1,5 @@
 % goxdr(1)
-% David Mazieres
+% David Mazi&egrave;res
 %
 
 # NAME
@@ -368,6 +368,15 @@ input files (`goxdr -o goxdr_boilerplate.go`) to get one copy of the
 boilerplate.  You should also use this option if you are importing
 another package that already includes the boilerplate using the `-i`
 option below.
+
+`-enum-comments`
+:	When enums an enum has one or more constants annotated with a
+comment, this options causes goxdr to emit a method `XdrEnumComments()
+map[int32]string` that contains the comment turned into a string.  The
+option is useful if, for instance, you have an enum encoding various
+error conditions.  In that case you can put a human-readable
+description of the error condition as a comment in the XDR source
+file, and access the text of that comment from your program.
 
 `-i` _import_path_
 :	Add the directive <tt>import . "_path_"</tt> at the top of the

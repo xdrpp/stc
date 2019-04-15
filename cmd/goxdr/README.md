@@ -64,7 +64,7 @@ To install it from within a go module (i.e., below a directory with a
 # Documentation
 
 The compiler options and generated code are detailed in the
-[goxdr.1](goxdr.1.md) man page.
+[goxdr(1)][goxdr.1] man page.
 
 # Copyright and warranty disclaimer
 
@@ -73,3 +73,4 @@ copyright and warranty disclaimers of the whole module.
 
 [RFC4506]: https://tools.ietf.org/html/rfc4506
 [RFC5531]: https://tools.ietf.org/html/rfc5531
+[goxdr.1]: https://xdrpp.github.io/stc/pkg/github.com/xdrpp/stc/cmd/goxdr/goxdr.1.html

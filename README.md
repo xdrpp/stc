@@ -40,7 +40,7 @@ you can also run, depending on context, one of:
 
 # Using `stc`
 
-See the [man page](cmd/stc/stc.1.md) for the command-line tool.
+See the [stc(1)][stc.1] man page for the command-line tool.
 
 See the [godoc documentation][gh-pages] for the library.  Because
 `stc` contains auto-generated source files that are not on the master
@@ -80,8 +80,8 @@ update-depend`.
 To install `stc`, you will also need [pandoc](https://pandoc.org/) to
 format the man page.
 
-To understand the included [`goxdr`](cmd/goxdr) XDR compiler, see its
-[man page](cmd/goxdr/goxdr.1.md).
+To understand the included [`goxdr`](cmd/goxdr) XDR compiler, see the
+[goxdr(1)][goxdr.1]).
 
 # Disclaimer
 
@@ -106,3 +106,5 @@ to operate with any other programs), even if such holder or other
 party has been advised of the possibility of such damages.
 
 [gh-pages]: https://xdrpp.github.io/stc/pkg/github.com/xdrpp/stc/
+[stc.1]: https://xdrpp.github.io/stc/pkg/github.com/xdrpp/stc/cmd/stc/stc.1.html
+[goxdr.1]: https://xdrpp.github.io/stc/pkg/github.com/xdrpp/stc/cmd/goxdr/goxdr.1.html
