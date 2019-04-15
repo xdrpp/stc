@@ -32,6 +32,12 @@ cat > index.html <<EOF
 </html>
 EOF
 
+for man in stc goxdr; do
+    pandoc --self-contained ../cmd/$man/$man.1.md \
+	   -c lib/godoc/style.css -c ../cmd/man.css \
+	   -o pkg/github.com/xdrpp/stc/cmd/$man/$man.1.html
+done
+
 GIT_DIR=$(git rev-parse --git-dir)
 export GIT_INDEX_FILE="$GIT_DIR/index.gh-pages"
 rm -f "$GIT_INDEX_FILE"

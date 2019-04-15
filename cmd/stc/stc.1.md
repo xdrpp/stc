@@ -13,6 +13,9 @@ stc -edit [-net=ID] _file_ \
 stc -post [-net=ID] _input-file_ \
 stc -preauth [-net=ID] _input-file_ \
 stc -txhash [-net=ID] _input-file_ \
+stc -q [-net=ID] _accountID_ \
+stc -fee-stats \
+stc -create [-net=ID] _accountID_ \
 stc -keygen [_name_] \
 stc -sec2pub [_name_] \
 stc -import-key _name_ \
@@ -36,7 +39,8 @@ allow somewhat interactive editing of transactions.  In hash mode, stc
 hashes a transactions to facilitate creation of pre-signed
 transactions or lookup of transaction results.  In post mode, stc
 posts a transaction to the network.  Finally, key management mode
-allows one to maintain a set of signing keys.
+allows one to maintain a set of signing keys, while network query mode
+allows one to query the network for account and fee status.
 
 ## Default mode
 
@@ -162,6 +166,16 @@ passphrase, they will be stored in plaintext.  If you use the
 `-nopass` option, stc will never prompt for a passphrase and always
 assume you do not encrypt your private keys.
 
+## Network query mode
+
+stc runs in network query mode when the `-fee-stats` or `-q` option is
+provided.  `-fee-stats` reports on recent transaction fees.  `-q`
+reports on the state of a particular account.  Unfortunately, both of
+these requests are parsed from horizon responses in JSON rather than
+XDR format, and so are reported in a somewhat incomparable style to
+txrep format.  For example, balances are shown as a fixed-point number
+10^7 times the underlying int64.
+
 # OPTIONS
 
 `-c`
@@ -174,6 +188,9 @@ is to output in text mode.  Only available in default mode.
 `-export-key`
 :	Print a private key in strkey format to standard output.
 
+`-fee-stats`
+:	Dump fee stats from network
+
 `-help`
 :	Print usage information.
 
@@ -182,7 +199,7 @@ is to output in text mode.  Only available in default mode.
 Only available in default mode.
 
 `-import-key`
-: Read a private key from the terminal (or standard input) and write
+:	Read a private key from the terminal (or standard input) and write
 it (optionally encrypted) into a file (if the name has a slash) or
 into the configuration directory.
 
@@ -196,12 +213,23 @@ stores the signers under the network's configuration directory, so
 that it can verify signatures from all keys associated with the
 account.  Only available in default mode.
 
+`-keygen` [_file_]
+:	Creates a new public keypair.  With no argument, prints first the
+secret then the public key to standard output.  When given an
+argument, writes the public key to standard output and the private key
+to a file, asking for a passphrase if you don't supply `-nopass`.
+Note that if file contains a '/' character, the file is taken relative
+to the current working directory or root directory.  If it does not,
+the file is stored in stc's configuration directory.
+
 `-list-keys`
 :	List all private keys stored under the configuration directory.
 
 `-net` _name_
 :	Specify which network to use for hashing, signing, and posting
 transactions, as well as for querying signers with the `-l` option.
+Two pre-defined names are "main" and "test", but you can configure
+other networks as discussed in the FILES section.
 
 `-nopass`
 :	Never prompt for a passphrase, so assume an empty passphrase
@@ -213,6 +241,15 @@ send the transaction to standard output unless `-i` has been
 supplied.  `-i` and `-o` are mutually exclusive, and can only be used
 in default mode.
 
+`-preauth`
+:	Hash a transaction to strkey for use as a pre-auth transaction
+signer.  Beware that `-net` must be set correctly or the hash will be
+incorrect, since the input to the hash function includes the network
+ID as well as the transaction.
+
+`-q`
+:	Query the network for the state of a particular account.
+
 `-sec2pub`
 :	Print the public key corresponding to a particular private key.
 
@@ -220,6 +257,11 @@ in default mode.
 :	Sign the transaction.  If no `-key` option is specified, it will
 prompt for the private key on the terminal (or read it from standard
 input if standard input is not a terminal).
+
+`-txhash`
+:	Like `-preauth`, but outputs the hash in hex format.  Like
+`-preauth`, also gives incorrect results if `-net` is not properly
+specified.
 
 `-u`
 :	Query the network to update the fee and sequence number.  The fee
@@ -352,6 +394,10 @@ the `-sign` option will read a key from standard input, so you can
 always run `gpg -d keyfile.pgp | stc -sign -i txfile` to sign the
 transaction in `txfile` with a public-key-encrypted signature key in
 `keyfile.pgp`.
+
+The options that interact with Horizon and parse JSON (such as `-q`)
+report things in a different style from the options that manipulate
+XDR.
 
 Various forms of malformed textual input will surely cause stc to
 panic, though the binary parser should be pretty robust.

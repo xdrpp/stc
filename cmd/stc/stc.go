@@ -367,15 +367,15 @@ func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to base64 XDR")
 	opt_keygen := flag.Bool("keygen", false, "Create a new signing keypair")
 	opt_sec2pub := flag.Bool("sec2pub", false, "Get public key from private")
-	opt_output := flag.String("o", "", "Output to `file` instead of stdout")
+	opt_output := flag.String("o", "", "Output to `FILE` instead of stdout")
 	opt_preauth := flag.Bool("preauth", false,
 		"Hash transaction to strkey for use as a pre-auth transaction signer")
 	opt_txhash := flag.Bool("txhash", false, "Hash transaction to hex format")
 	opt_inplace := flag.Bool("i", false, "Edit the input file in place")
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
-	opt_key := flag.String("key", "", "Use secret signing key in `file`")
+	opt_key := flag.String("key", "", "Use secret signing key in `FILE`")
 	opt_netname := flag.String("net", "",
-		"Use Network `net` (e.g., test); default: $STCNET, otherwise main")
+		"Use Network `NET` (e.g., test); default: $STCNET, otherwise main")
 	opt_update := flag.Bool("u", false,
 		"Query network to update fee and sequence number")
 	opt_learn := flag.Bool("l", false, "Learn new signers")
@@ -408,6 +408,8 @@ func main() {
        %[1]s -edit [-net=ID] FILE
        %[1]s -post [-net=ID] INPUT-FILE
        %[1]s -preauth [-net=ID] INPUT-FILE
+       %[1]s -txhash [-net=ID] _INPUT-FILE
+       %[1]s -fee-stats
        %[1]s -q [-net=ID] ACCT
        %[1]s -create [-net=ID] ACCT
        %[1]s -keygen [NAME]
