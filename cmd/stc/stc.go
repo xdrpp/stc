@@ -367,15 +367,15 @@ func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to base64 XDR")
 	opt_keygen := flag.Bool("keygen", false, "Create a new signing keypair")
 	opt_sec2pub := flag.Bool("sec2pub", false, "Get public key from private")
-	opt_output := flag.String("o", "", "Output to file instead of stdout")
+	opt_output := flag.String("o", "", "Output to `file` instead of stdout")
 	opt_preauth := flag.Bool("preauth", false,
 		"Hash transaction to strkey for use as a pre-auth transaction signer")
 	opt_txhash := flag.Bool("txhash", false, "Hash transaction to hex format")
 	opt_inplace := flag.Bool("i", false, "Edit the input file in place")
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
-	opt_key := flag.String("key", "", "File containing signing key")
+	opt_key := flag.String("key", "", "Use secret signing key in `file`")
 	opt_netname := flag.String("net", "",
-		`Network ID (e.g., "test"); default: $STCNET, otherwise "main"`)
+		"Use Network `net` (e.g., test); default: $STCNET, otherwise main")
 	opt_update := flag.Bool("u", false,
 		"Query network to update fee and sequence number")
 	opt_learn := flag.Bool("l", false, "Learn new signers")
@@ -393,6 +393,10 @@ func main() {
 		"List keys that have been stored in $STCDIR")
 	opt_fee_stats := flag.Bool("fee-stats", false,
 		"Dump fee stats from network")
+	opt_acctinfo := flag.Bool("q", false,
+		"Query Horizon for information on account")
+	opt_friendbot := flag.Bool("fund", false,
+		"Fund account (on testnet only)")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
 	} else {
@@ -400,10 +404,12 @@ func main() {
 	}
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
-			`Usage: %[1]s [-net=ID] [-sign] [-c] [-l] [-u] [-i | -o FILE] INPUT-FILE
+`Usage: %[1]s [-net=ID] [-sign] [-c] [-l] [-u] [-i | -o FILE] INPUT-FILE
        %[1]s -edit [-net=ID] FILE
        %[1]s -post [-net=ID] INPUT-FILE
        %[1]s -preauth [-net=ID] INPUT-FILE
+       %[1]s -q [-net=ID] ACCT
+       %[1]s -fund [-net=ID] ACCT
        %[1]s -keygen [NAME]
        %[1]s -sec2pub [NAME]
        %[1]s -import-key NAME
@@ -421,10 +427,11 @@ func main() {
 
 	if n := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit, *opt_keygen,
 		*opt_sec2pub, *opt_import_key, *opt_export_key,
+		*opt_acctinfo, *opt_friendbot,
 		*opt_list_keys, *opt_fee_stats); n > 1 || len(flag.Args()) > 1 ||
 		(len(flag.Args()) == 0 &&
 			!(*opt_keygen || *opt_sec2pub || *opt_list_keys ||
-			*opt_fee_stats)) {
+			*opt_fee_stats || *opt_acctinfo || *opt_friendbot)) {
 		flag.Usage()
 		os.Exit(2)
 	} else if n == 1 {
@@ -512,6 +519,34 @@ func main() {
 	if net == nil {
 		fmt.Fprintf(os.Stderr, "unknown network %q\n", *opt_netname)
 		os.Exit(1)
+	}
+
+	if *opt_acctinfo {
+		var acct AccountID
+		if _, err := fmt.Sscan(arg, &acct); err != nil {
+			fmt.Fprintln(os.Stderr, "syntactically invalid account")
+			os.Exit(1)
+		}
+		if ae, err := net.GetAccountEntry(arg); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		} else {
+			fmt.Printf("%#v\n", *ae)
+		}
+		return
+	}
+
+	if *opt_friendbot {
+		var acct AccountID
+		if _, err := fmt.Sscan(arg, &acct); err != nil {
+			fmt.Fprintln(os.Stderr, "syntactically invalid account")
+			os.Exit(1)
+		}
+		if _, err := net.Get("friendbot?addr=" + arg); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	if *opt_fee_stats {

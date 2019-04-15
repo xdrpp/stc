@@ -23,7 +23,8 @@ func (e horizonFailure) Error() string {
 
 const badHorizonURL horizonFailure = "Missing or invalid horizon URL"
 
-func get(net *StellarNet, query string) ([]byte, error) {
+// Send an HTTP request to horizon
+func (net *StellarNet) Get(query string) ([]byte, error) {
 	if net.Horizon == "" {
 		return nil, badHorizonURL
 	}
@@ -42,17 +43,30 @@ func get(net *StellarNet, query string) ([]byte, error) {
 	return body, nil
 }
 
+type HorizonThresholds struct {
+	Low_threshold uint8
+	Med_threshold uint8
+	High_threshold uint8
+}
+type HorizonBalance struct {
+	Balance json.Number
+	Buying_liabilities json.Number
+	Selling_liabilities json.Number
+	Limit json.Number
+	Asset_type json.Number
+	Asset_code string
+	Asset_issuer string
+}
 type HorizonSigner struct {
-	Key    string
+	Key string
 	Weight uint32
 }
 type HorizonAccountEntry struct {
-	Sequence   json.Number
-	Thresholds struct {
-		Low_threshold  uint8
-		Med_threshold  uint8
-		High_threshold uint8
-	}
+	Sequence json.Number
+	Last_modified_ledger uint32
+	Subentry_count uint32
+	Thresholds HorizonThresholds
+	Balances []HorizonBalance
 	Signers []HorizonSigner
 }
 
@@ -71,7 +85,7 @@ func (ae *HorizonAccountEntry) NextSeq() int64 {
 // network.
 func (net *StellarNet) GetAccountEntry(acct string) (
 	*HorizonAccountEntry, error) {
-	if body, err := get(net, "accounts/" + acct); err != nil {
+	if body, err := net.Get("accounts/" + acct); err != nil {
 		return nil, err
 	} else {
 		var ae HorizonAccountEntry
@@ -95,7 +109,7 @@ func (net *StellarNet) GetNetworkId() string {
 	if net.NetworkId != "" {
 		return net.NetworkId
 	}
-	if body, err := get(net, "/"); err != nil {
+	if body, err := net.Get("/"); err != nil {
 		return ""
 	} else {
 		var np struct { Network_passphrase string }
@@ -197,7 +211,7 @@ func getU32(i interface{}) (uint32, error) {
 
 // Queries the network for the latest fee statistics.
 func (net *StellarNet) GetFeeStats() (*FeeStats, error) {
-	body, err := get(net, "fee_stats")
+	body, err := net.Get("fee_stats")
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +271,7 @@ func (net *StellarNet) GetFeeStats() (*FeeStats, error) {
 
 // Fetch the latest ledger header over the network.
 func (net *StellarNet) GetLedgerHeader() (*LedgerHeader, error) {
-	body, err := get(net, "ledgers?limit=1&order=desc")
+	body, err := net.Get("ledgers?limit=1&order=desc")
 	if err != nil {
 		return nil, err
 	}
