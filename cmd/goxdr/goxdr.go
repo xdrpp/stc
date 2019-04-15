@@ -22,6 +22,7 @@ type emitter struct {
 	output strings.Builder
 	footer strings.Builder
 	emitted map[string]struct{}
+	enum_comments bool
 }
 
 type Emittable interface {
@@ -385,6 +386,52 @@ func (r0 *rpc_typedef) emit(e *emitter) {
 `, r.id, e.xdrgen("v", "name", gid(""), r))
 }
 
+func normalize_comment(comment string) string {
+	block := comment[2] == '*'
+	out := &strings.Builder{}
+	first := true
+	for _, line := range strings.Split(comment, "\n") {
+		if first || !block {
+			line = line[2:]
+		}
+		line := strings.Trim(line, " \t")
+		if first {
+			first = false
+		} else if line != "" {
+			out.WriteString(" ")
+		}
+		out.WriteString(line)
+	}
+	ret := out.String()
+	if block {
+		ret = ret[:len(ret)-2]
+	}
+	return ret
+}
+
+func enum_comment(e *rpc_enum) string {
+	var useful bool
+	out := &strings.Builder{}
+	fmt.Fprintf(out, "var _XdrComments_%[1]s = map[int32]string {\n", e.id)
+	for _, c := range e.tags {
+		if c.comment != "" {
+			useful = true
+			fmt.Fprintf(out, "\tint32(%s): %q,\n", c.id,
+				normalize_comment(c.comment))
+		}
+	}
+	fmt.Fprintf(out, `}
+func (e %[1]s) XdrEnumComments() map[int32]string {
+	return _XdrComments_%[1]s
+}
+`, e.id)
+	if useful {
+		return out.String()
+	} else {
+		return ""
+	}
+}
+
 func (r *rpc_enum) emit(e *emitter) {
 	out := &strings.Builder{}
 	if r.comment != "" {
@@ -452,6 +499,10 @@ func (v *%[1]s) XdrValue() interface{} {
 	return *v
 }
 `, r.id)
+
+	if e.enum_comments {
+		out.WriteString(enum_comment(r))
+	}
 
 	alltags := &strings.Builder{}
 	for _, tag := range r.tags {
@@ -768,10 +819,11 @@ func (r *rpc_program) emit(e *emitter) {
 	// Do something?
 }
 
-func emitAll(syms *rpc_syms) string {
+func emitAll(syms *rpc_syms, comments bool) string {
 	e := emitter{
 		syms: syms,
 		emitted: map[string]struct{}{},
+		enum_comments: comments,
 	}
 
 	e.append(`
@@ -797,6 +849,9 @@ func emitAll(syms *rpc_syms) string {
 
 type stringlist []string
 func (sl *stringlist) String() string {
+	return fmt.Sprint(*sl)
+}
+func (sl *stringlist) ToImports() string {
 	var out strings.Builder
 	for _, s := range *sl {
 		fmt.Fprintf(&out, "import . \"%s\"\n", s)
@@ -813,6 +868,8 @@ func main() {
 	opt_output := flag.String("o", "", "Name of output file")
 	opt_pkg := flag.String("p", "main", "Name of package")
 	opt_help := flag.Bool("help", false, "Print usage")
+	opt_enum_comments := flag.Bool("enum-comments", false,
+		"for each enum, output a map containing source comments")
 	var imports stringlist
 	flag.Var(&imports, "i", "add import directive for `path`")
 	progname = os.Args[0]
@@ -838,7 +895,7 @@ func main() {
 	if syms.Failed {
 		os.Exit(1)
 	}
-	code := emitAll(&syms)
+	code := emitAll(&syms, *opt_enum_comments)
 
 	out := os.Stdout
 	if (*opt_output != "") {
@@ -860,7 +917,7 @@ func main() {
 	fmt.Fprintln(out, "; DO NOT EDIT.\n");
 
 	if *opt_pkg != "" {
-		fmt.Fprintf(out, "package %s\n%s", *opt_pkg, imports.String())
+		fmt.Fprintf(out, "package %s\n%s", *opt_pkg, imports.ToImports())
 	}
 	if !*opt_nobp {
 		io.WriteString(out, header)

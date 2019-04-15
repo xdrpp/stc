@@ -122,7 +122,7 @@ enum_tag_list: enum_tag
 |	enum_tag_list ',' enum_tag
 	{
 		last := &$1[len($1)-1]
-		last.comment = nonEmpty(last.comment, $2.LineComment)
+		last.comment = nonEmpty($2.LineComment, last.comment)
 		$$ = append($1, $3)
 	};
 

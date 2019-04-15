@@ -37,7 +37,7 @@ cmd/stc/stc: $(BUILT_SOURCES) always
 	cd cmd/stc && $(MAKE)
 
 stx/xdr_generated.go: cmd/goxdr/goxdr $(XDRS)
-	cmd/goxdr/goxdr -p stx -o $@~ $(XDRS)
+	cmd/goxdr/goxdr -p stx -enum-comments -o $@~ $(XDRS)
 	@if cmp $@ $@~ > /dev/null 2>/dev/null; then \
 		rm -f $@~; \
 	else \
