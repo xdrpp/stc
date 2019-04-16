@@ -213,6 +213,26 @@ func (v $PTR) XdrValue() interface{} { return *v.p }
 	return ptrtyp
 }
 
+func (e *emitter) is_bool(t idval) bool {
+	for {
+		if t.getx() == "bool" {
+			return true
+		} else if t.getgo() == t.getx() {
+			return false
+		}
+		s, ok := e.syms.SymbolMap[t.getx()]
+		if !ok || t.getx() == s.getsym().getx() {
+			return false
+		}
+		td, ok := s.(*rpc_typedef)
+		if !ok || td.qual != SCALAR || td.typ.getgo() == "" ||
+			td.inline_decl != nil {
+			return false
+		}
+		t = td.typ
+	}
+}
+
 // Return (bound, sbound) where bound is just the normalized bound,
 // and sbound is a name suitable for embedding in strings (contains
 // the more readable "unbounded" rather than 4294967295).
@@ -568,11 +588,18 @@ func (v *%[1]s) XdrMarshal(x XDR, name string) {
 	e.xappend(out)
 }
 
-func (u *rpc_ufield) joinedCases() string {
-	ret := u.cases[0].getgo()
+func castCase(boolDiscriminant bool, v idval) string {
+	if boolDiscriminant {
+		return v.String()
+	}
+	return fmt.Sprintf("int32(%s)", v)
+}
+
+func (u *rpc_ufield) joinedCases(boolDiscriminant bool) string {
+	ret := castCase(boolDiscriminant, u.cases[0])
 	for i := 1; i < len(u.cases); i++ {
 		ret += ", "
-		ret += u.cases[i].getgo()
+		ret += castCase(boolDiscriminant, u.cases[i])
 	}
 	return ret
 }
@@ -595,7 +622,7 @@ func (r *rpc_union) emit(e *emitter) {
 		if (u.hasdefault) {
 			fmt.Fprintf(out, "\t//   default:\n")
 		} else {
-			fmt.Fprintf(out, "\t//   %s:\n", u.joinedCases())
+			fmt.Fprintf(out, "\t//   %s:\n", u.joinedCases(true))
 		}
 		if u.isVoid() {
 			fmt.Fprintf(out, "\t//      void\n")
@@ -609,6 +636,14 @@ func (r *rpc_union) emit(e *emitter) {
 		"}\n")
 	e.append(out)
 	out.Reset()
+
+	bd := e.is_bool(r.tagtype)
+	var discriminant string
+	if bd {
+		discriminant = "u." + r.tagid.String()
+	} else {
+		discriminant = fmt.Sprintf("int32(u.%s)", r.tagid)
+	}
 	for i := range r.fields {
 		u := &r.fields[i]
 		if u.isVoid() {
@@ -645,7 +680,7 @@ func (r *rpc_union) emit(e *emitter) {
 `		XdrPanic("%s.%s accessed when %s == %%v", u.%[3]s)
 		return nil
 `, r.id, u.decl.id, r.tagid)
-		fmt.Fprintf(out, "\tswitch u.%s {\n", r.tagid)
+		fmt.Fprintf(out, "\tswitch %s {\n", discriminant)
 		if u.hasdefault && len(r.fields) > 1 {
 			needcomma := false
 			fmt.Fprintf(out, "\tcase ")
@@ -659,14 +694,14 @@ func (r *rpc_union) emit(e *emitter) {
 				} else {
 					needcomma = true
 				}
-				fmt.Fprintf(out, "%s", u1.joinedCases())
+				fmt.Fprintf(out, "%s", u1.joinedCases(bd))
 			}
 			fmt.Fprintf(out, ":\n%s\tdefault:\n%s", badcase, goodcase)
 		} else {
 			if u.hasdefault {
 				fmt.Fprintf(out, "default:\n")
 			} else {
-				fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases())
+				fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases(bd))
 			}
 			fmt.Fprintf(out, "%s", goodcase)
 			if !u.hasdefault {
@@ -681,7 +716,7 @@ func (r *rpc_union) emit(e *emitter) {
 	if r.hasdefault {
 		fmt.Fprintf(out, "\treturn true\n")
 	} else {
-		fmt.Fprintf(out, "\tswitch u.%s {\n" + "\tcase ", r.tagid)
+		fmt.Fprintf(out, "\tswitch %s {\n" + "\tcase ", discriminant)
 		needcomma := false
 		for j := range r.fields {
 			u1 := &r.fields[j]
@@ -690,7 +725,7 @@ func (r *rpc_union) emit(e *emitter) {
 			} else {
 				needcomma = true
 			}
-			fmt.Fprintf(out, "%s", u1.joinedCases())
+			fmt.Fprintf(out, "%s", u1.joinedCases(bd))
 		}
 		fmt.Fprintf(out, ":\n\t\treturn true\n\t}\n\treturn false\n")
 	}
@@ -702,13 +737,13 @@ func (r *rpc_union) emit(e *emitter) {
 		"\treturn \"%s\"\n}\n", r.id, r.tagid)
 
 	fmt.Fprintf(out, "func (u *%s) XdrUnionBody() interface{} {\n" +
-		"\tswitch u.%s {\n", r.id, r.tagid)
+		"\tswitch %s {\n", r.id, discriminant)
 	for i := range r.fields {
 		u := &r.fields[i]
 		if u.hasdefault {
 			fmt.Fprintf(out, "\tdefault:\n")
 		} else {
-			fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases())
+			fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases(bd))
 		}
 		if u.isVoid() {
 			fmt.Fprintf(out, "\t\treturn nil\n")
@@ -723,13 +758,13 @@ func (r *rpc_union) emit(e *emitter) {
 	fmt.Fprintf(out, "}\n")
 
 	fmt.Fprintf(out, "func (u *%s) XdrUnionBodyName() string {\n" +
-		"\tswitch u.%s {\n", r.id, r.tagid)
+		"\tswitch %s {\n", r.id, discriminant)
 	for i := range r.fields {
 		u := &r.fields[i]
 		if u.hasdefault {
 			fmt.Fprintf(out, "\tdefault:\n")
 		} else {
-			fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases())
+			fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases(bd))
 		}
 		if u.isVoid() {
 			fmt.Fprintf(out, "\t\treturn \"\"\n")
@@ -750,22 +785,22 @@ func (r *rpc_union) emit(e *emitter) {
 func (v *%[1]s) XdrValue() interface{} {
 	return *v
 }
-func (v *%[1]s) XdrMarshal(x XDR, name string) {
+func (u *%[1]s) XdrMarshal(x XDR, name string) {
 	if name != "" {
 		name = x.Sprintf("%%s.", name)
 	}
-	XDR_%[2]s(x, x.Sprintf("%%s%[4]s", name), &v.%[3]s)
-	switch v.%[3]s {
-`, r.id, r.tagtype, r.tagid, r.tagid.getx())
+	XDR_%[2]s(x, x.Sprintf("%%s%[4]s", name), &u.%[3]s)
+	switch %[5]s {
+`, r.id, r.tagtype, r.tagid, r.tagid.getx(), discriminant)
 	for i := range r.fields {
 		u := &r.fields[i]
 		if u.hasdefault {
 			fmt.Fprintf(out, "\tdefault:\n")
 		} else {
-			fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases())
+			fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases(bd))
 		}
 		if !u.isVoid() {
-			out.WriteString("\t" + e.xdrgen("v." + u.decl.id.getgo() + "()",
+			out.WriteString("\t" + e.xdrgen("u." + u.decl.id.getgo() + "()",
 				`x.Sprintf("%s` + u.decl.id.getx() + `", name)`,
 				r.id, &u.decl))
 		}
@@ -774,7 +809,7 @@ func (v *%[1]s) XdrMarshal(x XDR, name string) {
 	fmt.Fprintf(out, "\t}\n")
 	if !r.hasdefault {
 		fmt.Fprintf(out,
-`	XdrPanic(fmt.Sprintf("invalid %[1]s (%%v) in %[2]s", v.%[1]s))
+`	XdrPanic("invalid %[1]s (%%v) in %[2]s", u.%[1]s)
 `, r.tagid, r.id)
 	}
 	fmt.Fprintf(out, "}\n")
