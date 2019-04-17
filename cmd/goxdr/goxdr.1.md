@@ -497,8 +497,8 @@ code unless it knows that the discriminant is of type bool.  (This is
 because go provides no uniform syntax for converting both enums and
 bools to int32.)  goxdr tries to figure out when the union
 discriminant is of type bool by following typedefs in the file, but
-this might now work if you use type aliases defined in a different
-file or constants other than "TRUE" and "FALSE".
+this doesn't work work if you use type aliases defined in a different
+file.
 
 IEEE 754 floating point allows for many different NaN (not a number)
 values.  The marshaling code simply takes whatever binary value go has
