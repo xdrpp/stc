@@ -18,6 +18,12 @@ wget -r -m -k -E -p -erobots=off -nH \
      --exclude-directories="*" \
      "http://localhost:6666/pkg/"
 
+cat >> lib/godoc/style.css <<EOF
+div#topbar {
+    visibility: hidden;
+}
+EOF
+
 cat > index.html <<EOF
 <!DOCTYPE html>
 <html lang="en">
