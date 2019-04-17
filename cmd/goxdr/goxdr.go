@@ -217,11 +217,11 @@ func (e *emitter) is_bool(t idval) bool {
 	for {
 		if t.getx() == "bool" {
 			return true
-		} else if t.getgo() == t.getx() {
+		} else if gg := t.getgo(); gg == "" || (gg[0] >= 'a' && gg[0] <= 'z') {
 			return false
 		}
 		s, ok := e.syms.SymbolMap[t.getx()]
-		if !ok || t.getx() == s.getsym().getx() {
+		if !ok {
 			return false
 		}
 		td, ok := s.(*rpc_typedef)
@@ -950,7 +950,7 @@ func main() {
 			fmt.Fprintf(out, " %s", arg)
 		}
 	}
-	fmt.Fprintln(out, "; DO NOT EDIT.\n");
+	fmt.Fprint(out, "; DO NOT EDIT.\n\n");
 
 	if *opt_pkg != "" {
 		fmt.Fprintf(out, "package %s\n%s", *opt_pkg, imports.ToImports())

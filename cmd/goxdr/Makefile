@@ -22,9 +22,12 @@ $(BUILT_SOURCES): header.go.in parse.y goxdr.go
 	sed -e 's|^[ 	]*//line|//line|' parse.go > parse.go~ \
 		&& mv -f parse.go~ parse.go
 
+test: all
+	go test -v
+
 clean:
 	go clean
-	rm -f *~ .*~ y.output debug
+	rm -f *~ .*~ y.output debug testdata/*~ testdata/testxdr.go
 
 maintainer-clean: clean
 	rm -f $(BUILT_SOURCES) goxdr.1
@@ -33,5 +36,5 @@ goxdr.1: goxdr.1.md
 	pandoc -s -w man goxdr.1.md -o goxdr.1 || \
 		git show $$(git for-each-ref --count 1 --format '%(refname)' 'refs/remotes/*/go1'):./$@ > $@
 
-.PHONY: all install uninstall clean maintainer-clean
+.PHONY: all install uninstall clean maintainer-clean test
 .NOTPARALLEL:

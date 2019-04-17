@@ -491,6 +491,14 @@ disallows identifiers that start with underscore, goxdr accepts them
 and produces code with inconsistent export semantics (since underscore
 cannot be capitalized).
 
+When unions use type bool as a discriminant, goxdr generates incorrect
+code unless it knows that the discriminant is of type bool.  (This is
+because go provides no uniform syntax for converting both enums and
+bools to int32.)  goxdr tried to figure out when the union
+discriminant is of type bool by following typedefs in the file, but if
+you use a type alias for bool that is defined in a different file,
+then goxdr will assume that the new type is not bool.
+
 IEEE 754 floating point allows for many different NaN (not a number)
 values.  The marshaling code simply takes whatever binary value go has
 sitting in memory, byteswapping on little-endian machines.  Other
