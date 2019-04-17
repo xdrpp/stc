@@ -38,7 +38,7 @@ cannot be `opaque` or `string` in this table):
 
     XDR type        Go type       notes
     --------------  ---------     ------------------------------
-    bool            bool          const (TRUE=true; FALSE=false)
+    bool            bool          use capital TRUE and FALSE
     int             int32
     unsigned int    uint32
     hyper           int64
@@ -62,10 +62,11 @@ representation is an `int32`.  The constants of the enum are defined
 as go constants of the new defined type.
 
 XDR defines bools as equivalent to an `enum` with name identifiers
-`TRUE` and `FALSE`.  Hence, goxdr introduces these names as aliases
-for go's `true` and `false`.  Be sure to use the capitalized versions
-in case statements of XDR source files so as to maintain compatibility
-with other languages and implementations.
+`TRUE` and `FALSE`.  goxdr translates XDR's `bool` to go's native
+`bool` type.  However, XDR still requires you to use capital `TRUE`
+and `FALSE`.  (The identifiers `true` and `false` will get translated
+to exported go identifiers `True` and `False`, which is probably not
+what you want.)
 
 An XDR `struct` is compiled to a defined type represented as a go
 struct containing each field of the XDR struct.
@@ -494,10 +495,10 @@ cannot be capitalized).
 When unions use type bool as a discriminant, goxdr generates incorrect
 code unless it knows that the discriminant is of type bool.  (This is
 because go provides no uniform syntax for converting both enums and
-bools to int32.)  goxdr tried to figure out when the union
-discriminant is of type bool by following typedefs in the file, but if
-you use a type alias for bool that is defined in a different file,
-then goxdr will assume that the new type is not bool.
+bools to int32.)  goxdr tries to figure out when the union
+discriminant is of type bool by following typedefs in the file, but
+this might now work if you use type aliases defined in a different
+file or constants other than "TRUE" and "FALSE".
 
 IEEE 754 floating point allows for many different NaN (not a number)
 values.  The marshaling code simply takes whatever binary value go has

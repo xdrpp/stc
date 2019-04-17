@@ -230,7 +230,9 @@ union_case_list: union_case
 		}
 	};
 
-union_case: T_CASE value ':' { $$ = $2 }
+union_case: T_CASE value ':' {
+	$$ = $2
+}
 | T_DEFAULT ':' { $$.setlocal("") }
 
 union_decl: declaration
@@ -426,6 +428,12 @@ id: T_ID
 	{
 		$$ = gid($1.Value)
 		$$.comment = nonEmpty($1.BlockComment, $1.LineComment)
+		switch $$.xid {
+		case "TRUE":
+			$$.goid = "true"
+		case "FALSE":
+			$$.goid = "false"
+		}
 	};
 
 %%
