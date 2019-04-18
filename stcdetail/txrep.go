@@ -1,3 +1,7 @@
+// Internal functions for the stc library.  These functions are
+// exported because they may be useful to application code, but
+// relegated to a separate package to avoid cluttering the main stc
+// documentation.
 package stcdetail
 
 import (

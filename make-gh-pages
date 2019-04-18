@@ -4,7 +4,7 @@ rm -rf goroot gh-pages
 make go1
 git archive --prefix=goroot/src/github.com/xdrpp/stc/ go1 | tar xf -
 
-godoc -goroot goroot -http localhost:6666 &
+GOPATH="$PWD/goroot" godoc -goroot "$PWD/goroot" -http localhost:6666 &
 pid=$!
 trap "kill $pid" 0
 

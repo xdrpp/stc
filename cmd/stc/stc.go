@@ -394,7 +394,7 @@ func main() {
 		"List keys that have been stored in $STCDIR")
 	opt_fee_stats := flag.Bool("fee-stats", false,
 		"Dump fee stats from network")
-	opt_acctinfo := flag.Bool("q", false,
+	opt_acctinfo := flag.Bool("qa", false,
 		"Query Horizon for information on account")
 	opt_friendbot := flag.Bool("create", false,
 		"Create and fund account (on testnet only)")

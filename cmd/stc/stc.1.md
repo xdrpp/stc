@@ -13,7 +13,7 @@ stc -edit [-net=ID] _file_ \
 stc -post [-net=ID] _input-file_ \
 stc -preauth [-net=ID] _input-file_ \
 stc -txhash [-net=ID] _input-file_ \
-stc -q [-net=ID] _accountID_ \
+stc -qa [-net=ID] _accountID_ \
 stc -fee-stats \
 stc -create [-net=ID] _accountID_ \
 stc -keygen [_name_] \
@@ -168,8 +168,8 @@ assume you do not encrypt your private keys.
 
 ## Network query mode
 
-stc runs in network query mode when the `-fee-stats` or `-q` option is
-provided.  `-fee-stats` reports on recent transaction fees.  `-q`
+stc runs in network query mode when the `-fee-stats` or `-qa` option
+is provided.  `-fee-stats` reports on recent transaction fees.  `-qa`
 reports on the state of a particular account.  Unfortunately, both of
 these requests are parsed from horizon responses in JSON rather than
 XDR format, and so are reported in a somewhat incomparable style to
@@ -247,7 +247,7 @@ signer.  Beware that `-net` must be set correctly or the hash will be
 incorrect, since the input to the hash function includes the network
 ID as well as the transaction.
 
-`-q`
+`-qa`
 :	Query the network for the state of a particular account.
 
 `-sec2pub`
@@ -395,7 +395,7 @@ always run `gpg -d keyfile.pgp | stc -sign -i txfile` to sign the
 transaction in `txfile` with a public-key-encrypted signature key in
 `keyfile.pgp`.
 
-The options that interact with Horizon and parse JSON (such as `-q`)
+The options that interact with Horizon and parse JSON (such as `-qa`)
 report things in a different style from the options that manipulate
 XDR.
 
