@@ -168,19 +168,26 @@ assume you do not encrypt your private keys.
 
 ## Network query mode
 
-stc runs in network query mode when the `-fee-stats` or `-qa` option
-is provided.  `-fee-stats` reports on recent transaction fees.  `-qa`
-reports on the state of a particular account.  Unfortunately, both of
-these requests are parsed from horizon responses in JSON rather than
-XDR format, and so are reported in a somewhat incomparable style to
-txrep format.  For example, balances are shown as a fixed-point number
-10^7 times the underlying int64.
+stc runs in network query mode when the `-fee-stats`, `-qa`, or
+`-create` option is provided.  `-fee-stats` reports on recent
+transaction fees.  `-qa` reports on the state of a particular account.
+Unfortunately, both of these requests are parsed from horizon
+responses in JSON rather than XDR format, and so are reported in a
+somewhat incomparable style to txrep format.  For example, balances
+are shown as a fixed-point number 10^7 times the underlying int64.
+`-create` creates and funds an account (which only works when the test
+network is specified).
 
 # OPTIONS
 
 `-c`
 :	Compile the output to base64 XDR binary.  Otherwise, the default
 is to output in text mode.  Only available in default mode.
+
+`-create`
+:	Create and fund an account on a network with a "friendbot" that
+gives away coins.  Currently the stellar test network has such a bot
+available by querying the `/friendbot?addr=ACCOUNT` path on horizon.
 
 `-edit`
 :	Select edit mode.

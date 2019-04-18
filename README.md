@@ -74,7 +74,7 @@ or if your versions are too old, run
     make update-depend
 
 to install the build-time dependencies under your `$GOPATH` (`~/go` by
-default).  Once these dependencies are place, just run:
+default).  Once these dependencies are place, just run
 
     make
 
