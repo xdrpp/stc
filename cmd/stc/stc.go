@@ -411,7 +411,7 @@ func main() {
        %[1]s -preauth [-net=ID] INPUT-FILE
        %[1]s -txhash [-net=ID] _INPUT-FILE
        %[1]s -fee-stats
-       %[1]s -q [-net=ID] ACCT
+       %[1]s -qa [-net=ID] ACCT
        %[1]s -create [-net=ID] ACCT
        %[1]s -keygen [NAME]
        %[1]s -sec2pub [NAME]

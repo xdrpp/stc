@@ -9,9 +9,8 @@ querying account status, and more.  The library makes it easy to build
 and submit transactions programmatically from go applications.
 
 In addition, stc includes a standalone RFC4506 XDR-to-go compiler,
-[`goxdr`](cmd/goxdr).  It has no Stellar-specific features, can be
-installed separately, and is useful for non-Stellar related
-applications.
+[`goxdr`](cmd/goxdr).  The compiler has no Stellar-specific features,
+can be installed separately, and is useful for other applications.
 
 # Installing `stc` for non-developers
 
@@ -27,8 +26,8 @@ limitation](https://github.com/golang/go/issues/27526) leaves your
 tree in a detached state, so that `go get -u` cannot pull from the
 remote `go1` branch.
 
-Once this completes, put the `~/go/bin` directory on your path and you
-should be able to run `stc`.
+Once this command completes, put the `~/go/bin` directory on your path
+and you should be able to run `stc`.
 
 To install the software from within a go module (a directory with a
 `go.mod` file), you will need to specify the `go1` branch to get
@@ -69,8 +68,8 @@ meant to be compiled under `$GOPATH`, but rather in a standalone
 directory with `make`.
 
 Furthermore, to build `stc` you also need to install `goyacc` and the
-Go extra `crypto` library.  If you don't already have these installed,
-or if your versions are too old, run the following command:
+go extra `crypto` library.  If you don't already have these installed,
+or if your versions are too old, run
 
     make update-depend
 
