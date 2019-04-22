@@ -48,6 +48,11 @@ type HorizonThresholds struct {
 	Med_threshold uint8
 	High_threshold uint8
 }
+type HorizonFlags struct {
+	Auth_required bool
+	Auth_revocable bool
+	Auth_immutable bool
+}
 type HorizonBalance struct {
 	Balance json.Number
 	Buying_liabilities json.Number
@@ -63,8 +68,11 @@ type HorizonSigner struct {
 }
 type HorizonAccountEntry struct {
 	Sequence json.Number
-	Last_modified_ledger uint32
 	Subentry_count uint32
+	Inflation_destination string
+	Home_domain string
+	Last_modified_ledger json.Number
+	Flags HorizonFlags
 	Thresholds HorizonThresholds
 	Balances []HorizonBalance
 	Signers []HorizonSigner
