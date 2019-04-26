@@ -117,7 +117,7 @@ func (pk *PublicKey) Scan(ss fmt.ScanState, _ rune) error {
 	if err != nil {
 		return err
 	}
-	return pk.TextUnmarshaler(bs)
+	return pk.UnmarshalText(bs)
 }
 
 // Parses a signer in strkey format.
@@ -126,11 +126,11 @@ func (pk *SignerKey) Scan(ss fmt.ScanState, _ rune) error {
 	if err != nil {
 		return err
 	}
-	return pk.TextUnmarshaler(bs)
+	return pk.UnmarshalText(bs)
 }
 
 // Parses a public key in strkey format.
-func (pk *PublicKey) TextUnmarshaler(bs []byte) error {
+func (pk *PublicKey) UnmarshalText(bs []byte) error {
 	key, vers := FromStrKey(bs)
 	switch vers {
 	case STRKEY_PUBKEY_ED25519:
@@ -143,7 +143,7 @@ func (pk *PublicKey) TextUnmarshaler(bs []byte) error {
 }
 
 // Parses a signer in strkey format.
-func (pk *SignerKey) TextUnmarshaler(bs []byte) error {
+func (pk *SignerKey) UnmarshalText(bs []byte) error {
 	key, vers := FromStrKey(bs)
 	switch vers {
 	case STRKEY_PUBKEY_ED25519:

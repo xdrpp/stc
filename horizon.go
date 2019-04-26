@@ -60,16 +60,16 @@ type HorizonBalance struct {
 	Limit json.Number
 	Asset_type json.Number
 	Asset_code string
-	Asset_issuer string
+	Asset_issuer *AccountID
 }
 type HorizonSigner struct {
-	Key string
+	Key SignerKey
 	Weight uint32
 }
 type HorizonAccountEntry struct {
 	Sequence json.Number
 	Subentry_count uint32
-	Inflation_destination string
+	Inflation_destination AccountID
 	Home_domain string
 	Last_modified_ledger json.Number
 	Flags HorizonFlags

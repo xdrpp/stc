@@ -24,7 +24,8 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 	ForEachXdr(e, func(t stx.XdrType)bool {
 		if ac, ok := t.(*stx.AccountID); ok {
 			if !isZeroAccount(ac) {
-				accounts[*ac] = []HorizonSigner{{Key: ac.String()}}
+				acs := ac.ToSignerKey()
+				accounts[*ac] = []HorizonSigner{{Key: acs}}
 			}
 			return true
 		}
@@ -48,13 +49,13 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 	}
 
 	for ac, signers := range accounts {
-		acs := ac.String()
+		acs := ac.ToSignerKey()
 		for _, signer := range signers {
 			var comment string
 			if acs != signer.Key {
-				comment = fmt.Sprintf("signer for account %s", acs)
+				comment = fmt.Sprintf("signer for account %s", ac)
 			}
-			net.Signers.Add(signer.Key, comment)
+			net.Signers.Add(signer.Key.String(), comment)
 		}
 	}
 }
