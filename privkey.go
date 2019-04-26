@@ -41,7 +41,7 @@ func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 	if err != nil {
 		return err
 	}
-	key, vers := stx.FromStrKey(string(bs))
+	key, vers := stx.FromStrKey(bs)
 	switch vers {
 	case stx.STRKEY_SEED_ED25519:
 		sec.K = stcdetail.Ed25519Priv(ed25519.NewKeyFromSeed(key))

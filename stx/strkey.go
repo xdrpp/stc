@@ -60,34 +60,26 @@ func ToStrKey(ver StrKeyVersionByte, bin []byte) string {
 // FromStrKey decodes a strkey-format string into the raw bytes of the
 // key and the type of key.  Returns the reserved StrKeyVersionByte
 // STRKEY_ERROR if it fails to decode the string.
-func FromStrKey(in string) ([]byte, StrKeyVersionByte) {
-	bin, err := base32.StdEncoding.DecodeString(in)
-	if err != nil || len(bin) < 3 || bin[0]&7 != 0 {
+func FromStrKey(in []byte) ([]byte, StrKeyVersionByte) {
+	bin := make([]byte, base32.StdEncoding.DecodedLen(len(in)))
+	n, err := base32.StdEncoding.Decode(bin, in)
+	if err != nil || n != len(bin) || n < 3 || bin[0]&7 != 0 {
 		return nil, STRKEY_ERROR
 	}
 	want := uint16(bin[len(bin)-2]) | uint16(bin[len(bin)-1])<<8
 	if want != crc16(bin[:len(bin)-2]) {
 		return nil, STRKEY_ERROR
 	}
-	switch len(bin) - 3 {
-	case 32:
-	default:
-		// Just so happens all three key types are currently 32 bytes
+	targetlen := -1
+	switch StrKeyVersionByte(bin[0] >> 3) {
+		case STRKEY_PUBKEY_ED25519, STRKEY_SEED_ED25519,
+		STRKEY_PRE_AUTH_TX, STRKEY_HASH_X:
+		targetlen = 32
+	}
+	if n - 3 != targetlen {
 		return nil, STRKEY_ERROR
 	}
 	return bin[1 : len(bin)-2], StrKeyVersionByte(bin[0] >> 3)
-}
-
-// Like FromStrKey, but the caller specifies the desired
-// StrKeyVersionByte.  Throws an error if the input is either invalid
-// or is of a type other than tat designated by the specified
-// StrKeyVersionByte.
-func MustFromStrKey(want StrKeyVersionByte, in string) []byte {
-	bin, ver := FromStrKey(in)
-	if bin == nil || ver != want {
-		panic(StrKeyError("invalid StrKey"))
-	}
-	return bin
 }
 
 // Renders a PublicKey in strkey format.
@@ -125,7 +117,21 @@ func (pk *PublicKey) Scan(ss fmt.ScanState, _ rune) error {
 	if err != nil {
 		return err
 	}
-	key, vers := FromStrKey(string(bs))
+	return pk.TextUnmarshaler(bs)
+}
+
+// Parses a signer in strkey format.
+func (pk *SignerKey) Scan(ss fmt.ScanState, _ rune) error {
+	bs, err := ss.Token(true, IsStrKeyChar)
+	if err != nil {
+		return err
+	}
+	return pk.TextUnmarshaler(bs)
+}
+
+// Parses a public key in strkey format.
+func (pk *PublicKey) TextUnmarshaler(bs []byte) error {
+	key, vers := FromStrKey(bs)
 	switch vers {
 	case STRKEY_PUBKEY_ED25519:
 		pk.Type = PUBLIC_KEY_TYPE_ED25519
@@ -137,12 +143,8 @@ func (pk *PublicKey) Scan(ss fmt.ScanState, _ rune) error {
 }
 
 // Parses a signer in strkey format.
-func (pk *SignerKey) Scan(ss fmt.ScanState, _ rune) error {
-	bs, err := ss.Token(true, IsStrKeyChar)
-	if err != nil {
-		return err
-	}
-	key, vers := FromStrKey(string(bs))
+func (pk *SignerKey) TextUnmarshaler(bs []byte) error {
+	key, vers := FromStrKey(bs)
 	switch vers {
 	case STRKEY_PUBKEY_ED25519:
 		pk.Type = SIGNER_KEY_TYPE_ED25519
