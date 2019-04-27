@@ -180,7 +180,7 @@ func readTx(infile string) (
 func mustReadTx(infile string) (*TransactionEnvelope, bool) {
 	e, compiled, err := readTx(infile)
 	if err != nil {
-		fmt.Println(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	return e, compiled

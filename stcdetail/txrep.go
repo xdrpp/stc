@@ -110,7 +110,8 @@ func init() {
 	}
 }
 
-func scalePrint(val int64, exp int) string {
+// Print a number divided by 10^exp, appending the exponent.
+func ScaleFmt(val int64, exp int) string {
 	mag := uint64(val)
 	if val < 0 {
 		mag = uint64(-val)
@@ -215,7 +216,7 @@ func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 		}
 	case *stx.XdrInt64:
 		fmt.Fprintf(xp.out, "%s: %s (%s)\n", name, v.String(),
-			scalePrint(int64(*v), 7))
+			ScaleFmt(int64(*v), 7))
 	case stx.XdrVecOpaque:
 		fmt.Fprintf(xp.out, "%s: %s\n", name, PrintVecOpaque(v.GetByteSlice()))
 	case fmt.Stringer:
