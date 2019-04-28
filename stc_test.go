@@ -99,6 +99,15 @@ func TestAppend(t *testing.T) {
 	})
 }
 
+func TestMaxInt64(t *testing.T) {
+	if MaxInt64 != 9223372036854775807 {
+		t.Error("MaxInt64 is wrong")
+	}
+	if MaxInt64 != int64(^uint64(0)>>1) {
+		t.Error("MaxInt64 is wrong")
+	}
+}
+
 func Example_txrep() {
 	var mykey PrivateKey
 	fmt.Sscan("SDWHLWL24OTENLATXABXY5RXBG6QFPLQU7VMKFH4RZ7EWZD2B7YRAYFS",
@@ -184,3 +193,4 @@ func Example_postTransaction() {
 
 	fmt.Println(result)
 }
+

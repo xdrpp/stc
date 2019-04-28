@@ -23,6 +23,9 @@ type Signature = stx.Signature
 type TransactionResult = stx.TransactionResult
 type LedgerHeader = stx.LedgerHeader
 
+// Largest 64-bit signed integer (9223372036854775807).
+const MaxInt64 = 0x7fffffffffffffff
+
 func NativeAsset() stx.Asset {
 	return stx.Asset {
 		Type: stx.ASSET_TYPE_NATIVE,

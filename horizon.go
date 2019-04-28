@@ -54,11 +54,11 @@ type HorizonFlags struct {
 	Auth_immutable bool
 }
 type HorizonBalance struct {
-	Balance json.Number
-	Buying_liabilities json.Number
-	Selling_liabilities json.Number
-	Limit json.Number
-	Asset_type json.Number
+	Balance stcdetail.JsonInt64e7
+	Buying_liabilities stcdetail.JsonInt64e7
+	Selling_liabilities stcdetail.JsonInt64e7
+	Limit stcdetail.JsonInt64e7
+	Asset_type string
 	Asset_code string
 	Asset_issuer *AccountID
 }
@@ -67,11 +67,12 @@ type HorizonSigner struct {
 	Weight uint32
 }
 type HorizonAccountEntry struct {
-	Sequence json.Number
+	Sequence stcdetail.JsonInt64
+	Balance stcdetail.JsonInt64e7
 	Subentry_count uint32
 	Inflation_destination AccountID
 	Home_domain string
-	Last_modified_ledger json.Number
+	Last_modified_ledger uint32
 	Flags HorizonFlags
 	Thresholds HorizonThresholds
 	Balances []HorizonBalance
@@ -84,8 +85,8 @@ func (hs *HorizonAccountEntry) String() string {
 // Return the next sequence number (1 + Sequence) as an int64 (or 0 if
 // an invalid sequence number was returned by horizon).
 func (ae *HorizonAccountEntry) NextSeq() int64 {
-	if val, err := stcdetail.JsonNumberToI64(ae.Sequence);
-	err != nil || val + 1 <= 0 {
+	val := int64(ae.Sequence)
+	if val <= 0 {
 		return 0
 	} else {
 		return val + 1
@@ -102,6 +103,13 @@ func (net *StellarNet) GetAccountEntry(acct string) (
 		var ae HorizonAccountEntry
 		if err = json.Unmarshal(body, &ae); err != nil {
 			return nil, err
+		}
+		for i := range ae.Balances {
+			if ae.Balances[i].Asset_type == "native" {
+				ae.Balance = ae.Balances[i].Balance
+				ae.Balances = append(ae.Balances[:i], ae.Balances[i+1:]...)
+				break
+			}
 		}
 		return &ae, nil
 	}
