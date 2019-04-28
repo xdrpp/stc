@@ -379,6 +379,10 @@ error conditions.  In that case you can put a human-readable
 description of the error condition as a comment in the XDR source
 file, and access the text of that comment from your program.
 
+`-lax-discriminants`
+:	Cast all discriminants and cases (except bool) to int32, so that
+you can use discriminants and cases that are different enum types.
+
 `-i` _import_path_
 :	Add the directive <tt>import . "_path_"</tt> at the top of the
 output file.  This is needed when XDR files in the current package
@@ -492,13 +496,13 @@ disallows identifiers that start with underscore, goxdr accepts them
 and produces code with inconsistent export semantics (since underscore
 cannot be capitalized).
 
-When unions use type bool as a discriminant, goxdr generates incorrect
-code unless it knows that the discriminant is of type bool.  (This is
-because go provides no uniform syntax for converting both enums and
-bools to int32.)  goxdr tries to figure out when the union
-discriminant is of type bool by following typedefs in the file, but
-this doesn't work work if you use type aliases defined in a different
-file.
+With `-lax-discriminants`, when unions use type bool as a
+discriminant, goxdr generates incorrect code unless it knows that the
+discriminant is of type bool.  (This is because go provides no uniform
+syntax for converting both enums and bools to int32.)  goxdr tries to
+figure out when the union discriminant is of type bool by following
+typedefs in the file, but this doesn't work work if you use type
+aliases defined in a different file.
 
 IEEE 754 floating point allows for many different NaN (not a number)
 values.  The marshaling code simply takes whatever binary value go has

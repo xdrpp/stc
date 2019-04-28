@@ -24,6 +24,7 @@ type emitter struct {
 	footer strings.Builder
 	emitted map[string]struct{}
 	enum_comments bool
+	lax_discriminants bool
 }
 
 type Emittable interface {
@@ -588,6 +589,27 @@ func (v *%[1]s) XdrMarshal(x XDR, name string) {
 	e.xappend(out)
 }
 
+type unionHelper struct {
+	castCases bool
+}
+
+func (uh unionHelper) castCase(v idval) string {
+	if uh.castCases {
+		return fmt.Sprintf("int32(%s)", v)
+	}
+	return v.String()
+}
+
+func (uh unionHelper) join(u *rpc_ufield) string {
+	ret := uh.castCase(u.cases[0])
+	for i := 1; i < len(u.cases); i++ {
+		ret += ", "
+		ret += uh.castCase(u.cases[i])
+	}
+	return ret
+}
+
+/*
 func castCase(boolDiscriminant bool, v idval) string {
 	if boolDiscriminant {
 		return v.String()
@@ -603,6 +625,7 @@ func (u *rpc_ufield) joinedCases(boolDiscriminant bool) string {
 	}
 	return ret
 }
+*/
 
 func (u *rpc_ufield) isVoid() bool {
 	return u.decl.id.getx() == "" || u.decl.typ.getx() == "void"
@@ -622,7 +645,8 @@ func (r *rpc_union) emit(e *emitter) {
 		if (u.hasdefault) {
 			fmt.Fprintf(out, "\t//   default:\n")
 		} else {
-			fmt.Fprintf(out, "\t//   %s:\n", u.joinedCases(true))
+			fmt.Fprintf(out, "\t//   %s:\n",
+				unionHelper{castCases: false}.join(u))
 		}
 		if u.isVoid() {
 			fmt.Fprintf(out, "\t//      void\n")
@@ -637,9 +661,12 @@ func (r *rpc_union) emit(e *emitter) {
 	e.append(out)
 	out.Reset()
 
-	bd := e.is_bool(r.tagtype)
+	uh := unionHelper {
+		castCases: e.lax_discriminants && !e.is_bool(r.tagtype),
+	}
+
 	var discriminant string
-	if bd {
+	if !uh.castCases {
 		discriminant = "u." + r.tagid.String()
 	} else {
 		discriminant = fmt.Sprintf("int32(u.%s)", r.tagid)
@@ -694,14 +721,14 @@ func (r *rpc_union) emit(e *emitter) {
 				} else {
 					needcomma = true
 				}
-				fmt.Fprintf(out, "%s", u1.joinedCases(bd))
+				fmt.Fprintf(out, "%s", uh.join(u1))
 			}
 			fmt.Fprintf(out, ":\n%s\tdefault:\n%s", badcase, goodcase)
 		} else {
 			if u.hasdefault {
 				fmt.Fprintf(out, "default:\n")
 			} else {
-				fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases(bd))
+				fmt.Fprintf(out, "\tcase %s:\n", uh.join(u))
 			}
 			fmt.Fprintf(out, "%s", goodcase)
 			if !u.hasdefault {
@@ -725,7 +752,7 @@ func (r *rpc_union) emit(e *emitter) {
 			} else {
 				needcomma = true
 			}
-			fmt.Fprintf(out, "%s", u1.joinedCases(bd))
+			fmt.Fprintf(out, "%s", uh.join(u1))
 		}
 		fmt.Fprintf(out, ":\n\t\treturn true\n\t}\n\treturn false\n")
 	}
@@ -743,7 +770,7 @@ func (r *rpc_union) emit(e *emitter) {
 		if u.hasdefault {
 			fmt.Fprintf(out, "\tdefault:\n")
 		} else {
-			fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases(bd))
+			fmt.Fprintf(out, "\tcase %s:\n", uh.join(u))
 		}
 		if u.isVoid() {
 			fmt.Fprintf(out, "\t\treturn nil\n")
@@ -764,7 +791,7 @@ func (r *rpc_union) emit(e *emitter) {
 		if u.hasdefault {
 			fmt.Fprintf(out, "\tdefault:\n")
 		} else {
-			fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases(bd))
+			fmt.Fprintf(out, "\tcase %s:\n", uh.join(u))
 		}
 		if u.isVoid() {
 			fmt.Fprintf(out, "\t\treturn \"\"\n")
@@ -797,7 +824,7 @@ func (u *%[1]s) XdrMarshal(x XDR, name string) {
 		if u.hasdefault {
 			fmt.Fprintf(out, "\tdefault:\n")
 		} else {
-			fmt.Fprintf(out, "\tcase %s:\n", u.joinedCases(bd))
+			fmt.Fprintf(out, "\tcase %s:\n", uh.join(u))
 		}
 		if !u.isVoid() {
 			out.WriteString("\t" + e.xdrgen("u." + u.decl.id.getgo() + "()",
@@ -855,11 +882,12 @@ func (r *rpc_program) emit(e *emitter) {
 	// Do something?
 }
 
-func emitAll(syms *rpc_syms, comments bool) string {
+func emitAll(syms *rpc_syms, comments bool, lax bool) string {
 	e := emitter{
 		syms: syms,
 		emitted: map[string]struct{}{},
 		enum_comments: comments,
+		lax_discriminants: lax,
 	}
 
 	e.append(`
@@ -868,7 +896,7 @@ func emitAll(syms *rpc_syms, comments bool) string {
 //
 `)
 
-	for _, s := range syms.Symbols  {
+	for _, s := range syms.Symbols {
 		e.append("\n")
 		e.emit(s)
 	}
@@ -906,6 +934,8 @@ func main() {
 	opt_help := flag.Bool("help", false, "Print usage")
 	opt_enum_comments := flag.Bool("enum-comments", false,
 		"for each enum, output a map containing source comments")
+	opt_lax_discriminants := flag.Bool("lax-discriminants", false,
+		"allow union discriminants and cases to be different enum types")
 	var imports stringlist
 	flag.Var(&imports, "i", "add import directive for `path`")
 	progname = os.Args[0]
@@ -931,7 +961,7 @@ func main() {
 	if syms.Failed {
 		os.Exit(1)
 	}
-	code := emitAll(&syms, *opt_enum_comments)
+	code := emitAll(&syms, *opt_enum_comments, *opt_lax_discriminants)
 
 	out := os.Stdout
 	if (*opt_output != "") {
