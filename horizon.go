@@ -2,6 +2,7 @@ package stc
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -50,6 +51,45 @@ func (net *StellarNet) GetJSON(query string, out interface{}) error {
 	} else {
 		return json.Unmarshal(body, out)
 	}
+}
+
+var badCb error = fmt.Errorf(
+	"StreamJSON cb argument must be of type func(obj *T)error")
+
+// Stream a series of events.  cb is a callback function which must
+// have type func(obj *T)error, where *T is a type into which JSON can
+// be unmarshalled.
+func (net *StellarNet) StreamJSON(
+	ctx context.Context, query string, cb interface{}) error {
+	cbv := reflect.ValueOf(cb)
+	tp := cbv.Type()
+	if tp.Kind() != reflect.Func || tp.NumIn() != 1 || tp.NumOut() != 1 ||
+		tp.Out(0).String() != "error" || tp.In(0).Kind() != reflect.Ptr {
+		panic(badCb)
+	}
+	tp = tp.In(0).Elem()
+
+	if net.Horizon == "" {
+		return badHorizonURL
+	}
+	query = net.Horizon + query
+
+	return stcdetail.Stream(ctx, query, func(evtype string, data []byte) error {
+		switch evtype {
+		case "error":
+			return stcdetail.HTTPerror(data)
+		case "message":
+			v := reflect.New(tp)
+			if err := json.Unmarshal(data, v.Interface()); err != nil {
+				return err
+			}
+			errs := cbv.Call([]reflect.Value{v})
+			if err, ok := errs[0].Interface().(error); ok && err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 type HorizonThresholds struct {
