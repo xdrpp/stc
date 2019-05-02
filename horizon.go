@@ -57,14 +57,19 @@ var badCb error = fmt.Errorf(
 	"StreamJSON cb argument must be of type func(obj *T)error")
 
 // Stream a series of events.  cb is a callback function which must
-// have type func(obj *T)error, where *T is a type into which JSON can
-// be unmarshalled.
+// have type func(obj *T)error or func(obj *T), where *T is a type
+// into which JSON can be unmarshalled.  Returns if there is an error
+// or the ctx argument is Done.  You likely want to call this in a
+// goroutine, and might want to call it in a loop to try again after
+// errors.
 func (net *StellarNet) StreamJSON(
 	ctx context.Context, query string, cb interface{}) error {
 	cbv := reflect.ValueOf(cb)
 	tp := cbv.Type()
-	if tp.Kind() != reflect.Func || tp.NumIn() != 1 || tp.NumOut() != 1 ||
-		tp.Out(0).String() != "error" || tp.In(0).Kind() != reflect.Ptr {
+	if tp.Kind() != reflect.Func ||
+		tp.NumIn() != 1 || tp.In(0).Kind() != reflect.Ptr ||
+		tp.NumOut() > 1 ||
+		(tp.NumOut() == 1 && tp.Out(0).String() != "error") {
 		panic(badCb)
 	}
 	tp = tp.In(0).Elem()
@@ -84,8 +89,10 @@ func (net *StellarNet) StreamJSON(
 				return err
 			}
 			errs := cbv.Call([]reflect.Value{v})
-			if err, ok := errs[0].Interface().(error); ok && err != nil {
-				return err
+			if len(errs) != 0 {
+				if err, ok := errs[0].Interface().(error); ok && err != nil {
+					return err
+				}
 			}
 		}
 		return nil
