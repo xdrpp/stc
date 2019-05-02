@@ -89,6 +89,7 @@ type HorizonAccountEntry struct {
 	Thresholds HorizonThresholds
 	Balances []HorizonBalance
 	Signers []HorizonSigner
+	Data map[string]string
 }
 func (hs *HorizonAccountEntry) String() string {
 	return stcdetail.PrettyPrint(hs)

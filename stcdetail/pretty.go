@@ -56,6 +56,12 @@ func (pp printer) doPretty(prefix string, v reflect.Value) {
 		for i := 0; i < n; i++ {
 			pp.recPretty(fmt.Sprintf("%s[%d]", prefix, i), "", v.Index(i))
 		}
+	case reflect.Map:
+		iter := v.MapRange()
+		for iter.Next() {
+			pp.recPretty(fmt.Sprintf("%s[%q]", prefix, iter.Key().Interface()),
+				"", iter.Value())
+		}
 	default:
 		panic(fmt.Errorf("cannot pretty-print %s", v.Type()))
 	}
