@@ -54,7 +54,7 @@ func (net *StellarNet) GetJSON(query string, out interface{}) error {
 }
 
 var badCb error = fmt.Errorf(
-	"StreamJSON cb argument must be of type func(obj *T)error")
+	"StreamJSON cb argument must be of type func(*T) or func(*T)error")
 
 // Stream a series of events.  cb is a callback function which must
 // have type func(obj *T)error or func(obj *T), where *T is a type
