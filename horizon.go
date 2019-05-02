@@ -43,6 +43,15 @@ func (net *StellarNet) Get(query string) ([]byte, error) {
 	return body, nil
 }
 
+// Send an HTTP request to horizon and perse the result as JSON
+func (net *StellarNet) GetJSON(query string, out interface{}) error {
+	if body, err := net.Get(query); err != nil {
+		return err
+	} else {
+		return json.Unmarshal(body, out)
+	}
+}
+
 type HorizonThresholds struct {
 	Low_threshold uint8
 	Med_threshold uint8
@@ -66,11 +75,14 @@ type HorizonSigner struct {
 	Key SignerKey
 	Weight uint32
 }
+
+// Structure into which you can unmarshal JSON returned by a query to
+// horizon for an account endpoint
 type HorizonAccountEntry struct {
 	Sequence stcdetail.JsonInt64
 	Balance stcdetail.JsonInt64e7
 	Subentry_count uint32
-	Inflation_destination AccountID
+	Inflation_destination *AccountID
 	Home_domain string
 	Last_modified_ledger uint32
 	Flags HorizonFlags
@@ -93,26 +105,30 @@ func (ae *HorizonAccountEntry) NextSeq() int64 {
 	}
 }
 
+func (ae *HorizonAccountEntry) UnmarshalJSON(data []byte) error {
+	type hae HorizonAccountEntry
+	if err := json.Unmarshal(data, (*hae)(ae)); err != nil {
+		return err
+	}
+	for i := range ae.Balances {
+		if ae.Balances[i].Asset_type == "native" {
+			ae.Balance = ae.Balances[i].Balance
+			ae.Balances = append(ae.Balances[:i], ae.Balances[i+1:]...)
+			break
+		}
+	}
+	return nil
+}
+
 // Fetch the sequence number and signers of an account over the
 // network.
 func (net *StellarNet) GetAccountEntry(acct string) (
 	*HorizonAccountEntry, error) {
-	if body, err := net.Get("accounts/" + acct); err != nil {
+	var ret HorizonAccountEntry
+	if err := net.GetJSON("accounts/" + acct, &ret); err != nil {
 		return nil, err
-	} else {
-		var ae HorizonAccountEntry
-		if err = json.Unmarshal(body, &ae); err != nil {
-			return nil, err
-		}
-		for i := range ae.Balances {
-			if ae.Balances[i].Asset_type == "native" {
-				ae.Balance = ae.Balances[i].Balance
-				ae.Balances = append(ae.Balances[:i], ae.Balances[i+1:]...)
-				break
-			}
-		}
-		return &ae, nil
 	}
+	return &ret, nil
 }
 
 // Returns the network ID, a string that is hashed into transaction
@@ -219,7 +235,7 @@ func capitalize(s string) string {
         return s
 }
 
-func getU32(i interface{}) (uint32, error) {
+func parseU32(i interface{}) (uint32, error) {
 	// Annoyingly, Horizion aleays returns strings instead of numbers
 	// for the /fee_stats endpoint.  Because this behavior is
 	// annoying, we want to be prepared for it to change, which is why
@@ -228,26 +244,20 @@ func getU32(i interface{}) (uint32, error) {
 	return uint32(n), err
 }
 
-// Queries the network for the latest fee statistics.
-func (net *StellarNet) GetFeeStats() (*FeeStats, error) {
-	body, err := net.Get("fee_stats")
-	if err != nil {
-		return nil, err
-	}
-	dec := json.NewDecoder(bytes.NewReader(body))
+func (fs *FeeStats) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()
 	var obj map[string]interface{}
-	if err = dec.Decode(&obj); err != nil {
-		return nil, err
+	if err := dec.Decode(&obj); err != nil {
+		return err
 	}
 
-	var fs FeeStats
-	rv := reflect.ValueOf(&fs).Elem()
+	rv := reflect.ValueOf(fs).Elem()
 	for k := range obj {
 		if strings.HasSuffix(k, feeSuffix) &&
 			k[0] == 'p' && k[1] >= '0' || k[1] <= '9' {
-			if p, err := getU32(k[1:len(k)-len(feeSuffix)]); err == nil {
-				if fee, err := getU32(obj[k]); err == nil {
+			if p, err := parseU32(k[1:len(k)-len(feeSuffix)]); err == nil {
+				if fee, err := parseU32(obj[k]); err == nil {
 					fs.Percentiles = append(fs.Percentiles, feePercentile{
 						Percentile: int(p),
 						Fee: fee,
@@ -279,13 +289,22 @@ func (net *StellarNet) GetFeeStats() (*FeeStats, error) {
 	if fs.Min_accepted_fee == 0 || fs.Last_ledger_base_fee == 0 ||
 		len(fs.Percentiles) == 0 {
 		// Something's wrong; don't return garbage
-		return nil, horizonFailure("Garbled fee_stats")
+		return horizonFailure("Garbled fee_stats")
 	}
 
 	sort.Slice(fs.Percentiles, func(i, j int) bool {
 		return fs.Percentiles[i].Percentile < fs.Percentiles[j].Percentile
 	})
-	return &fs, nil
+	return nil
+}
+
+// Queries the network for the latest fee statistics.
+func (net *StellarNet) GetFeeStats() (*FeeStats, error) {
+	var ret FeeStats
+	if err := net.GetJSON("fee_stats", &ret); err != nil {
+		return nil, err
+	}
+	return &ret, nil
 }
 
 // Fetch the latest ledger header over the network.
