@@ -121,7 +121,7 @@ func NewTransactionEnvelope() *TransactionEnvelope {
 // versions of the OperationType enum and can be transformed into the
 // body of an Operation
 type OperationBody interface {
-	ToXdrAnon_Operation_Body() stx.XdrAnon_Operation_Body
+	To_Operation_Body() stx.XdrAnon_Operation_Body
 }
 
 /*
@@ -167,7 +167,7 @@ func (txe *TransactionEnvelope) Append(
 	}
 	txe.Tx.Operations = append(txe.Tx.Operations, stx.Operation {
 		SourceAccount: sourceAccount,
-		Body: body.ToXdrAnon_Operation_Body(),
+		Body: body.To_Operation_Body(),
 	})
 }
 

@@ -52,13 +52,13 @@ func indent(s string) string {
 	return "\t" + strings.Replace(s, "\n", "\n\t", -1) + "\n"
 }
 
-const xdrinline_prefix string = "XdrAnon_"
+const Xdrinline_prefix string = "XdrAnon_"
 
 func xdrinline(s string) string {
-	if strings.HasPrefix(s, xdrinline_prefix) {
+	if strings.HasPrefix(s, Xdrinline_prefix) {
 		return s
 	}
-	return xdrinline_prefix + s
+	return Xdrinline_prefix + s
 }
 
 func parseXDR(out *rpc_syms, file string) {

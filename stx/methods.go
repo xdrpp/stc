@@ -15,8 +15,7 @@ func (pk PublicKey) ToSignerKey() SignerKey {
        panic(StrKeyError("Invalid public key type"))
 }
 
-func (body XdrAnon_Operation_Body) ToXdrAnon_Operation_Body(
-) XdrAnon_Operation_Body {
+func (body XdrAnon_Operation_Body) To_Operation_Body() XdrAnon_Operation_Body {
 	return body
 }
 
