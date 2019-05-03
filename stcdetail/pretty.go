@@ -11,21 +11,21 @@ type printer struct {
 }
 
 func canPrint(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16,
-		reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8,
-		reflect.Uint16, reflect.Uint32, reflect.Uint64,
-		reflect.Float32, reflect.Float64, reflect.Complex64,
-		reflect.Complex128, reflect.String:
+	if _, ok := v.Type().MethodByName("String"); ok {
 		return true
+	}
+
+	switch v.Kind() {
+	case reflect.Struct, reflect.Map:
+		return false
 	case reflect.Slice, reflect.Array:
 		if v.Type().Elem().Kind() == reflect.Uint8 {
 			return true
 		}
 		return false
+	default:
+		return true
 	}
-	_, ok := v.Type().MethodByName("String")
-	return ok
 }
 
 func (pp printer) recPretty(prefix string, field string, v reflect.Value) {
@@ -34,7 +34,11 @@ func (pp printer) recPretty(prefix string, field string, v reflect.Value) {
 	} else {
 		prefix += field
 	}
-	if canPrint(v) {
+	if v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
+		if !v.IsNil() {
+			pp.doPretty(prefix, v.Elem())
+		}
+	} else if canPrint(v) {
 		s := fmt.Sprint(v.Interface())
 		if s != "" {
 			fmt.Fprintf(pp, "%s: %s\n", prefix, s)
@@ -45,9 +49,6 @@ func (pp printer) recPretty(prefix string, field string, v reflect.Value) {
 }
 
 func (pp printer) doPretty(prefix string, v reflect.Value) {
-	if v.Kind() == reflect.Interface {
-		v = v.Elem()
-	}
 	switch v.Kind() {
 	case reflect.Struct:
 		n := v.NumField()
@@ -66,7 +67,7 @@ func (pp printer) doPretty(prefix string, v reflect.Value) {
 				"", iter.Value())
 		}
 	default:
-		panic(fmt.Errorf("cannot pretty-print %s", v.Type()))
+		pp.recPretty(prefix, "", v)
 	}
 }
 
