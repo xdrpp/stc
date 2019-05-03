@@ -111,7 +111,9 @@ func Stream(ctx context.Context, url string,
 		ctx = context.Background()
 	}
 	req.Header.Set("Accept", "text/event-stream")
-	req.URL.Query().Set("cursor", "now")
+	q := req.URL.Query()
+	q.Set("cursor", "now")
+	req.URL.RawQuery = q.Encode()
 
 	var resp *http.Response
 	cleanup := func() {
@@ -144,7 +146,8 @@ func Stream(ctx context.Context, url string,
 		}
 
 		if len(event.Id) > 0 {
-			req.URL.Query().Set("cursor", string(event.Id))
+			q.Set("cursor", string(event.Id))
+			req.URL.RawQuery = q.Encode()
 		}
 		if event.Retry != nil {
 			select {

@@ -45,6 +45,9 @@ func (pp printer) recPretty(prefix string, field string, v reflect.Value) {
 }
 
 func (pp printer) doPretty(prefix string, v reflect.Value) {
+	if v.Kind() == reflect.Interface {
+		v = v.Elem()
+	}
 	switch v.Kind() {
 	case reflect.Struct:
 		n := v.NumField()
