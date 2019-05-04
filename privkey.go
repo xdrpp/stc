@@ -18,23 +18,8 @@ import (
 // Abstract type representing a Stellar private key.  Prints and scans
 // in StrKey format.
 type PrivateKey struct {
-	K interface {
-		String() string
-		Sign([]byte) ([]byte, error)
-		Public() *PublicKey
-	}
+	stcdetail.PrivateKeyInterface
 }
-
-// Renders a private key in StrKey format.
-func (sk PrivateKey) String() string { return sk.K.String() }
-
-// Signs a raw stream of bytes.  You should generally use StellarNet's
-// SignTx() method instead, as Stellar inserts a network id into all
-// signed messages for the purposes of domain separation.
-func (sk *PrivateKey) Sign(msg []byte) ([]byte, error) { return sk.K.Sign(msg) }
-
-// Returns the public key corresponding to the private key.
-func (sk *PrivateKey) Public() *PublicKey { return sk.K.Public() }
 
 func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 	bs, err := ss.Token(true, stx.IsStrKeyChar)
@@ -44,7 +29,8 @@ func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 	key, vers := stx.FromStrKey(bs)
 	switch vers {
 	case stx.STRKEY_SEED_ED25519:
-		sec.K = stcdetail.Ed25519Priv(ed25519.NewKeyFromSeed(key))
+		sec.PrivateKeyInterface =
+			stcdetail.Ed25519Priv(ed25519.NewKeyFromSeed(key))
 		return nil
 	default:
 		return stx.StrKeyError("Invalid private key")

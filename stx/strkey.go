@@ -171,7 +171,7 @@ func signerHint(bs []byte) (ret SignatureHint) {
 
 // Returns the last 4 bytes of a PublicKey, as required for the Hint
 // field in a DecoratedSignature.
-func (pk *PublicKey) Hint() SignatureHint {
+func (pk PublicKey) Hint() SignatureHint {
 	switch pk.Type {
 	case PUBLIC_KEY_TYPE_ED25519:
 		return signerHint(pk.Ed25519()[:])
@@ -182,7 +182,7 @@ func (pk *PublicKey) Hint() SignatureHint {
 
 // Returns the last 4 bytes of a SignerKey, as required for the Hint
 // field in a DecoratedSignature.
-func (pk *SignerKey) Hint() SignatureHint {
+func (pk SignerKey) Hint() SignatureHint {
 	switch pk.Type {
 	case SIGNER_KEY_TYPE_ED25519:
 		return signerHint(pk.Ed25519()[:])

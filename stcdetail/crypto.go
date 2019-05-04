@@ -65,6 +65,12 @@ func VerifyTx(pk *stx.SignerKey, network string, tx *stx.Transaction,
 	}
 }
 
+type PrivateKeyInterface interface {
+	String() string
+	Sign([]byte) ([]byte, error)
+	Public() PublicKey
+}
+
 type Ed25519Priv ed25519.PrivateKey
 
 func (sk Ed25519Priv) String() string {
@@ -75,10 +81,10 @@ func (sk Ed25519Priv) Sign(msg []byte) ([]byte, error) {
 	return ed25519.PrivateKey(sk).Sign(rand.Reader, msg, crypto.Hash(0))
 }
 
-func (sk Ed25519Priv) Public() *PublicKey {
-	ret := stx.PublicKey{Type: stx.PUBLIC_KEY_TYPE_ED25519}
+func (sk Ed25519Priv) Public() (ret PublicKey) {
+	ret.Type = stx.PUBLIC_KEY_TYPE_ED25519
 	copy(ret.Ed25519()[:], ed25519.PrivateKey(sk).Public().(ed25519.PublicKey))
-	return &ret
+	return
 }
 
 func NewEd25519Priv() Ed25519Priv {
@@ -88,17 +94,6 @@ func NewEd25519Priv() Ed25519Priv {
 	}
 	return Ed25519Priv(sk)
 }
-
-/*
-func genEd25519() PrivateKey {
-	_, sk, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
-	return PrivateKey{ Ed25519Priv(sk) }
-}
-*/
 
 // PassphraseFile is the io.Reader from which passphrases should be
 // read.  If set to a terminal, then a prompt will be displayed and
