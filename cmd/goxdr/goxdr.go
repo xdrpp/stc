@@ -985,7 +985,9 @@ func main() {
 	if *opt_pkg != "" {
 		fmt.Fprintf(out, "package %s\n%s", *opt_pkg, imports.ToImports())
 	}
-	if !*opt_nobp {
+	if *opt_nobp {
+		fmt.Fprint(out, "import \"fmt\"\n\nvar _ = fmt.Sprintf\n")
+	} else {
 		io.WriteString(out, header)
 	}
 

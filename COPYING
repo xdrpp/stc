@@ -1,4 +1,4 @@
-Copyright (C) 2018 David Mazieres.  All rights reserved.
+Copyright (C) 2018-19 David Mazieres.  All rights reserved.
 
 
 Anyone is premitted to distribute this software under the terms of the
@@ -10,6 +10,12 @@ version of this license is available at the following URL:
 If the Free Software Foundation publishes a higher-numbered GPL
 license, you may at your option distribute this software under the
 terms of that license as well.
+
+
+Anyone is also permitted to distributed this software under the terms
+of the Apache License version 2.0, available at the following URL:
+
+        http://www.apache.org/licenses/LICENSE-2.0
 
 
 Stellar Development Foundation may, at the foundation's option,
