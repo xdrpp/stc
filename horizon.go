@@ -383,17 +383,11 @@ func (net *StellarNet) GetLedgerHeader() (*LedgerHeader, error) {
 	return ret, nil
 }
 
-type enum interface {
-	fmt.Stringer
-	stx.XdrNum32
-	XdrEnumNames() map[int32]string
-}
-
 type enumComments interface {
 	XdrEnumComments() map[int32]string
 }
 
-func enumDesc(e enum) string {
+func enumDesc(e stx.XdrEnum) string {
 	if ec, ok := e.(enumComments); ok {
 		if c, ok := ec.XdrEnumComments()[int32(e.GetU32())]; ok {
 			return c

@@ -9,12 +9,6 @@ import "strings"
 import "unicode"
 import "github.com/xdrpp/stc/stx"
 
-type enum interface {
-	fmt.Stringer
-	stx.XdrNum32
-	XdrEnumNames() map[int32]string
-}
-
 type union interface {
 	stx.XdrType
 	XdrUnionTag() interface{}
@@ -59,7 +53,7 @@ func genTypes(prefix string, u union, useArmName bool,
 	} else {
 		method = "To" + typ
 	}
-	tag := u.XdrUnionTag().(enum)
+	tag := u.XdrUnionTag().(stx.XdrEnum)
 	var evs enumVals
 	for k, v := range tag.XdrEnumNames() {
 		evs = append(evs, enumVal{k, v})
@@ -114,7 +108,7 @@ func (arg %[1]s) %[8]s() (ret %[3]s) {
 func genFuncs(prefix string, u union, useArmName bool,
 	comfn func([]interface{})) {
 	typ := reflect.TypeOf(u.XdrValue()).Name()
-	tag := u.XdrUnionTag().(enum)
+	tag := u.XdrUnionTag().(stx.XdrEnum)
 	var evs enumVals
 	for k, v := range tag.XdrEnumNames() {
 		evs = append(evs, enumVal{k, v})

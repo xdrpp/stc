@@ -12,7 +12,7 @@ func unmarshalOneValue(jval interface{}, xval stx.XdrType) {
 		if b, ok := jval.(bool); ok {
 			*v = stx.XdrBool(b)
 		} else {
-			stx.XdrPanic("JsonToXdr: field %s should be bool")
+			stx.XdrPanic("JsonToXdr: field XXX should be bool")
 		}
 	case stx.XdrPtr:
 		if jval == nil {
@@ -25,7 +25,7 @@ func unmarshalOneValue(jval interface{}, xval stx.XdrType) {
 		if s, ok := jval.(string); ok {
 			v.SetString(s)
 		} else {
-			stx.XdrPanic("JsonToXdr: field %s should be string")
+			stx.XdrPanic("JsonToXdr: field XXX should be string")
 		}
 	}
 
@@ -68,18 +68,13 @@ func JsonToXdr(dst stx.XdrAggregate, src []byte) (err error) {
 	return nil
 }
 
-const indentString = "    "
-
 type jsonOut struct {
 	out *bytes.Buffer
 	indent string
 	needComma bool
 }
-func (_ *jsonOut) Sprintf(f string, args ...interface{}) string {
-	return fmt.Sprintf(f, args...)
-}
-func (j *jsonOut) Marshal(name string, val stx.XdrType) {
-	startlen := j.out.Len()
+
+func (j *jsonOut) printField(name string, f string, args ...interface{}) {
 	if j.needComma {
 		j.out.WriteString(",\n")
 	} else {
@@ -90,46 +85,63 @@ func (j *jsonOut) Marshal(name string, val stx.XdrType) {
 	if len(name) > 0 && name[0] != '[' {
 		fmt.Fprintf(j.out, "%q: ", name)
 	}
+	fmt.Fprintf(j.out, f, args...)
+}
 
+func (j *jsonOut) aggregate(val stx.XdrAggregate) {
+	oldIndent := j.indent
+	defer func() {
+		j.needComma = true
+		j.indent = oldIndent
+	}()
+	j.indent = j.indent + "    "
+	j.needComma = false
+	switch v := val.(type) {
+	case stx.XdrVec:
+		j.out.WriteString("[")
+		v.XdrMarshalN(j, "", v.GetVecLen())
+		j.out.WriteString("\n" + oldIndent + "]")
+	case stx.XdrArray:
+		j.out.WriteString("[")
+		v.XdrMarshal(j, "")
+		j.out.WriteString("\n" + oldIndent + "]")
+	case stx.XdrAggregate:
+		j.out.WriteString("{")
+		v.XdrMarshal(j, "")
+		j.out.WriteString("\n" + oldIndent + "}")
+	}
+}
+
+func (_ *jsonOut) Sprintf(f string, args ...interface{}) string {
+	return fmt.Sprintf(f, args...)
+}
+func (j *jsonOut) Marshal(name string, val stx.XdrType) {
 	switch v := val.(type) {
 	case *stx.XdrBool:
-		fmt.Fprintf(j.out, "%v", bool(*v))
+		j.printField(name, "%v", *v)
+	case stx.XdrEnum:
+		j.printField(name, "%q", v.String())
+	case stx.XdrNum32:
+		j.printField(name, "%s", v.String())
+    // Intentionally don't do the same for 64-bit, which get passed as
+    // strings to avoid any loss of precision.
 	case stx.XdrString:
-		fmt.Fprintf(j.out, "%s", v.String())
+		j.printField(name, "%s", v.String())
 	case stx.XdrBytes:
-		j.out.WriteByte('"')
+		j.printField(name, "\"")
 		base64.NewEncoder(base64.StdEncoding, j.out).Write(v.GetByteSlice())
 		j.out.WriteByte('"')
 	case fmt.Stringer:
-		fmt.Fprintf(j.out, "%q", v.String())
+		j.printField(name, "%q", v.String())
 	case stx.XdrPtr:
 		if !v.GetPresent() {
-			j.out.WriteString("null")
+			j.printField(name, "null")
 		} else {
-			j.out.Truncate(startlen)
 			v.XdrMarshalValue(j, name)
 		}
-	case stx.XdrVec:
-		j.out.WriteString("[")
-		v.XdrMarshalN(&jsonOut{
-			out: j.out,
-			indent: j.indent + indentString,
-		}, "", v.GetVecLen())
-		j.out.WriteString("\n" + j.indent + "]")
-	case stx.XdrArray:
-		j.out.WriteString("[")
-		v.XdrMarshal(&jsonOut{
-			out: j.out,
-			indent: j.indent + indentString,
-		}, "")
-		j.out.WriteString("\n" + j.indent + "]")
 	case stx.XdrAggregate:
-		j.out.WriteString("{")
-		v.XdrMarshal(&jsonOut{
-			out: j.out,
-			indent: j.indent + indentString,
-		}, "")
-		j.out.WriteString("\n" + j.indent + "}")
+		j.printField(name, "")
+		j.aggregate(v)
 	default:
 		stx.XdrPanic("XdrToJson can't handle type %T", val)
 	}
@@ -144,15 +156,6 @@ func XdrToJson(src stx.XdrAggregate) (json []byte, err error) {
 		}
 	}()
 	j := &jsonOut{out: &bytes.Buffer{}}
-	switch src.(type) {
-	case stx.XdrArray, stx.XdrVec:
-		src.XdrMarshal(j, "")
-		j.out.WriteString("\n")
-	default:
-		j.out.WriteString("{")
-		j.indent += indentString
-		src.XdrMarshal(j, "")
-		j.out.WriteString("\n}\n")
-	}
+	j.aggregate(src)
 	return j.out.Bytes(), nil
 }

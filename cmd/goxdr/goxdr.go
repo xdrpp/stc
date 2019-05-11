@@ -167,6 +167,23 @@ func (v _ptrflag_$TYPE) String() string {
 	}
 	return "non-nil"
 }
+func (v _ptrflag_$TYPE) Scan(ss fmt.ScanState, r rune) error {
+	tok, err := ss.Token(true, func(c rune) bool {
+		return c == '-' || (c >= 'a' && c <= 'z')
+	})
+	if err != nil {
+		return err
+	}
+	switch string(tok) {
+	case "nil":
+		v.SetU32(0)
+	case "non-nil":
+		v.SetU32(1)
+	default:
+		return XdrError("$TYPE flag should be \"nil\" or \"non-nil\"")
+	}
+	return nil
+}
 func (v _ptrflag_$TYPE) GetU32() uint32 {
 	if *v.p == nil {
 		return 0

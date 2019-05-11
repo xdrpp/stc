@@ -31,3 +31,12 @@ case TRUE:
 default:
      void;
 };
+
+typedef U2 A1[5];
+
+struct A2 {
+     A1 a[4];
+     E1 e[4];
+     myBool b[4];
+     U2 u[4];
+};

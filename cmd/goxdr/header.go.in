@@ -137,8 +137,20 @@ const (
 // the 32-bit length.
 type XdrNum32 interface {
 	XdrType
+	fmt.Stringer
+	fmt.Scanner
 	GetU32() uint32
 	SetU32(uint32)
+}
+
+// Enums additionally provide access to a map of values to names.  You
+// generally don't need to invoke the XdrEnumNames() method (since the
+// String and Scan methods already access the underlying maps), but
+// the presence of this method can be useful to differentiate enums
+// from other XdrNum32 types.
+type XdrEnum interface {
+	XdrNum32
+	XdrEnumNames() map[int32]string
 }
 
 // All 64-bit numbers (hyper, unsigned hyper, and double) are passed
@@ -146,6 +158,8 @@ type XdrNum32 interface {
 // XdrNum64.
 type XdrNum64 interface {
 	XdrType
+	fmt.Stringer
+	fmt.Scanner
 	GetU64() uint64
 	SetU64(uint64)
 }
@@ -244,6 +258,10 @@ type XdrVoid = struct{}
 
 type XdrBool bool
 func (v *XdrBool) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
+func (v *XdrBool) Scan(ss fmt.ScanState, r rune) error {
+	_, err := fmt.Fscanf(ss, string([]rune{'%', r}), v.XdrPointer())
+	return err
+}
 func (v *XdrBool) GetU32() uint32 { if *v { return 1 }; return 0 }
 func (v *XdrBool) SetU32(nv uint32) {
 	switch nv {
@@ -260,6 +278,10 @@ func XDR_bool(x XDR, name string, v *bool) { x.Marshal(name, (*XdrBool)(v)) }
 
 type XdrInt32 int32
 func (v *XdrInt32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
+func (v *XdrInt32) Scan(ss fmt.ScanState, r rune) error {
+	_, err := fmt.Fscanf(ss, string([]rune{'%', r}), v.XdrPointer())
+	return err
+}
 func (v *XdrInt32) GetU32() uint32 { return uint32(*v) }
 func (v *XdrInt32) SetU32(nv uint32) { *v = XdrInt32(nv) }
 func (v *XdrInt32) XdrPointer() interface{} { return (*int32)(v) }
@@ -270,6 +292,10 @@ func XDR_int32(x XDR, name string, v *int32) {
 
 type XdrUint32 uint32
 func (v *XdrUint32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
+func (v *XdrUint32) Scan(ss fmt.ScanState, r rune) error {
+	_, err := fmt.Fscanf(ss, string([]rune{'%', r}), v.XdrPointer())
+	return err
+}
 func (v *XdrUint32) GetU32() uint32 { return uint32(*v) }
 func (v *XdrUint32) SetU32(nv uint32) { *v = XdrUint32(nv) }
 func (v *XdrUint32) XdrPointer() interface{} { return (*uint32)(v) }
@@ -280,6 +306,10 @@ func XDR_uint32(x XDR, name string, v *uint32) {
 
 type XdrFloat32 float32
 func (v *XdrFloat32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
+func (v *XdrFloat32) Scan(ss fmt.ScanState, r rune) error {
+	_, err := fmt.Fscanf(ss, string([]rune{'%', r}), v.XdrPointer())
+	return err
+}
 func (v *XdrFloat32) GetU32() uint32 { return math.Float32bits(float32(*v)) }
 func (v *XdrFloat32) SetU32(nv uint32) {
 	*v = XdrFloat32(math.Float32frombits(nv))
@@ -295,6 +325,19 @@ type XdrSize struct {
 	Bound uint32
 }
 func (v *XdrSize) String() string { return fmt.Sprintf("%v", v.Size) }
+func (v *XdrSize) Scan(ss fmt.ScanState, r rune) (err error) {
+	defer func() {
+		if err == nil {
+			err = recover().(error)
+		}
+	}()
+	var nv uint32
+	if _, err := fmt.Fscanf(ss, string([]rune{'%', r}), &nv); err != nil {
+		return err
+	}
+	v.SetU32(nv)
+	return
+}
 func (v *XdrSize) GetU32() uint32 { return v.Size }
 func (v *XdrSize) SetU32(nv uint32) {
 	if nv > v.Bound {
@@ -310,6 +353,10 @@ func (v *XdrSize) XdrBound() uint32 { return v.Bound }
 
 type XdrInt64 int64
 func (v *XdrInt64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
+func (v *XdrInt64) Scan(ss fmt.ScanState, r rune) error {
+	_, err := fmt.Fscanf(ss, string([]rune{'%', r}), v.XdrPointer())
+	return err
+}
 func (v *XdrInt64) GetU64() uint64 { return uint64(*v) }
 func (v *XdrInt64) SetU64(nv uint64) { *v = XdrInt64(nv) }
 func (v *XdrInt64) XdrPointer() interface{} { return (*int64)(v) }
@@ -318,6 +365,10 @@ func XDR_int64(x XDR, name string, v *int64) { x.Marshal(name, (*XdrInt64)(v)) }
 
 type XdrUint64 uint64
 func (v *XdrUint64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
+func (v *XdrUint64) Scan(ss fmt.ScanState, r rune) error {
+	_, err := fmt.Fscanf(ss, string([]rune{'%', r}), v.XdrPointer())
+	return err
+}
 func (v *XdrUint64) GetU64() uint64 { return uint64(*v) }
 func (v *XdrUint64) SetU64(nv uint64) { *v = XdrUint64(nv) }
 func (v *XdrUint64) XdrPointer() interface{} { return (*uint64)(v) }
@@ -328,6 +379,10 @@ func XDR_uint64(x XDR, name string, v *uint64) {
 
 type XdrFloat64 float64
 func (v *XdrFloat64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
+func (v *XdrFloat64) Scan(ss fmt.ScanState, r rune) error {
+	_, err := fmt.Fscanf(ss, string([]rune{'%', r}), v.XdrPointer())
+	return err
+}
 func (v *XdrFloat64) GetU64() uint64 { return math.Float64bits(float64(*v)) }
 func (v *XdrFloat64) SetU64(nv uint64) {
 	*v = XdrFloat64(math.Float64frombits(nv))
