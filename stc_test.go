@@ -155,6 +155,74 @@ func Example_txrep() {
 	// signatures[0].signature: 5cfdc4be4c35956876fe0688058d17e34dd481c475237a001def46236877461075f233c87b63b92ddfb5cde09c27f8361c325b72825bc3137e4b2b38130fd801
 }
 
+func Example_XdrToJson() {
+	var mykey PrivateKey
+	fmt.Sscan("SDWHLWL24OTENLATXABXY5RXBG6QFPLQU7VMKFH4RZ7EWZD2B7YRAYFS",
+		&mykey)
+
+	var yourkey PublicKey
+	fmt.Sscan("GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L",
+		&yourkey)
+
+	// Build a transaction
+	txe := NewTransactionEnvelope()
+	txe.Tx.SourceAccount = mykey.Public()
+	txe.Tx.Fee = 100
+	txe.Tx.SeqNum = 3319833626148865
+	txe.Tx.Memo = MemoText("Hello")
+	txe.Append(nil, Payment{
+		Destination: yourkey,
+		Asset: NativeAsset(),
+		Amount: 20000000,
+	})
+	// ... Can keep appending operations with txe.Append
+
+	// Sign the transaction
+	StellarTestNet.SignTx(&mykey, txe)
+
+	// Print the transaction in JSON
+	j, _ := XdrToJson(txe)
+	fmt.Print(string(j))
+
+	// Output:
+	// {
+	//     "tx": {
+	//         "sourceAccount": "GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G",
+	//         "fee": 100,
+	//         "seqNum": "3319833626148865",
+	//         "timeBounds": null,
+	//         "memo": {
+	//             "type": "MEMO_TEXT",
+	//             "text": "Hello"
+	//         },
+	//         "operations": [
+	//             {
+	//                 "sourceAccount": null,
+	//                 "body": {
+	//                     "type": "PAYMENT",
+	//                     "paymentOp": {
+	//                         "destination": "GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L",
+	//                         "asset": {
+	//                             "type": "ASSET_TYPE_NATIVE"
+	//                         },
+	//                         "amount": "20000000"
+	//                     }
+	//                 }
+	//             }
+	//         ],
+	//         "ext": {
+	//             "v": 0
+	//         }
+	//     },
+	//     "signatures": [
+	//         {
+	//             "hint": "4TdH",
+	//             "signature": "XP3Evkw1lWh2/gaIBY0X403UgcR1I3oAHe9GI2h3RhB18jPIe2O5Ld+1zeCcJ/g2HDJbcoJbwxN+Sys4Ew/Y"
+	//         }
+	//     ]
+	// }
+}
+
 func Example_postTransaction() {
 	var mykey PrivateKey
 	fmt.Sscan("SDWHLWL24OTENLATXABXY5RXBG6QFPLQU7VMKFH4RZ7EWZD2B7YRAYFS",
