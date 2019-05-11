@@ -29,16 +29,19 @@ func canPrint(v reflect.Value) bool {
 }
 
 func (pp printer) recPretty(prefix string, field string, v reflect.Value) {
+	fmt.Printf(">>> %s %s %s\n", prefix, field, v.Type())
 	if prefix != "" && field != "" && field[0] != '[' {
 		prefix = prefix + "." + field
 	} else {
 		prefix += field
 	}
 	if v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
-		if !v.IsNil() {
-			pp.doPretty(prefix, v.Elem())
+		if v.IsNil() {
+			return
 		}
-	} else if canPrint(v) {
+		v = v.Elem()
+	}
+	if canPrint(v) {
 		s := fmt.Sprint(v.Interface())
 		if s != "" {
 			fmt.Fprintf(pp, "%s: %s\n", prefix, s)

@@ -336,6 +336,37 @@ func (v *$VEC) XdrValue() interface{} { return ([]$TYPE)(*v) }
 	return vectyp
 }
 
+func (e *emitter) gen_array(typ, bound0 idval) string {
+	bound, _ := e.get_bound(bound0)
+	vectyp := "_XdrArray_" + bound + "_" + typ.getgo()
+	if typ.getgo()[0] == '_' {
+		// '_' starts inline declarations, so only one size
+		vectyp = "_XdrArray" + typ.getgo()
+	}
+	if e.done(vectyp) {
+		return vectyp
+	}
+	frag :=
+`type $VEC [$BOUND]$TYPE
+func (v *$VEC) XdrArraySize() uint32 {
+	const bound uint32 = $BOUND // Force error if not const or doesn't fit
+	return bound
+}
+func (v *$VEC) XdrMarshal(x XDR, name string) {
+	for i := 0; i < len(*v); i++ {
+		XDR_$TYPE(x, x.Sprintf("%s[%d]", name, i), &(*v)[i])
+	}
+}
+func (v *$VEC) XdrPointer() interface{} { return (*[$BOUND]$TYPE)(v) }
+func (v *$VEC) XdrValue() interface{} { return v[:] }
+`
+	frag = strings.Replace(frag, "$VEC", vectyp, -1)
+	frag = strings.Replace(frag, "$TYPE", typ.getgo(), -1)
+	frag = strings.Replace(frag, "$BOUND", bound, -1)
+	e.footer.WriteString(frag)
+	return vectyp
+}
+
 func (e *emitter) xdrgen(target, name string, context idval,
 	d *rpc_decl) string {
 	typ := e.get_typ(context, d)
@@ -355,11 +386,8 @@ func (e *emitter) xdrgen(target, name string, context idval,
 			frag = "\tx.Marshal($NAME, XdrArrayOpaque((*$TARGET)[:]))\n"
 			break;
 		}
-		frag =
-`	for i := 0; i < len(*$TARGET); i++ {
-		XDR_$TYPE(x, x.Sprintf("%s[%d]", $NAME, i), &(*$TARGET)[i])
-	}
-`
+		vectyp := e.gen_array(typ, d.bound)
+		frag = fmt.Sprintf("\tx.Marshal($NAME, (*%s)($TARGET))\n", vectyp)
 	case VEC:
 		if typ.getgo() == "byte" {
 			frag = "\tx.Marshal($NAME, XdrVecOpaque{$TARGET, $BOUND})\n"

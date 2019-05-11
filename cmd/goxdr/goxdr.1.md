@@ -211,8 +211,9 @@ on what is being marshaled:
   `XdrAggregate`.
 
 * Fixed-length arrays (other than `opaque[]`) are passed to `Marshal`
-  one element at a time, so `Marshal` is never called on the whole
-  array (or on a pointer to the whole array).
+  as a defined type implementing `XdrArray`.  Calling `XdrMarshal()`
+  on this defined type iterates over the array to marshal each element
+  individually.
 
 * Variable-length arrays (other than `opaque<>`) are passed first as a
   pointer to a defined type implementing the `XdrVec` and
@@ -241,10 +242,12 @@ on what is being marshaled:
 
 For most types, the original type or a pointer to it can be retrieved
 via the `XdrPointer()` and `XdrValue()` methods, which return an
-`interface{}`.  Two exceptions are `XdrArrayOpaque` (for which
-`XdrValue()` returns a slice and `XdrPointer` returns `nil`), and the
-fake `bool` on which `Marshal` is called for a pointer type (which
-bool supports `XdrValue()`, but returns `nil` from `XdrPointer()`).
+`interface{}`.  Exceptions are `XdrArrayOpaque` (for which
+`XdrValue()` returns a slice and `XdrPointer` returns `nil`), the fake
+`bool` on which `Marshal` is called for a pointer type (which bool
+supports `XdrValue()`, but returns `nil` from `XdrPointer()`), and
+arrays (for which `XdrValue()` returns a slice, to avoid copying the
+array).
 
 The table below summarizes the (overlapping) interfaces implemented by
 types passed to `Marshal` functions, where `T` stands for a complete
@@ -258,11 +261,12 @@ cover all types, for instance `XdrNum32`, `XdrNum64`, `XdrBytes`, and
     XdrNum32     bool, [unsigned] int, enums, float,
                  size, pointer present flag
     XdrNum64     [unsigned] hyper, double
+    XdrArray     T[n]
     XdrVec       T<n>
     XdrPtr       T*
     XdrVarBytes  string<n>, opaque<n>
     XdrBytes     string<n>, opaque[n], opaque<n>
-    XdrAggregate struct T, union T, T*, T<n>
+    XdrAggregate struct T, union T, T*, T<n>, T[n]
     Stringer     all types in XdrNum{32,64} and XdrBytes
     Scanner      all types in XdrNum{32,64} and XdrBytes
     XdrType      all XDR types
@@ -311,7 +315,7 @@ information cannot conveniently be encoded as part of the go type.
     opaque<n>       XdrVecOpaque
     opaque[n]       XdrArrayOpaque
     T               *T              for struct, enum, union
-    T[n]            n times *T
+    T[n]            generated
     T*              generated
     T<n>            generated
     size            *XdrSize        when recursing in T<n>

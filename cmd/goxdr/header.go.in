@@ -27,7 +27,7 @@ import (
 // XdrValue and XdrPointer methods give you access to a value or
 // pointer to the original underlying type.
 //
-// There are two exceptions:
+// There are a few exceptions:
 //
 //   - opaque[] (fixed-length arrays of bytes) are returned as
 //     XdrArrayOpaque (by XdrValue()) or nil (by XdrPointer()).  This
@@ -42,6 +42,9 @@ import (
 //     XdrNum32 type of 0 or 1 to record whether the pointer is nil or
 //     the value is present.  Since this bool does not exist,
 //     XdrPointer() returns nil (while XdrValue returns a bool).
+//
+//   - For arrays, XdrValue() passes a slice, rather than the full
+//     array, so as to avoid copying the array.
 //
 // Note that arrays of types other than opaque are never passed to the
 // Marshal method.  Rather, the XDR_Type function loops over the array
@@ -203,10 +206,10 @@ type XdrPtr interface {
 	XdrMarshalValue(XDR, string)
 }
 
-// Any vector type is passed as a pointer to a user-defined alias
-// around a slice that implements the XdrVec interface.  XdrVec is a
-// superset of XdrAggregate, so calling XdrMarshal will recurse to
-// call XDR.Marshal first on the size (of type XdrSize), then on each
+// Any vector type is passed as a pointer to a user-defined slice type
+// that implements the XdrVec interface.  XdrVec is a superset of
+// XdrAggregate, so calling XdrMarshal will recurse to call
+// XDR.Marshal first on the size (of type XdrSize), then on each
 // element of the slice.  An XDR.Marshal function can manually marshal
 // the size and then call XdrMarshalN to marshal n vector elements.
 // (When deserializing, it is advisable *not* to call SetVecLen before
@@ -220,6 +223,15 @@ type XdrVec interface {
 	GetVecLen() uint32
 	SetVecLen(uint32)
 	XdrMarshalN(XDR, string, uint32)
+}
+
+// Any array type is passed as a pointer to a user-defined array
+// supporting the XdrArray interface.  This is a superset of
+// XdrAggregate, and so supports recursing to marshal each individual
+// array member.
+type XdrArray interface {
+	XdrAggregate
+	XdrArraySize() uint32
 }
 
 // Returns true for A-Z, a-z, 0-9, and _.

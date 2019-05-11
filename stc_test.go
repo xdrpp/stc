@@ -119,7 +119,7 @@ func Example_txrep() {
 
 	// Build a transaction
 	txe := NewTransactionEnvelope()
-	txe.Tx.SourceAccount = *mykey.Public()
+	txe.Tx.SourceAccount = mykey.Public()
 	txe.Tx.Fee = 100
 	txe.Tx.SeqNum = 3319833626148865
 	txe.Tx.Memo = MemoText("Hello")
@@ -170,7 +170,7 @@ func Example_postTransaction() {
 
 	// Build a transaction
 	txe := NewTransactionEnvelope()
-	txe.Tx.SourceAccount = *mykey.Public()
+	txe.Tx.SourceAccount = mykey.Public()
 	txe.Tx.SeqNum = myacct.NextSeq()
 	txe.Tx.Memo = MemoText("Hello")
 	txe.Append(nil, SetOptions{
