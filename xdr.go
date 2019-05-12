@@ -62,6 +62,11 @@ func MkAllowTrustAsset(code string) stx.AllowTrustAsset {
 	return ret
 }
 
+// Return a pointer to an account ID
+func NewAccountID(id AccountID) *AccountID {
+	return &id
+}
+
 // Create a signer for a particular public key and weight
 func NewSignerKey(pk PublicKey, weight uint32) *stx.Signer {
 	return &stx.Signer{

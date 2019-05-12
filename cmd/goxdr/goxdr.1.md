@@ -264,6 +264,7 @@ cover all types, for instance `XdrNum32`, `XdrNum64`, `XdrBytes`, and
     XdrArray     T[n]
     XdrVec       T<n>
     XdrPtr       T*
+    XdrEnum      enums
     XdrVarBytes  string<n>, opaque<n>
     XdrBytes     string<n>, opaque[n], opaque<n>
     XdrAggregate struct T, union T, T*, T<n>, T[n]

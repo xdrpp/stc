@@ -155,7 +155,7 @@ func Example_txrep() {
 	// signatures[0].signature: 5cfdc4be4c35956876fe0688058d17e34dd481c475237a001def46236877461075f233c87b63b92ddfb5cde09c27f8361c325b72825bc3137e4b2b38130fd801
 }
 
-func Example_XdrToJson() {
+func ExampleXdrToJson() {
 	var mykey PrivateKey
 	fmt.Sscan("SDWHLWL24OTENLATXABXY5RXBG6QFPLQU7VMKFH4RZ7EWZD2B7YRAYFS",
 		&mykey)
@@ -216,11 +216,67 @@ func Example_XdrToJson() {
 	//     },
 	//     "signatures": [
 	//         {
-	//             "hint": "4TdH",
-	//             "signature": "XP3Evkw1lWh2/gaIBY0X403UgcR1I3oAHe9GI2h3RhB18jPIe2O5Ld+1zeCcJ/g2HDJbcoJbwxN+Sys4Ew/Y"
+    //             "hint": "4TdHQQ==",
+    //             "signature": "XP3Evkw1lWh2/gaIBY0X403UgcR1I3oAHe9GI2h3RhB18jPIe2O5Ld+1zeCcJ/g2HDJbcoJbwxN+Sys4Ew/YAQ=="
 	//         }
 	//     ]
 	// }
+}
+
+func TestJsonToXdr(t *testing.T) {
+	var mykey PrivateKey
+	fmt.Sscan("SDWHLWL24OTENLATXABXY5RXBG6QFPLQU7VMKFH4RZ7EWZD2B7YRAYFS",
+		&mykey)
+
+	var yourkey PublicKey
+	fmt.Sscan("GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L",
+		&yourkey)
+
+	// Build a transaction
+	txe := NewTransactionEnvelope()
+	txe.Tx.SourceAccount = mykey.Public()
+	txe.Tx.Fee = 100
+	txe.Tx.SeqNum = 3319833626148865
+	txe.Tx.Memo = MemoText("Hello")
+	txe.Append(nil, Payment{
+		Destination: yourkey,
+		Asset: NativeAsset(),
+		Amount: 20000000,
+	})
+	txe.Append(nil, Inflation{})
+	txe.Append(&yourkey, AllowTrust{
+		Trustor: mykey.Public(),
+		Asset: MkAllowTrustAsset("ABCDE"),
+		Authorize: true,
+	})
+	txe.Append(nil, SetOptions{
+		InflationDest: NewAccountID(mykey.Public()),
+		HomeDomain: NewString("stellar.org"),
+		MasterWeight: NewUint(255),
+		Signer: NewSignerKey(yourkey, 1),
+	})
+
+	// Sign the transaction
+	StellarTestNet.SignTx(&mykey, txe)
+
+	// Print the transaction in JSON
+	j, err := XdrToJson(txe)
+	if err != nil {
+		t.Errorf("XdrToJson: %s", err)
+		return
+	}
+
+	txe2 := NewTransactionEnvelope()
+	if err = JsonToXdr(txe2, j); err != nil {
+		t.Errorf("JsonToXdr: %s", err)
+		return
+	}
+
+	if TxToBase64(txe) != TxToBase64(txe2) {
+		t.Errorf("Round-trip error\nWant:\n%sHave:\n%sJson:\n%s",
+			StellarTestNet.TxToRep(txe), StellarTestNet.TxToRep(txe2),
+			string(j))
+	}
 }
 
 func Example_postTransaction() {
@@ -261,4 +317,3 @@ func Example_postTransaction() {
 
 	fmt.Println(result)
 }
-

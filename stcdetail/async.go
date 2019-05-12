@@ -12,7 +12,7 @@ type Errors []error
 func (errs Errors) Error() string {
 	out := strings.Builder{}
 	for i := range errs {
-		fmt.Println(&out, errs[i].Error())
+		fmt.Fprintln(&out, errs[i].Error())
 	}
 	return strings.TrimRight(out.String(), "\r\n")
 }
