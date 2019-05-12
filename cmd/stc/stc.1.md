@@ -82,11 +82,12 @@ of transactions.  Hence, if you want to preserve transactions that you
 can later read or re-use, compile them with `-c`.  XDR is also
 compatible with other tools.  Notably, you can examine the contents of
 an XDR transaction with `stellar-core` itself, using the command
-"`stellar-core --base64 --printxdr FILE`", or by using the web-based
-Stellar XDR viewer at
+"`stellar-core print-xdr --filetype tx --base64 FILE`", or by using
+the web-based Stellar XDR viewer at
 <https://www.stellar.org/laboratory/#xdr-viewer>.  You can also sign
-XDR transactions with `stellar-core`, using "`stellar-core --base64
---signtxn`".
+XDR transactions with `stellar-core`, using "`stellar-core
+sign-transaction --base64 --netid "Public Global Stellar Network ;
+September 2015" FILE`".
 
 ## Edit mode
 
@@ -340,9 +341,13 @@ each subdirectory of `networks` there are four files:
   signatures and pre-signed-transaction hashes (which prevents
   signatures from being valid on more than one instantiation of the
   Stellar network).  stc by default populates these files correctly
-  for the main public Stellar network and test networks.  You probably
-  shouldn't edit these files, but may wish to create new ones if you
-  instantiate your own networks using the Stellar code base.
+  for the main public Stellar network and automatically fetches and
+  stores the network ID of test network the first time it is used.
+  You probably shouldn't edit these files, but may wish to create new
+  ones if you instantiate your own networks using the Stellar code
+  base and don't want stc to fetch the network automatically, or if
+  you relaunch a network with a different network ID, in which case
+  you need to delete the old `network_id` file.
 
 * `horizon` corresponds to the base URL of the horizon instance to use
   for this network.  You may wish to change this URL to use your own
