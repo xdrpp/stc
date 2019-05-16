@@ -108,6 +108,47 @@ func TestMaxInt64(t *testing.T) {
 	}
 }
 
+func TestParseTxrep(t *testing.T) {
+	var yourkey PublicKey
+	fmt.Sscan("GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L",
+		&yourkey)
+
+	txe := NewTransactionEnvelope()
+	fmt.Sscan("GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G",
+		&txe.Tx.SourceAccount)
+	var ot stx.OperationType
+	for i := range ot.XdrEnumNames() {
+		var op stx.Operation
+		op.Body.Type = stx.OperationType(i)
+		txe.Tx.Operations = append(txe.Tx.Operations, op)
+	}
+	ForEachXdr(txe, func(i stx.XdrType) bool {
+		switch v := i.(type) {
+		case interface{XdrInitialize()}:
+			v.XdrInitialize()
+		case stx.XdrPtr:
+			v.SetPresent(true)
+		case *stx.AccountID:
+			*v = yourkey
+		case stx.XdrNum64:
+			v.SetU64(1)
+		case stx.XdrVarBytes:
+			v.SetByteSlice([]byte("X"))
+		case stx.XdrBytes:
+			v.GetByteSlice()[0] = 'Y'
+		}
+		return false
+	})
+
+	rep := StellarTestNet.TxToRep(txe)
+	txe2, err := TxFromRep(rep)
+	if err != nil {
+		t.Errorf("parsing txrep failed: %s", err)
+	} else if TxToBase64(txe) != TxToBase64(txe2) {
+		t.Error("txrep round-trip failed")
+	}
+}
+
 func Example_txrep() {
 	var mykey PrivateKey
 	fmt.Sscan("SDWHLWL24OTENLATXABXY5RXBG6QFPLQU7VMKFH4RZ7EWZD2B7YRAYFS",
