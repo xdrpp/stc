@@ -424,6 +424,17 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 		} else if len(val) > 0 && val[len(val)-1] == '?' {
 			xs.setHelp(name)
 		}
+	case *stx.XdrSize:
+		var size uint32
+		lv = xs.kvs[name+"."+ps_len]
+		fmt.Sscan(lv.val, &size)
+		if size <= v.XdrBound() {
+			v.SetU32(size)
+		} else {
+			v.SetU32(v.XdrBound())
+			xs.report(lv.line, "%s.%s (%d) exceeds maximum size %d.",
+				name, ps_len, size, v.XdrBound())
+		}
 	case fmt.Scanner:
 		if !ok {
 			return
@@ -463,17 +474,6 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 				"%s (%s) must be true or false", field, val)
 		}
 		v.XdrMarshalValue(xs, name)
-	case *stx.XdrSize:
-		var size uint32
-		lv = xs.kvs[name+"."+ps_len]
-		fmt.Sscan(lv.val, &size)
-		if size <= v.XdrBound() {
-			v.SetU32(size)
-		} else {
-			v.SetU32(v.XdrBound())
-			xs.report(lv.line, "%s.%s (%d) exceeds maximum size %d.",
-				name, ps_len, size, v.XdrBound())
-		}
 	case stx.XdrAggregate:
 		v.XdrMarshal(xs, name)
 	default:
