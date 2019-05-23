@@ -87,7 +87,7 @@ func (l *Lexer) advance(length int) {
 			l.colno = 0
 			l.midline = false
 		case '\t':
-			l.colno = (l.colno + tabwidth) % tabwidth
+			l.colno += 8 - (l.colno % tabwidth)
 		case ' ':
 			l.colno++
 		default:
