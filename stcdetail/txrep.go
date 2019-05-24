@@ -10,7 +10,6 @@ import (
 	"io"
 	"strings"
 	"time"
-	"unicode"
 )
 
 // pseudo-selectors
@@ -37,10 +36,11 @@ func (e XdrBadValue) Error() string {
 	return out.String()
 }
 
+/*
 func renderByte(b byte) string {
 	if b <= ' ' || b >= '\x7f' {
 		return fmt.Sprintf("\\x%02x", b)
-	} else if b == '\\' {
+	} else if b == '\\' || b == ':' {
 		return "\\" + string(b)
 	}
 	return string(b)
@@ -50,12 +50,16 @@ func renderCode(bs []byte) string {
 	var n int
 	for n = len(bs); n > 0 && bs[n-1] == 0; n-- {
 	}
+	if len(bs) > 4 && n <= 4 {
+		n = 5
+	}
 	out := &strings.Builder{}
 	for i := 0; i < n; i++ {
 		out.WriteString(renderByte(bs[i]))
 	}
 	return out.String()
 }
+*/
 
 type trackTypes struct {
 	ptrDepth int
@@ -208,12 +212,14 @@ func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 		} else {
 			fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
 		}
+/*
 	case stx.XdrArrayOpaque:
 		if xp.inAsset {
 			fmt.Fprintf(xp.out, "%s: %s\n", name, renderCode(v.GetByteSlice()))
 		} else {
 			fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
 		}
+*/
 	case *stx.XdrInt64:
 		fmt.Fprintf(xp.out, "%s: %s (%s)\n", name, v.String(),
 			ScaleFmt(int64(*v), 7))
@@ -317,22 +323,27 @@ func (e TxrepError) FileError(filename string) string {
 	return e.render(filename + ":")
 }
 
+/*
+func isSpace(c byte) bool {
+	return c == ' ' || c == '\t'
+}
+
 // Slightly convoluted logic to avoid throwing away the account name
 // in case the code is bad
 func scanCode(out []byte, input string) error {
 	ss := strings.NewReader(input)
 skipspace:
-	if r, _, err := ss.ReadRune(); unicode.IsSpace(r) {
+	if r, err := ss.ReadByte(); isSpace(r) {
 		goto skipspace
 	} else if err == nil {
-		ss.UnreadRune()
+		ss.UnreadByte()
 	}
 	var i int
-	var r = ' '
+	var r = byte(' ')
 	var err error
 	for i = 0; i < len(out); i++ {
-		r, _, err = ss.ReadRune()
-		if err == io.EOF || unicode.IsSpace(r) {
+		r, err = ss.ReadByte()
+		if err == io.EOF || isSpace(r) {
 			break
 		} else if err != nil {
 			return err
@@ -343,7 +354,7 @@ skipspace:
 			out[i] = byte(r)
 			continue
 		}
-		r, _, err = ss.ReadRune()
+		r, err = ss.ReadByte()
 		if err != nil {
 			return err
 		} else if r != 'x' {
@@ -356,12 +367,13 @@ skipspace:
 		out[i] = 0
 	}
 	// XXX - might already have read space above
-	r, _, err = ss.ReadRune()
-	if err != io.EOF && !unicode.IsSpace(r) {
+	r, err = ss.ReadByte()
+	if err != io.EOF && isSpace(r) {
 		return stx.StrKeyError("AssetCode too long")
 	}
 	return nil
 }
+*/
 
 type lineval struct {
 	line int
@@ -396,6 +408,7 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 	}
 	switch v := i.(type) {
 	case stx.XdrArrayOpaque:
+/*
 		var err error
 		if xs.inAsset {
 			err = scanCode(v.GetByteSlice(), val)
@@ -404,6 +417,8 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 		} else {
 			_, err = fmt.Sscan(val, v)
 		}
+*/
+		_, err := fmt.Sscan(val, v)
 		if err != nil {
 			xs.setHelp(name)
 			xs.report(lv.line, "%s", err.Error())

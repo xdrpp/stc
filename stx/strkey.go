@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"fmt"
 	"encoding/base32"
+	"io"
+	"strings"
 )
 
 type StrKeyError string
@@ -104,6 +106,117 @@ func (pk SignerKey) String() string {
 	default:
 		return fmt.Sprintf("SignerKey.Type#%d", int32(pk.Type))
 	}
+}
+
+func renderByte(b byte) string {
+	if b <= ' ' || b >= '\x7f' {
+		return fmt.Sprintf("\\x%02x", b)
+	} else if b == '\\' || b == ':' {
+		return "\\" + string(b)
+	}
+	return string(b)
+}
+
+func renderCode(bs []byte) string {
+	var n int
+	for n = len(bs); n > 0 && bs[n-1] == 0; n-- {
+	}
+	if len(bs) > 4 && n <= 4 {
+		n = 5
+	}
+	out := &strings.Builder{}
+	for i := 0; i < n; i++ {
+		out.WriteString(renderByte(bs[i]))
+	}
+	return out.String()
+}
+
+// Renders an Asset as Code:AccountID.
+func (a Asset) String() string {
+	var code []byte
+	var issuer *AccountID
+	switch a.Type {
+	case ASSET_TYPE_NATIVE:
+		return "NATIVE"
+	case ASSET_TYPE_CREDIT_ALPHANUM4:
+		code = a.AlphaNum4().AssetCode[:]
+		issuer = &a.AlphaNum4().Issuer
+	case ASSET_TYPE_CREDIT_ALPHANUM12:
+		code = a.AlphaNum12().AssetCode[:]
+		issuer = &a.AlphaNum12().Issuer
+	default:
+		return fmt.Sprintf("Asset.Type#%d", int32(a.Type))
+	}
+	return fmt.Sprintf("%s:%s", renderCode(code), issuer.String())
+}
+
+func scanCode(input []byte) ([]byte, error) {
+	out := make([]byte, 12)
+	ss := bytes.NewReader(input)
+	var i int
+	r := byte(' ')
+	var err error
+	for i = 0; i < len(out); i++ {
+		r, err = ss.ReadByte()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		} else if r <= 32 || r >= 127 {
+			return nil, StrKeyError("Invalid character in AssetCode")
+		} else if r != '\\' {
+			out[i] = byte(r)
+			continue
+		}
+		r, err = ss.ReadByte()
+		if err != nil {
+			return nil, err
+		} else if r != 'x' {
+			out[i] = byte(r)
+		} else if _, err = fmt.Fscanf(ss, "%02x", &out[i]); err != nil {
+			return nil, err
+		}
+	}
+	if ss.Len() > 0 {
+		return nil, StrKeyError("AssetCode too long")
+	}
+	if i <= 4 {
+		return out[:4], nil
+	}
+	return out, nil
+}
+
+func (a *Asset) Scan(ss fmt.ScanState, _ rune) error {
+	bs, err := ss.Token(true, nil)
+	if err != nil {
+		return err
+	}
+	colon := bytes.LastIndexByte(bs, ':')
+	if colon == -1 {
+		if len(bs) > 12 {
+			return StrKeyError("Asset should be Code:AccountID or NATIVE")
+		}
+		a.Type = ASSET_TYPE_NATIVE
+		return nil
+	}
+	var issuer AccountID
+	if _, err = fmt.Fscan(bytes.NewReader(bs[colon+1:]), &issuer); err != nil {
+		return err
+	}
+	code, err := scanCode(bs[:colon])
+	if err != nil {
+		return err
+	}
+	if len(code) <= 4 {
+		a.Type = ASSET_TYPE_CREDIT_ALPHANUM4
+		copy(a.AlphaNum4().AssetCode[:], code)
+		a.AlphaNum4().Issuer = issuer
+	} else {
+		a.Type = ASSET_TYPE_CREDIT_ALPHANUM12
+		copy(a.AlphaNum12().AssetCode[:], code)
+		a.AlphaNum12().Issuer = issuer
+	}
+	return nil
 }
 
 // Returns true if c is a valid character in a strkey formatted key.

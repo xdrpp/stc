@@ -319,7 +319,11 @@ func doEdit(net *StellarNet, arg string) {
 		if err != nil {
 			fmt.Fprint(os.Stderr, err.Error())
 			fmt.Printf("Press return to run editor.")
-			stcdetail.ReadTextLine(os.Stdin)
+			b := make([]byte, 1)
+			for n, err := os.Stdin.Read(b);
+			err != nil && n > 0 && b[0] != '\n'; {
+				fmt.Printf("Read %c\n", b)
+			}
 			if pe, ok := err.(ParseError); ok {
 				line = pe.TxrepError[0].Line
 			}
