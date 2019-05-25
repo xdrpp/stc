@@ -580,7 +580,7 @@ func main() {
 			os.Exit(1)
 		}
 	case *opt_txhash:
-		fmt.Printf("%x\n", net.HashTx(e))
+		fmt.Printf("%x\n", *net.HashTx(e))
 	case *opt_preauth:
 		sk := stx.SignerKey{Type: stx.SIGNER_KEY_TYPE_PRE_AUTH_TX}
 		*sk.PreAuthTx() = *net.HashTx(e)
