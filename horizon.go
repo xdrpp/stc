@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/xdrpp/stc/stcdetail"
+	"github.com/xdrpp/stc/stx"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -12,12 +14,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"github.com/xdrpp/stc/stcdetail"
-	"github.com/xdrpp/stc/stx"
 )
 
 // A communication error with horizon
 type horizonFailure string
+
 func (e horizonFailure) Error() string {
 	return string(e)
 }
@@ -100,44 +101,45 @@ func (net *StellarNet) StreamJSON(
 }
 
 type HorizonThresholds struct {
-	Low_threshold uint8
-	Med_threshold uint8
+	Low_threshold  uint8
+	Med_threshold  uint8
 	High_threshold uint8
 }
 type HorizonFlags struct {
-	Auth_required bool
+	Auth_required  bool
 	Auth_revocable bool
 	Auth_immutable bool
 }
 type HorizonBalance struct {
-	Balance stcdetail.JsonInt64e7
-	Buying_liabilities stcdetail.JsonInt64e7
+	Balance             stcdetail.JsonInt64e7
+	Buying_liabilities  stcdetail.JsonInt64e7
 	Selling_liabilities stcdetail.JsonInt64e7
-	Limit stcdetail.JsonInt64e7
-	Asset_type string
-	Asset_code string
-	Asset_issuer *AccountID
+	Limit               stcdetail.JsonInt64e7
+	Asset_type          string
+	Asset_code          string
+	Asset_issuer        *AccountID
 }
 type HorizonSigner struct {
-	Key SignerKey
+	Key    SignerKey
 	Weight uint32
 }
 
 // Structure into which you can unmarshal JSON returned by a query to
 // horizon for an account endpoint
 type HorizonAccountEntry struct {
-	Sequence stcdetail.JsonInt64
-	Balance stcdetail.JsonInt64e7
-	Subentry_count uint32
+	Sequence              stcdetail.JsonInt64
+	Balance               stcdetail.JsonInt64e7
+	Subentry_count        uint32
 	Inflation_destination *AccountID
-	Home_domain string
-	Last_modified_ledger uint32
-	Flags HorizonFlags
-	Thresholds HorizonThresholds
-	Balances []HorizonBalance
-	Signers []HorizonSigner
-	Data map[string]string
+	Home_domain           string
+	Last_modified_ledger  uint32
+	Flags                 HorizonFlags
+	Thresholds            HorizonThresholds
+	Balances              []HorizonBalance
+	Signers               []HorizonSigner
+	Data                  map[string]string
 }
+
 func (hs *HorizonAccountEntry) String() string {
 	return stcdetail.PrettyPrint(hs)
 }
@@ -173,7 +175,7 @@ func (ae *HorizonAccountEntry) UnmarshalJSON(data []byte) error {
 func (net *StellarNet) GetAccountEntry(acct string) (
 	*HorizonAccountEntry, error) {
 	var ret HorizonAccountEntry
-	if err := net.GetJSON("accounts/" + acct, &ret); err != nil {
+	if err := net.GetJSON("accounts/"+acct, &ret); err != nil {
 		return nil, err
 	}
 	return &ret, nil
@@ -195,7 +197,7 @@ func (net *StellarNet) GetNetworkId() string {
 	if body, err := net.Get("/"); err != nil {
 		return ""
 	} else {
-		var np struct { Network_passphrase string }
+		var np struct{ Network_passphrase string }
 		if err = json.Unmarshal(body, &np); err != nil {
 			return ""
 		}
@@ -205,9 +207,10 @@ func (net *StellarNet) GetNetworkId() string {
 }
 
 var feeSuffix string = "_accepted_fee"
+
 type feePercentile = struct {
 	Percentile int
-	Fee uint32
+	Fee        uint32
 }
 
 // Go representation of the Horizon Fee Stats structure response.  The
@@ -215,14 +218,14 @@ type feePercentile = struct {
 // are documented here:
 // https://www.stellar.org/developers/horizon/reference/endpoints/fee-stats.html
 type FeeStats struct {
-	Last_ledger uint64
-	Last_ledger_base_fee uint32
+	Last_ledger           uint64
+	Last_ledger_base_fee  uint32
 	Ledger_capacity_usage float64
-	Min_accepted_fee uint32
-	Mode_accepted_fee uint32
-	Percentiles []struct {
+	Min_accepted_fee      uint32
+	Mode_accepted_fee     uint32
+	Percentiles           []struct {
 		Percentile int
-		Fee uint32
+		Fee        uint32
 	}
 }
 
@@ -277,10 +280,10 @@ func (fs *FeeStats) Percentile(target int) uint32 {
 }
 
 func capitalize(s string) string {
-        if len(s) > 0 && s[0] >= 'a' && s[0] <= 'z' {
-                return string(s[0] &^ 0x20) + s[1:]
-        }
-        return s
+	if len(s) > 0 && s[0] >= 'a' && s[0] <= 'z' {
+		return string(s[0]&^0x20) + s[1:]
+	}
+	return s
 }
 
 func parseU32(i interface{}) (uint32, error) {
@@ -304,11 +307,11 @@ func (fs *FeeStats) UnmarshalJSON(data []byte) error {
 	for k := range obj {
 		if strings.HasSuffix(k, feeSuffix) &&
 			k[0] == 'p' && k[1] >= '0' || k[1] <= '9' {
-			if p, err := parseU32(k[1:len(k)-len(feeSuffix)]); err == nil {
+			if p, err := parseU32(k[1 : len(k)-len(feeSuffix)]); err == nil {
 				if fee, err := parseU32(obj[k]); err == nil {
 					fs.Percentiles = append(fs.Percentiles, feePercentile{
 						Percentile: int(p),
-						Fee: fee,
+						Fee:        fee,
 					})
 				}
 			}
@@ -318,8 +321,7 @@ func (fs *FeeStats) UnmarshalJSON(data []byte) error {
 		if capk == "Percentiles" {
 			continue // Server is messing with us
 		}
-		switch field, s := rv.FieldByName(capk), fmt.Sprint(obj[k]);
-		field.Kind() {
+		switch field, s := rv.FieldByName(capk), fmt.Sprint(obj[k]); field.Kind() {
 		case reflect.Uint32:
 			if v, err := strconv.ParseUint(s, 10, 32); err == nil {
 				field.SetUint(v)
@@ -376,8 +378,7 @@ func (net *StellarNet) GetLedgerHeader() (*LedgerHeader, error) {
 	}
 
 	ret := &LedgerHeader{}
-	if err = stcdetail.XdrFromBase64(ret, lhx.Embedded.Records[0].Header_xdr);
-	err != nil {
+	if err = stcdetail.XdrFromBase64(ret, lhx.Embedded.Records[0].Header_xdr); err != nil {
 		return nil, err
 	}
 	return ret, nil
@@ -402,6 +403,7 @@ func enumDesc(e stx.XdrEnum) string {
 type TxFailure struct {
 	*TransactionResult
 }
+
 func (e TxFailure) Error() string {
 	msg := enumDesc(&e.Result.Code)
 	switch e.Result.Code {
@@ -428,7 +430,7 @@ func (net *StellarNet) Post(e *TransactionEnvelope) (
 		return nil, badHorizonURL
 	}
 	tx := stcdetail.XdrToBase64(e)
-	resp, err := http.PostForm(net.Horizon + "/transactions",
+	resp, err := http.PostForm(net.Horizon+"/transactions",
 		url.Values{"tx": {tx}})
 	if err != nil {
 		return nil, err

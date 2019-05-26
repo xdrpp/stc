@@ -27,7 +27,7 @@ type LedgerHeader = stx.LedgerHeader
 const MaxInt64 = 0x7fffffffffffffff
 
 func NativeAsset() stx.Asset {
-	return stx.Asset {
+	return stx.Asset{
 		Type: stx.ASSET_TYPE_NATIVE,
 	}
 }
@@ -70,7 +70,7 @@ func NewAccountID(id AccountID) *AccountID {
 // Create a signer for a particular public key and weight
 func NewSignerKey(pk PublicKey, weight uint32) *stx.Signer {
 	return &stx.Signer{
-		Key: pk.ToSignerKey(),
+		Key:    pk.ToSignerKey(),
 		Weight: weight,
 	}
 }
@@ -78,7 +78,7 @@ func NewSignerKey(pk PublicKey, weight uint32) *stx.Signer {
 // Create a pre-signed transaction from a transaction and weight.
 func (net *StellarNet) NewSignerPreauth(tx stx.IsTransaction,
 	weight uint32) *stx.Signer {
-	ret := stx.Signer{ Weight: weight }
+	ret := stx.Signer{Weight: weight}
 	ret.Key.Type = stx.SIGNER_KEY_TYPE_PRE_AUTH_TX
 	*ret.Key.PreAuthTx() = *net.HashTx(tx)
 	return &ret
@@ -86,7 +86,7 @@ func (net *StellarNet) NewSignerPreauth(tx stx.IsTransaction,
 
 // Create a signer that requires the hash pre-image of some hash value x
 func NewSignerHashX(x stx.Hash, weight uint32) *stx.Signer {
-	ret := stx.Signer{ Weight: weight }
+	ret := stx.Signer{Weight: weight}
 	ret.Key.Type = stx.SIGNER_KEY_TYPE_PRE_AUTH_TX
 	*ret.Key.HashX() = x
 	return &ret
@@ -170,9 +170,9 @@ func (txe *TransactionEnvelope) Append(
 	} else if len(txe.Signatures) > 0 {
 		stx.XdrPanic("TransactionEnvelope.Op: transaction already signed")
 	}
-	txe.Tx.Operations = append(txe.Tx.Operations, stx.Operation {
+	txe.Tx.Operations = append(txe.Tx.Operations, stx.Operation{
 		SourceAccount: sourceAccount,
-		Body: body.To_Operation_Body(),
+		Body:          body.To_Operation_Body(),
 	})
 }
 
@@ -189,21 +189,18 @@ func (txe *TransactionEnvelope) SetHelp(name string) {
 	}
 }
 
-type txrepHelper = StellarNet
-
-func (net *txrepHelper) SignerNote(txe *stx.TransactionEnvelope,
+func (net *StellarNet) SignerNote(txe *stx.TransactionEnvelope,
 	sig *stx.DecoratedSignature) string {
 	if txe == nil {
 		return ""
-	} else if ski := net.Signers.Lookup(net.GetNetworkId(), txe, sig);
-	ski != nil {
+	} else if ski := net.Signers.Lookup(net.GetNetworkId(), txe, sig); ski != nil {
 		return ski.String()
 	}
 	return fmt.Sprintf("bad signature/unknown key/%s is wrong network",
 		net.Name)
 }
 
-func (net *txrepHelper) AccountIDNote(acct *stx.AccountID) string {
+func (net *StellarNet) AccountIDNote(acct *stx.AccountID) string {
 	return net.Accounts[acct.String()]
 }
 
@@ -219,14 +216,14 @@ func (net *StellarNet) ToRep(txe stx.XdrAggregate) string {
 	if e, ok := txe.(helper); ok {
 		ntxe := struct {
 			helper
-			*txrepHelper
-		}{e, (*txrepHelper)(net)}
+			*StellarNet
+		}{e, (*StellarNet)(net)}
 		stcdetail.XdrToTxrep(&out, ntxe)
 	} else {
 		ntxe := struct {
 			stx.XdrAggregate
-			*txrepHelper
-		}{txe, (*txrepHelper)(net)}
+			*StellarNet
+		}{txe, (*StellarNet)(net)}
 		stcdetail.XdrToTxrep(&out, ntxe)
 	}
 
@@ -263,9 +260,10 @@ func TxFromBase64(input string) (*TransactionEnvelope, error) {
 	return tx, nil
 }
 
-type forEachXdr struct{
-	fn func(stx.XdrType)bool
+type forEachXdr struct {
+	fn func(stx.XdrType) bool
 }
+
 func (fex forEachXdr) Marshal(_ string, val stx.XdrType) {
 	if !fex.fn(val) {
 		if xa, ok := val.(stx.XdrAggregate); ok {
@@ -279,7 +277,7 @@ func (forEachXdr) Sprintf(string, ...interface{}) string {
 
 // Calls fn, recursively, on every value inside an XdrAggregate.
 // Prunes the recursion if fn returns true.
-func ForEachXdr(t stx.XdrAggregate, fn func(stx.XdrType)bool) {
+func ForEachXdr(t stx.XdrAggregate, fn func(stx.XdrType) bool) {
 	t.XdrMarshal(forEachXdr{fn}, "")
 }
 
@@ -322,7 +320,7 @@ func (ax *assignXdr) Marshal(name string, val stx.XdrType) {
 	if v := reflect.ValueOf(val.XdrPointer()); v.Kind() == reflect.Ptr &&
 		reflect.TypeOf(ax.fields[0]).AssignableTo(v.Type().Elem()) {
 		f := reflect.ValueOf(ax.fields[0])
-		if b, ok := val.(interface{XdrBound() uint32}); ok &&
+		if b, ok := val.(interface{ XdrBound() uint32 }); ok &&
 			(f.Kind() == reflect.Slice || f.Kind() == reflect.String) &&
 			uint(f.Len()) > uint(b.XdrBound()) {
 			stx.XdrPanic("Set: length %d exceeded for %s",

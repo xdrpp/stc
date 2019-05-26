@@ -269,8 +269,9 @@ func (v *XdrBool) SetU32(nv uint32) {
 		*v = false
 	case 1:
 		*v = true
+	default:
+		XdrPanic("bool must be 0 or 1")
 	}
-	XdrPanic("bool must be 0 or 1")
 }
 func (v *XdrBool) XdrPointer() interface{} { return (*bool)(v) }
 func (v *XdrBool) XdrValue() interface{} { return bool(*v) }

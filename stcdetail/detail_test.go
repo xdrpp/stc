@@ -101,9 +101,7 @@ func ExampleXdrToJson() {
 	//                     "type": "PAYMENT",
 	//                     "paymentOp": {
 	//                         "destination": "GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L",
-	//                         "asset": {
-	//                             "type": "ASSET_TYPE_NATIVE"
-	//                         },
+	//                         "asset": "NATIVE",
 	//                         "amount": "20000000"
 	//                     }
 	//                 }
@@ -115,8 +113,8 @@ func ExampleXdrToJson() {
 	//     },
 	//     "signatures": [
 	//         {
-    //             "hint": "4TdHQQ==",
-    //             "signature": "XP3Evkw1lWh2/gaIBY0X403UgcR1I3oAHe9GI2h3RhB18jPIe2O5Ld+1zeCcJ/g2HDJbcoJbwxN+Sys4Ew/YAQ=="
+	//             "hint": "4TdHQQ==",
+	//             "signature": "XP3Evkw1lWh2/gaIBY0X403UgcR1I3oAHe9GI2h3RhB18jPIe2O5Ld+1zeCcJ/g2HDJbcoJbwxN+Sys4Ew/YAQ=="
 	//         }
 	//     ]
 	// }

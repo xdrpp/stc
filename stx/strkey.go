@@ -117,7 +117,7 @@ func renderByte(b byte) string {
 	return string(b)
 }
 
-func renderCode(bs []byte) string {
+func RenderAssetCode(bs []byte) string {
 	var n int
 	for n = len(bs); n > 0 && bs[n-1] == 0; n-- {
 	}
@@ -147,10 +147,21 @@ func (a Asset) String() string {
 	default:
 		return fmt.Sprintf("Asset.Type#%d", int32(a.Type))
 	}
-	return fmt.Sprintf("%s:%s", renderCode(code), issuer.String())
+	return fmt.Sprintf("%s:%s", RenderAssetCode(code), issuer.String())
 }
 
-func scanCode(input []byte) ([]byte, error) {
+func (a XdrAnon_AllowTrustOp_Asset) String() string {
+	switch a.Type {
+	case ASSET_TYPE_CREDIT_ALPHANUM4:
+		return RenderAssetCode(a.AssetCode4()[:])
+	case ASSET_TYPE_CREDIT_ALPHANUM12:
+		return RenderAssetCode(a.AssetCode12()[:])
+	default:
+		return fmt.Sprintf("AllowTrustOp_Asset.Type#%d", int32(a.Type))
+	}
+}
+
+func ScanAssetCode(input []byte) ([]byte, error) {
 	out := make([]byte, 12)
 	ss := bytes.NewReader(input)
 	var i int
@@ -203,7 +214,7 @@ func (a *Asset) Scan(ss fmt.ScanState, _ rune) error {
 	if _, err = fmt.Fscan(bytes.NewReader(bs[colon+1:]), &issuer); err != nil {
 		return err
 	}
-	code, err := scanCode(bs[:colon])
+	code, err := ScanAssetCode(bs[:colon])
 	if err != nil {
 		return err
 	}
@@ -215,6 +226,22 @@ func (a *Asset) Scan(ss fmt.ScanState, _ rune) error {
 		a.Type = ASSET_TYPE_CREDIT_ALPHANUM12
 		copy(a.AlphaNum12().AssetCode[:], code)
 		a.AlphaNum12().Issuer = issuer
+	}
+	return nil
+}
+
+func (a *XdrAnon_AllowTrustOp_Asset) Scan(ss fmt.ScanState, _ rune) error {
+	bs, err := ss.Token(true, nil)
+	code, err := ScanAssetCode(bs)
+	if err != nil {
+		return err
+	}
+	if len(code) <= 4 {
+		a.Type = ASSET_TYPE_CREDIT_ALPHANUM4
+		copy(a.AssetCode4()[:], code)
+	} else {
+		a.Type = ASSET_TYPE_CREDIT_ALPHANUM12
+		copy(a.AssetCode12()[:], code)
 	}
 	return nil
 }

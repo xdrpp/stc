@@ -16,6 +16,9 @@ type StellarNet struct {
 	// Network password used for hashing and signing transactions.
 	NetworkId string
 
+	// Name to use for native asset
+	NativeAsset string
+
 	// Base URL of horizon (including trailing slash).
 	Horizon string
 
@@ -31,17 +34,23 @@ type StellarNet struct {
 // Default parameters for the Stellar main net (including the address
 // of a Horizon instance hosted by SDF).
 var StellarMainNet = StellarNet{
-	Name:      "main",
-	NetworkId: "Public Global Stellar Network ; September 2015",
-	Horizon:   "https://horizon.stellar.org/",
+	Name:        "main",
+	NetworkId:   "Public Global Stellar Network ; September 2015",
+	NativeAsset: "XLM",
+	Horizon:     "https://horizon.stellar.org/",
 }
 
 // Default parameters for the Stellar test network (including the
 // address of a Horizon instance hosted by SDF).
 var StellarTestNet = StellarNet{
-	Name:      "test",
-	NetworkId: "",
-	Horizon:   "https://horizon-testnet.stellar.org/",
+	Name:        "test",
+	NetworkId:   "",
+	NativeAsset: "TestXLM",
+	Horizon:     "https://horizon-testnet.stellar.org/",
+}
+
+func (net *StellarNet) GetNativeAsset() string {
+	return net.NativeAsset
 }
 
 // Returns true only if sig is a valid signature on e for public key

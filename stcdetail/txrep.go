@@ -36,34 +36,8 @@ func (e XdrBadValue) Error() string {
 	return out.String()
 }
 
-/*
-func renderByte(b byte) string {
-	if b <= ' ' || b >= '\x7f' {
-		return fmt.Sprintf("\\x%02x", b)
-	} else if b == '\\' || b == ':' {
-		return "\\" + string(b)
-	}
-	return string(b)
-}
-
-func renderCode(bs []byte) string {
-	var n int
-	for n = len(bs); n > 0 && bs[n-1] == 0; n-- {
-	}
-	if len(bs) > 4 && n <= 4 {
-		n = 5
-	}
-	out := &strings.Builder{}
-	for i := 0; i < n; i++ {
-		out.WriteString(renderByte(bs[i]))
-	}
-	return out.String()
-}
-*/
-
 type trackTypes struct {
 	ptrDepth int
-	inAsset  bool
 	env      *stx.TransactionEnvelope
 	err      XdrBadValue
 }
@@ -76,8 +50,6 @@ func (x *trackTypes) track(i stx.XdrType) (cleanup func()) {
 	switch v := i.(type) {
 	case stx.XdrPtr:
 		x.ptrDepth++
-	case *stx.Asset, *stx.AllowTrustOp:
-		x.inAsset = true
 	case *stx.TransactionEnvelope:
 		// In case some XDR structure wraps TransactionEnvelope
 		x.env = v
@@ -92,6 +64,7 @@ type txStringCtx struct {
 	signerNote    func(*stx.TransactionEnvelope, *stx.DecoratedSignature) string
 	getHelp       func(string) bool
 	out           io.Writer
+	native        string
 	trackTypes
 }
 
@@ -102,6 +75,10 @@ func (xp *txStringCtx) Sprintf(f string, args ...interface{}) string {
 func (xp *txStringCtx) Marshal_SequenceNumber(name string,
 	v *stx.SequenceNumber) {
 	fmt.Fprintf(xp.out, "%s: %d\n", name, *v)
+}
+
+func (xp *txStringCtx) Marshal_TimePoint(name string, v *stx.TimePoint) {
+	fmt.Fprintf(xp.out, "%s: %d%s\n", name, *v, dateComment(*v))
 }
 
 var exp10 [20]uint64
@@ -185,10 +162,12 @@ func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 		}
 	}()
 	switch v := i.(type) {
-	case *stx.TimeBounds:
-		fmt.Fprintf(xp.out, "%s.minTime: %d%s\n%s.maxTime: %d%s\n",
-			name, v.MinTime, dateComment(v.MinTime),
-			name, v.MaxTime, dateComment(v.MaxTime))
+	case *stx.Asset:
+		asset := v.String()
+		if asset == "NATIVE" {
+			asset = xp.native
+		}
+		fmt.Fprintf(xp.out, "%s: %s\n", name, asset)
 	case *stx.AccountID:
 		ac := v.String()
 		if hint := xp.accountIDNote(v); hint != "" {
@@ -212,14 +191,6 @@ func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 		} else {
 			fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
 		}
-/*
-	case stx.XdrArrayOpaque:
-		if xp.inAsset {
-			fmt.Fprintf(xp.out, "%s: %s\n", name, renderCode(v.GetByteSlice()))
-		} else {
-			fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
-		}
-*/
 	case *stx.XdrInt64:
 		fmt.Fprintf(xp.out, "%s: %s (%s)\n", name, v.String(),
 			ScaleFmt(int64(*v), 7))
@@ -285,6 +256,12 @@ func XdrToTxrep(out io.Writer, t stx.XdrAggregate) XdrBadValue {
 	if i, ok := t.(interface{ GetHelp(string) bool }); ok {
 		ctx.getHelp = i.GetHelp
 	}
+	if i, ok := t.(interface{ GetNativeAsset() string }); ok {
+		ctx.native = i.GetNativeAsset()
+	}
+	if ctx.native == "" {
+		ctx.native = "NATIVE"
+	}
 
 	t.XdrMarshal(&ctx, "")
 	if len(ctx.err) > 0 {
@@ -323,58 +300,6 @@ func (e TxrepError) FileError(filename string) string {
 	return e.render(filename + ":")
 }
 
-/*
-func isSpace(c byte) bool {
-	return c == ' ' || c == '\t'
-}
-
-// Slightly convoluted logic to avoid throwing away the account name
-// in case the code is bad
-func scanCode(out []byte, input string) error {
-	ss := strings.NewReader(input)
-skipspace:
-	if r, err := ss.ReadByte(); isSpace(r) {
-		goto skipspace
-	} else if err == nil {
-		ss.UnreadByte()
-	}
-	var i int
-	var r = byte(' ')
-	var err error
-	for i = 0; i < len(out); i++ {
-		r, err = ss.ReadByte()
-		if err == io.EOF || isSpace(r) {
-			break
-		} else if err != nil {
-			return err
-		} else if r <= ' ' || r >= 127 {
-			err = stx.StrKeyError("Invalid character in AssetCode")
-			break
-		} else if r != '\\' {
-			out[i] = byte(r)
-			continue
-		}
-		r, err = ss.ReadByte()
-		if err != nil {
-			return err
-		} else if r != 'x' {
-			out[i] = byte(r)
-		} else if _, err = fmt.Fscanf(ss, "%02x", &out[i]); err != nil {
-			return err
-		}
-	}
-	for ; i < len(out); i++ {
-		out[i] = 0
-	}
-	// XXX - might already have read space above
-	r, err = ss.ReadByte()
-	if err != io.EOF && isSpace(r) {
-		return stx.StrKeyError("AssetCode too long")
-	}
-	return nil
-}
-*/
-
 type lineval struct {
 	line int
 	val  string
@@ -385,6 +310,7 @@ type xdrScan struct {
 	kvs     map[string]lineval
 	err     TxrepError
 	setHelp func(string)
+	native  *string
 }
 
 func (*xdrScan) Sprintf(f string, args ...interface{}) string {
@@ -408,16 +334,6 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 	}
 	switch v := i.(type) {
 	case stx.XdrArrayOpaque:
-/*
-		var err error
-		if xs.inAsset {
-			err = scanCode(v.GetByteSlice(), val)
-		} else if !ok {
-			return
-		} else {
-			_, err = fmt.Sscan(val, v)
-		}
-*/
 		_, err := fmt.Sscan(val, v)
 		if err != nil {
 			xs.setHelp(name)
@@ -557,6 +473,10 @@ func XdrFromTxrep(in io.Reader, t stx.XdrAggregate) TxrepError {
 		xs.setHelp = sh.SetHelp
 	} else {
 		xs.setHelp = func(string) {}
+	}
+	if nam, ok := t.(interface{ GetNativeAsset() string }); ok {
+		na := nam.GetNativeAsset()
+		xs.native = &na
 	}
 	xs.readKvs(in)
 	if xs.kvs != nil {

@@ -76,6 +76,8 @@ func netInit() {
 		os.MkdirAll(ConfigPath(&defaultNets[i]), 0777)
 		CreateIfMissing(ConfigPath(&defaultNets[i], "horizon"),
 			defaultNets[i].Horizon+"\n")
+		CreateIfMissing(ConfigPath(&defaultNets[i], "native_asset"),
+			defaultNets[i].NativeAsset+"\n")
 		if path := ConfigPath(&defaultNets[i], "network_id");
 		!FileExists(path) {
 			if id := defaultNets[i].GetNetworkId(); id != "" {
@@ -107,6 +109,7 @@ func GetStellarNet(name string) *StellarNet {
 		return nil
 	}
 	net.Horizon, _ = head(ConfigPath(net, "horizon"))
+	net.NativeAsset, _ = head(ConfigPath(net, "native_asset"))
 	net.Signers.Load(ConfigPath(net, "signers"))
 	net.Accounts.Load(ConfigPath(net, "accounts"))
 	return net
