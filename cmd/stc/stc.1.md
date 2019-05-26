@@ -349,6 +349,13 @@ each subdirectory of `networks` there are four files:
   you relaunch a network with a different network ID, in which case
   you need to delete the old `network_id` file.
 
+* `native_asset` shows how to render the native asset.  This defaults
+  to `XLM` for the stellar main network, and `TestXLM` for the stellar
+  test network.  For other networks, or if the file is just blank, it
+  defaults to the string `NATIVE`.  Note that this only controls how
+  the asset is rendered not parsed.  When parsing, any string not
+  ending ":IssuerAccountID" is considered the native asset.
+
 * `horizon` corresponds to the base URL of the horizon instance to use
   for this network.  You may wish to change this URL to use your own
   local validator if you are running one, or else that of an exchange
