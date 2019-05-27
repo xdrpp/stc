@@ -374,7 +374,8 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 		if err != nil {
 			xs.setHelp(name)
 			xs.report(lv.line, "%s", err.Error())
-		} else if len(val) > 0 && val[len(val)-1] == '?' {
+		}
+		if len(val) > 0 && val[len(val)-1] == '?' {
 			xs.setHelp(name)
 		}
 	case stx.XdrPtr:

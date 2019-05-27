@@ -293,18 +293,18 @@ func (e *emitter) gen_vec(typ, bound0 idval) string {
 	}
 	frag :=
 `type $VEC []$TYPE
-func (v *$VEC) XdrBound() uint32 {
+func ($VEC) XdrBound() uint32 {
 	const bound uint32 = $BOUND // Force error if not const or doesn't fit
 	return bound
 }
-func (*$VEC) XdrCheckLen(length uint32) {
+func ($VEC) XdrCheckLen(length uint32) {
 	if length > uint32($BOUND) {
 		XdrPanic("$VEC length %d exceeds bound $BOUND", length)
 	} else if int(length) < 0 {
 		XdrPanic("$VEC length %d exceeds max int", length)
 	}
 }
-func (v *$VEC) GetVecLen() uint32 { return uint32(len(*v)) }
+func (v $VEC) GetVecLen() uint32 { return uint32(len(v)) }
 func (v *$VEC) SetVecLen(length uint32) {
 	v.XdrCheckLen(length)
 	if int(length) <= cap(*v) {
@@ -344,7 +344,7 @@ func (v *$VEC) XdrMarshal(x XDR, name string) {
 	v.XdrMarshalN(x, name, size.Size)
 }
 func (v *$VEC) XdrPointer() interface{} { return (*[]$TYPE)(v) }
-func (v *$VEC) XdrValue() interface{} { return ([]$TYPE)(*v) }
+func (v $VEC) XdrValue() interface{} { return ([]$TYPE)(v) }
 `
 	frag = strings.Replace(frag, "$VEC", vectyp, -1)
 	frag = strings.Replace(frag, "$TYPE", typ.getgo(), -1)
@@ -365,7 +365,7 @@ func (e *emitter) gen_array(typ, bound0 idval) string {
 	}
 	frag :=
 `type $VEC [$BOUND]$TYPE
-func (v *$VEC) XdrArraySize() uint32 {
+func ($VEC) XdrArraySize() uint32 {
 	const bound uint32 = $BOUND // Force error if not const or doesn't fit
 	return bound
 }
@@ -532,14 +532,14 @@ func (r *rpc_enum) emit(e *emitter) {
 	}
 	fmt.Fprintf(out, "}\n")
 	fmt.Fprintf(out,
-`func (*%[1]s) XdrEnumNames() map[int32]string {
+`func (%[1]s) XdrEnumNames() map[int32]string {
 	return _XdrNames_%[1]s
 }
-func (v *%[1]s) String() string {
-	if s, ok := _XdrNames_%[1]s[int32(*v)]; ok {
+func (v %[1]s) String() string {
+	if s, ok := _XdrNames_%[1]s[int32(v)]; ok {
 		return s
 	}
-	return fmt.Sprintf("%[1]s#%%d", *v)
+	return fmt.Sprintf("%[1]s#%%d", v)
 }
 func (v *%[1]s) Scan(ss fmt.ScanState, _ rune) error {
 	if tok, err := ss.Token(true, XdrSymChar); err != nil {
@@ -549,12 +549,17 @@ func (v *%[1]s) Scan(ss fmt.ScanState, _ rune) error {
 		if val, ok := _XdrValues_%[1]s[stok]; ok {
 			*v = %[1]s(val)
 			return nil
+		} else if stok == "%[1]s" {
+			if n, err := fmt.Fscanf(ss, "#%%d", (*int32)(v));
+				n == 1 && err == nil {
+				return nil
+			}
 		}
 		return XdrError(fmt.Sprintf("%%s is not a valid %[1]s.", stok))
 	}
 }
-func (v *%[1]s) GetU32() uint32 {
-	return uint32(*v)
+func (v %[1]s) GetU32() uint32 {
+	return uint32(v)
 }
 func (v *%[1]s) SetU32(n uint32) {
 	*v = %[1]s(n)
@@ -562,8 +567,8 @@ func (v *%[1]s) SetU32(n uint32) {
 func (v *%[1]s) XdrPointer() interface{} {
 	return v
 }
-func (v *%[1]s) XdrValue() interface{} {
-	return *v
+func (v %[1]s) XdrValue() interface{} {
+	return v
 }
 `, r.id)
 
@@ -614,8 +619,8 @@ func (r *rpc_struct) emit(e *emitter) {
 `func (v *%[1]s) XdrPointer() interface{} {
 	return v
 }
-func (v *%[1]s) XdrValue() interface{} {
-	return *v
+func (v %[1]s) XdrValue() interface{} {
+	return v
 }
 func (v *%[1]s) XdrMarshal(x XDR, name string) {
 	if name != "" {
@@ -722,19 +727,6 @@ func (r *rpc_union) emit(e *emitter) {
 			continue
 		}
 		ret := e.decltype(r.id, &u.decl)
-/*
-		if (u.hasdefault) {
-			fmt.Fprintf(out,
-				"// Valid by default when u.%s does not match another field.\n",
-				r.tagid)
-		} else if len(u.cases) == 1 {
-			fmt.Fprintf(out, "// Valid when u.%s is %s.\n",
-				r.tagid, u.joinedCases())
-		} else {
-			fmt.Fprintf(out, "// Valid when u.%s is one of: %s.\n",
-				r.tagid, u.joinedCases())
-		}
-*/
 		if u.decl.comment != "" {
 			fmt.Fprintf(out, "%s\n", u.decl.comment)
 		}
@@ -784,7 +776,7 @@ func (r *rpc_union) emit(e *emitter) {
 		fmt.Fprintf(out, "}\n")
 	}
 
-	fmt.Fprintf(out, "func (u *%s) XdrValid() bool {\n", r.id)
+	fmt.Fprintf(out, "func (u %s) XdrValid() bool {\n", r.id)
 	if r.hasdefault {
 		fmt.Fprintf(out, "\treturn true\n")
 	} else {
@@ -854,8 +846,8 @@ func (r *rpc_union) emit(e *emitter) {
 `func (v *%[1]s) XdrPointer() interface{} {
 	return v
 }
-func (v *%[1]s) XdrValue() interface{} {
-	return *v
+func (v %[1]s) XdrValue() interface{} {
+	return v
 }
 func (u *%[1]s) XdrMarshal(x XDR, name string) {
 	if name != "" {
