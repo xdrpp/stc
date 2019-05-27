@@ -2,8 +2,10 @@ package stcdetail_test
 
 import "fmt"
 import "math/rand"
+import "strings"
 import "testing"
 import "github.com/xdrpp/stc"
+import "github.com/xdrpp/stc/stx"
 import . "github.com/xdrpp/stc/stcdetail"
 
 func ExampleScaleFmt() {
@@ -176,3 +178,11 @@ func TestJsonToXdr(t *testing.T) {
 	}
 }
 
+func TestMissingByteArray(t *testing.T) {
+	in := strings.NewReader("type: MEMO_HASH")
+	var m stx.Memo
+	err := XdrFromTxrep(in, &m)
+	if err != nil {
+		t.Errorf("%s", err)
+	}
+}

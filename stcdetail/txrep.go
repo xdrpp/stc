@@ -334,6 +334,9 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 	}
 	switch v := i.(type) {
 	case stx.XdrArrayOpaque:
+		if !ok {
+			return
+		}
 		_, err := fmt.Sscan(val, v)
 		if err != nil {
 			xs.setHelp(name)
