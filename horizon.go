@@ -156,7 +156,8 @@ func (ae *HorizonAccountEntry) NextSeq() int64 {
 }
 
 func (ae *HorizonAccountEntry) UnmarshalJSON(data []byte) error {
-	if err := json.Unmarshal(data, ae); err != nil {
+	type hae HorizonAccountEntry
+	if err := json.Unmarshal(data, (*hae)(ae)); err != nil {
 		return err
 	}
 	for i := range ae.Balances {
