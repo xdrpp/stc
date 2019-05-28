@@ -156,8 +156,7 @@ func (ae *HorizonAccountEntry) NextSeq() int64 {
 }
 
 func (ae *HorizonAccountEntry) UnmarshalJSON(data []byte) error {
-	type hae HorizonAccountEntry
-	if err := json.Unmarshal(data, (*hae)(ae)); err != nil {
+	if err := json.Unmarshal(data, ae); err != nil {
 		return err
 	}
 	for i := range ae.Balances {
@@ -191,19 +190,53 @@ func (net *StellarNet) GetAccountEntry(acct string) (
 // StellarTestNet requires fetching the network ID since the Stellar
 // test network is periodically reset.
 func (net *StellarNet) GetNetworkId() string {
-	if net.NetworkId != "" {
-		return net.NetworkId
-	}
-	if body, err := net.Get("/"); err != nil {
-		return ""
-	} else {
+	if net.NetworkId == "" {
 		var np struct{ Network_passphrase string }
-		if err = json.Unmarshal(body, &np); err != nil {
-			return ""
+		if err := net.GetJSON("/", &np); err == nil {
+			net.NetworkId = np.Network_passphrase
 		}
-		net.NetworkId = np.Network_passphrase
-		return net.NetworkId
 	}
+	return net.NetworkId
+}
+
+type HorizonTxResult struct {
+	stcdetail.XdrTxResult
+}
+
+func (r HorizonTxResult) String() string {
+	out := strings.Builder{}
+	stcdetail.XdrToTxrep(&out, &r.XdrTxResult)
+	return out.String()
+}
+
+func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
+	var j struct {
+		Envelope_xdr string
+		Result_xdr string
+		Result_meta_xdr string
+		Fee_meta_xdr string
+	}
+	if err := json.Unmarshal(data, &j); err != nil {
+		return err
+	} else if err = stcdetail.XdrFromBase64(&r.Env,
+		j.Envelope_xdr); err != nil {
+		return err
+	} else if err = stcdetail.XdrFromBase64(&r.Result,
+		j.Result_xdr); err != nil {
+		return err
+	} else if err = stcdetail.XdrFromBase64(&r.ResultMeta,
+		j.Result_meta_xdr); err != nil {
+			return err
+	}
+	return nil
+}
+
+func (net *StellarNet) GetTxResult(txid string) (*HorizonTxResult, error) {
+	var ret HorizonTxResult
+	if err := net.GetJSON("transactions/"+txid, &ret); err != nil {
+		return nil, err
+	}
+	return &ret, nil
 }
 
 var feeSuffix string = "_accepted_fee"

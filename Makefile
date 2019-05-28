@@ -2,7 +2,7 @@ DESTDIR =
 PREFIX = /usr/local
 MANDIR = $(PREFIX)/share/man
 
-BUILT_SOURCES = stx/xdr_generated.go uhelper.go
+BUILT_SOURCES = stx/xdr_generated.go uhelper.go stcdetail/stcxdr.go
 XDRS = xdr/Stellar-SCP.x xdr/Stellar-ledger-entries.x			\
 xdr/Stellar-ledger.x xdr/Stellar-overlay.x xdr/Stellar-transaction.x	\
 xdr/Stellar-types.x
@@ -11,6 +11,10 @@ GO_DEPENDS = golang.org/x/crypto/... golang.org/x/tools/cmd/goyacc	\
 golang.org/x/tools/cmd/stringer
 
 all: cmd/stc/stc
+
+man:
+	cd cmd/stc && $(MAKE) stc.1
+	cd cmd/goxdr && $(MAKE) goxdr.1
 
 always:
 	@:
@@ -38,6 +42,16 @@ cmd/stc/stc: $(BUILT_SOURCES) always
 
 stx/xdr_generated.go: cmd/goxdr/goxdr $(XDRS)
 	cmd/goxdr/goxdr -p stx -enum-comments -o $@~ $(XDRS)
+	@if cmp $@ $@~ > /dev/null 2>/dev/null; then \
+		rm -f $@~; \
+	else \
+		echo mv -f $@~ $@; \
+		mv -f $@~ $@; \
+	fi
+
+stcdetail/stcxdr.go: cmd/goxdr/goxdr stcdetail/stcxdr.x
+	cmd/goxdr/goxdr -b -i github.com/xdrpp/stc/stx -p stcdetail \
+		-o $@~ stcdetail/stcxdr.x
 	@if cmp $@ $@~ > /dev/null 2>/dev/null; then \
 		rm -f $@~; \
 	else \
@@ -76,6 +90,6 @@ go1:
 gh-pages:
 	./make-gh-pages
 
-.PHONY: all test install clean maintainer-clean go1 gh-pages
+.PHONY: all man test install clean maintainer-clean go1 gh-pages
 .PHONY: build-depend update-depend always
 .PHONY: cmd/goxdr/goxdr cmd/goxdr/stc

@@ -401,6 +401,8 @@ func main() {
 		"Dump fee stats from network")
 	opt_acctinfo := flag.Bool("qa", false,
 		"Query Horizon for information on account")
+	opt_txinfo := flag.Bool("qt", false,
+		"Query Horizon for information on transaction")
 	opt_friendbot := flag.Bool("create", false,
 		"Create and fund account (on testnet only)")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
@@ -417,6 +419,7 @@ func main() {
        %[1]s -txhash [-net=ID] _INPUT-FILE
        %[1]s -fee-stats
        %[1]s -qa [-net=ID] ACCT
+       %[1]s -qt [-net=ID] TXHASH
        %[1]s -create [-net=ID] ACCT
        %[1]s -keygen [NAME]
        %[1]s -sec2pub [NAME]
@@ -435,11 +438,11 @@ func main() {
 
 	if n := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit, *opt_keygen,
 		*opt_sec2pub, *opt_import_key, *opt_export_key,
-		*opt_acctinfo, *opt_friendbot,
+		*opt_acctinfo, *opt_txinfo, *opt_friendbot,
 		*opt_list_keys, *opt_fee_stats); n > 1 || len(flag.Args()) > 1 ||
 		(len(flag.Args()) == 0 &&
 			!(*opt_keygen || *opt_sec2pub || *opt_list_keys ||
-			*opt_fee_stats || *opt_acctinfo || *opt_friendbot)) {
+			*opt_fee_stats || *opt_friendbot)) {
 		flag.Usage()
 		os.Exit(2)
 	} else if n == 1 {
@@ -540,6 +543,23 @@ func main() {
 			os.Exit(1)
 		} else {
 			fmt.Print(ae)
+		}
+		return
+	}
+
+	if *opt_txinfo {
+		var txid stx.Hash
+		slice := stx.XdrArrayOpaque(txid[:])
+		if _, err := fmt.Sscanf(arg, "%x", &slice); err != nil {
+			fmt.Fprintln(os.Stderr, "syntactically invalid txid")
+			os.Exit(1)
+		}
+		if txr, err := net.GetTxResult(arg); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		} else {
+			fmt.Print("==== TRANSACTION ====\n", net.ToRep(&txr.Env),
+				"==== RESULT ====\n", net.ToRep(&txr.Result))
 		}
 		return
 	}

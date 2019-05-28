@@ -14,8 +14,6 @@ import (
 	"os"
 )
 
-type PublicKey = stx.PublicKey
-
 // Computes the SHA-256 hash of an arbitrary XDR data structure.
 func xdrSHA256(t stx.XdrAggregate) (ret stx.Hash) {
 	sha := sha256.New()
@@ -38,7 +36,7 @@ func TxPayloadHash(network string, tx *stx.Transaction) *stx.Hash {
 }
 
 /*
-func Verify(pk *PublicKey, message []byte, sig []byte) bool {
+func Verify(pk *stx.PublicKey, message []byte, sig []byte) bool {
 	switch pk.Type {
 	case stx.PUBLIC_KEY_TYPE_ED25519:
 		return ed25519.Verify(pk.Ed25519()[:], message, sig)
@@ -68,7 +66,7 @@ func VerifyTx(pk *stx.SignerKey, network string, tx *stx.Transaction,
 type PrivateKeyInterface interface {
 	String() string
 	Sign([]byte) ([]byte, error)
-	Public() PublicKey
+	Public() stx.PublicKey
 }
 
 type Ed25519Priv ed25519.PrivateKey
@@ -81,7 +79,7 @@ func (sk Ed25519Priv) Sign(msg []byte) ([]byte, error) {
 	return ed25519.PrivateKey(sk).Sign(rand.Reader, msg, crypto.Hash(0))
 }
 
-func (sk Ed25519Priv) Public() (ret PublicKey) {
+func (sk Ed25519Priv) Public() (ret stx.PublicKey) {
 	ret.Type = stx.PUBLIC_KEY_TYPE_ED25519
 	copy(ret.Ed25519()[:], ed25519.PrivateKey(sk).Public().(ed25519.PublicKey))
 	return
