@@ -201,11 +201,13 @@ func (net *StellarNet) GetNetworkId() string {
 
 type HorizonTxResult struct {
 	stcdetail.XdrTxResult
+	PagingToken string
 }
 
 func (r HorizonTxResult) String() string {
 	out := strings.Builder{}
 	stcdetail.XdrToTxrep(&out, &r.XdrTxResult)
+	fmt.Fprintf(&out, "paging_token: %s\n", r.PagingToken)
 	return out.String()
 }
 
@@ -214,8 +216,10 @@ func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 		Envelope_xdr string
 		Result_xdr string
 		Result_meta_xdr string
-		Fee_meta_xdr string
+		Paging_token string
+		Hash string
 	}
+	hash := stx.XdrArrayOpaque(r.Txhash[:])
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	} else if err = stcdetail.XdrFromBase64(&r.Env,
@@ -227,7 +231,10 @@ func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 	} else if err = stcdetail.XdrFromBase64(&r.ResultMeta,
 		j.Result_meta_xdr); err != nil {
 			return err
+	} else if _, err := fmt.Sscanf(j.Hash, "%x", &hash); err != nil {
+		return err
 	}
+	r.PagingToken = j.Paging_token
 	return nil
 }
 

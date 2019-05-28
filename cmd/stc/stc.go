@@ -405,6 +405,8 @@ func main() {
 		"Query Horizon for information on transaction")
 	opt_friendbot := flag.Bool("create", false,
 		"Create and fund account (on testnet only)")
+	opt_verbose := flag.Bool("v", false,
+		"Be more verbose for some operations")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
 	} else {
@@ -553,10 +555,11 @@ func main() {
 		if _, err := fmt.Sscanf(arg, "%x", &slice); err != nil {
 			fmt.Fprintln(os.Stderr, "syntactically invalid txid")
 			os.Exit(1)
-		}
-		if txr, err := net.GetTxResult(arg); err != nil {
+		} else if txr, err := net.GetTxResult(arg); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
+		} else if *opt_verbose {
+			fmt.Print(txr)
 		} else {
 			fmt.Print("==== TRANSACTION ====\n", net.ToRep(&txr.Env),
 				"==== RESULT ====\n", net.ToRep(&txr.Result))
