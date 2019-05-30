@@ -82,3 +82,23 @@ func PrettyPrint(arg interface{}) string {
 	pp.doPretty("", v)
 	return pp.String()
 }
+
+func RepDiff(arep, brep string) string {
+	out := &strings.Builder{}
+	amap := make(map [string]string)
+	for _, a := range strings.Split(arep, "\n") {
+		kv := strings.SplitN(a, ": ", 2)
+		amap[kv[0]] = kv[1]
+	}
+	for _, b := range strings.Split(brep, "\n") {
+		kv := strings.SplitN(b, ": ", 2)
+		av, ok := amap[kv[0]]
+		if !ok {
+			fmt.Fprintf(out, "  %s\n", b)
+		} else if av != kv[1] {
+			fmt.Fprintf(out, "  %s: %s -> %s\n", kv[0], av, kv[1])
+		}
+	}
+	return out.String()
+}
+

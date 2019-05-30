@@ -403,6 +403,8 @@ func main() {
 		"Query Horizon for information on account")
 	opt_txinfo := flag.Bool("qt", false,
 		"Query Horizon for information on transaction")
+	opt_txacct := flag.Bool("qta", false,
+		"Query Horizon transactions on account")
 	opt_friendbot := flag.Bool("create", false,
 		"Create and fund account (on testnet only)")
 	opt_verbose := flag.Bool("v", false,
@@ -422,6 +424,7 @@ func main() {
        %[1]s -fee-stats
        %[1]s -qa [-net=ID] ACCT
        %[1]s -qt [-net=ID] TXHASH
+       %[1]s -qta [-net=ID] ACCT
        %[1]s -create [-net=ID] ACCT
        %[1]s -keygen [NAME]
        %[1]s -sec2pub [NAME]
@@ -440,7 +443,7 @@ func main() {
 
 	if n := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit, *opt_keygen,
 		*opt_sec2pub, *opt_import_key, *opt_export_key,
-		*opt_acctinfo, *opt_txinfo, *opt_friendbot,
+		*opt_acctinfo, *opt_txinfo, *opt_txacct, *opt_friendbot,
 		*opt_list_keys, *opt_fee_stats); n > 1 || len(flag.Args()) > 1 ||
 		(len(flag.Args()) == 0 &&
 			!(*opt_keygen || *opt_sec2pub || *opt_list_keys ||
@@ -563,6 +566,24 @@ func main() {
 		} else {
 			fmt.Print("==== TRANSACTION ====\n", net.ToRep(&txr.Env),
 				"==== RESULT ====\n", net.ToRep(&txr.Result))
+		}
+		return
+	}
+
+	if *opt_txacct {
+		var acct AccountID
+		if _, err := fmt.Sscan(arg, &acct); err != nil {
+			fmt.Fprintln(os.Stderr, "syntactically invalid account")
+			os.Exit(1)
+		}
+		txs, err := net.GetAcctTxs(arg, 0x7fffffff)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		for i := range txs {
+			fmt.Printf("%x\n", txs[i].Txhash)
+			fmt.Printf(net.PrintTransactionMeta(txs[i].ResultMeta, &acct))
 		}
 		return
 	}

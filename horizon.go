@@ -200,6 +200,35 @@ func (net *StellarNet) GetNetworkId() string {
 	return net.NetworkId
 }
 
+func showLedgerKey(k stx.LedgerKey) string {
+	switch k.Type {
+	case stx.ACCOUNT:
+		return fmt.Sprintf("account %s", k.Account().AccountID)
+	case stx.TRUSTLINE:
+		return fmt.Sprintf("trustline %s[%s]", k.TrustLine().AccountID,
+			k.TrustLine().Asset)
+	case stx.OFFER:
+		return fmt.Sprintf("offer %d", k.Offer().OfferID)
+	case stx.DATA:
+		return fmt.Sprintf("data %s[%q]", k.Data().AccountID, k.Data().DataName)
+	default:
+		return stcdetail.XdrToBase64(&k)
+	}
+}
+
+func (net *StellarNet) PrintTransactionMeta(
+	m stx.TransactionMeta, acct *AccountID) string {
+	out := &strings.Builder{}
+	if m.V != 1 {
+		return ""
+	}
+	changes := m.V1().TxChanges
+	for i := range changes {
+		var _ = i
+	}
+	return out.String()
+}
+
 type HorizonTxResult struct {
 	stcdetail.XdrTxResult
 	PagingToken string
@@ -245,6 +274,40 @@ func (net *StellarNet) GetTxResult(txid string) (*HorizonTxResult, error) {
 		return nil, err
 	}
 	return &ret, nil
+}
+
+func (net *StellarNet) GetAcctTxs(acct string, n int) (
+	[]HorizonTxResult, error) {
+	var j struct {
+		Embedded struct {
+			Records []HorizonTxResult
+		} `json:"_embedded"`
+	}
+	var ret []HorizonTxResult
+	var cursor string
+	for n > 0 {
+		lim := n
+		if lim > 100 {
+			lim = 100
+		}
+		q := fmt.Sprintf("accounts/%s/transactions?order=desc&limit=%d",
+			acct, lim)
+		if cursor != "" {
+			q += fmt.Sprintf("&cursor=%s", cursor)
+		}
+		if err := net.GetJSON(q, &j); err != nil {
+			return nil, err
+		} else if len(j.Embedded.Records) == 0 {
+			break
+		}
+		ret = append(ret, j.Embedded.Records...)
+		if len(ret) >= n {
+			ret = ret[:n]
+			break
+		}
+		cursor = j.Embedded.Records[len(j.Embedded.Records)-1].PagingToken
+	}
+	return ret, nil
 }
 
 var feeSuffix string = "_accepted_fee"
@@ -328,7 +391,7 @@ func capitalize(s string) string {
 }
 
 func parseU32(i interface{}) (uint32, error) {
-	// Annoyingly, Horizion aleays returns strings instead of numbers
+	// Annoyingly, Horizion always returns strings instead of numbers
 	// for the /fee_stats endpoint.  Because this behavior is
 	// annoying, we want to be prepared for it to change, which is why
 	// we Sprint and then Parse.
@@ -362,7 +425,8 @@ func (fs *FeeStats) UnmarshalJSON(data []byte) error {
 		if capk == "Percentiles" {
 			continue // Server is messing with us
 		}
-		switch field, s := rv.FieldByName(capk), fmt.Sprint(obj[k]); field.Kind() {
+		switch field, s :=
+			rv.FieldByName(capk), fmt.Sprint(obj[k]); field.Kind() {
 		case reflect.Uint32:
 			if v, err := strconv.ParseUint(s, 10, 32); err == nil {
 				field.SetUint(v)
