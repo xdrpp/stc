@@ -15,6 +15,7 @@ stc -preauth [-net=ID] _input-file_ \
 stc -txhash [-net=ID] _input-file_ \
 stc -qa [-net=ID] _accountID_ \
 stc -qt [-net=ID] _txhash_ \
+stc -qta [-net=ID] _accountID_ \
 stc -fee-stats \
 stc -create [-net=ID] _accountID_ \
 stc -keygen [_name_] \
@@ -170,16 +171,18 @@ assume you do not encrypt your private keys.
 
 ## Network query mode
 
-stc runs in network query mode when the `-fee-stats`, `-qa`, `-qt`, or
-`-create` option is provided.  `-fee-stats` reports on recent
-transaction fees.  `-qa` reports on the state of a particular account.
-`-qt` reports the result of a transaction that has been previously
-submitted.  Unfortunately, some of these requests are parsed from
-horizon responses in JSON rather than XDR format, and so are reported
-in a somewhat incomparable style to txrep format.  For example,
-balances are shown as a fixed-point number 10^7 times the underlying
-int64.  `-create` creates and funds an account (which only works when
-the test network is specified).
+stc runs in network query mode when the `-fee-stats`, `-qa`, `-qt`,
+`-qta`, or `-create` option is provided.  `-fee-stats` reports on
+recent transaction fees.  `-qa` reports on the state of a particular
+account.  `-qt` reports the result of a transaction that has been
+previously submitted.  `-qta` reports transactions on an account in
+reverse chronological order (use `-qt` to get more detail on any
+transaction ID).  Unfortunately, some of these requests are parsed
+from horizon responses in JSON rather than XDR format, and so are
+reported in a somewhat incomparable style to txrep format.  For
+example, balances are shown as a fixed-point number 10^7 times the
+underlying int64.  `-create` creates and funds an account (which only
+works when the test network is specified).
 
 # OPTIONS
 

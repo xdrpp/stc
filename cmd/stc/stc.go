@@ -404,7 +404,7 @@ func main() {
 	opt_txinfo := flag.Bool("qt", false,
 		"Query Horizon for information on transaction")
 	opt_txacct := flag.Bool("qta", false,
-		"Query Horizon transactions on account")
+		"Query Horizon for transactions on account")
 	opt_friendbot := flag.Bool("create", false,
 		"Create and fund account (on testnet only)")
 	opt_verbose := flag.Bool("v", false,
@@ -581,9 +581,18 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		for i := range txs {
-			fmt.Printf("%x\n", txs[i].Txhash)
-			fmt.Printf(net.PrintTransactionMeta(txs[i].ResultMeta, &acct))
+		if *opt_verbose {
+			for i := range txs {
+				if i != 0 {
+					fmt.Println()
+				}
+				fmt.Print(&txs[i])
+			}
+		} else {
+			for i := range txs {
+				fmt.Printf("%x\n", txs[i].Txhash)
+				fmt.Printf(net.AccountDelta(&txs[i].ResultMeta, acct))
+			}
 		}
 		return
 	}

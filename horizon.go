@@ -216,17 +216,33 @@ func showLedgerKey(k stx.LedgerKey) string {
 	}
 }
 
-func (net *StellarNet) PrintTransactionMeta(
-	m stx.TransactionMeta, acct *AccountID) string {
-	out := &strings.Builder{}
-	if m.V != 1 {
+func (net *StellarNet) AccountDelta(
+	m *stx.TransactionMeta, acct AccountID) string {
+	target := stcdetail.XdrBin(&acct)
+	var before, after *stx.AccountEntry
+	seen := false
+	stcdetail.ForEachAccountEntry(m, func(tp stx.LedgerEntryChangeType,
+		ap *stx.AccountID, ae *stx.AccountEntry) {
+			if !bytes.Equal(stcdetail.XdrBin(ap), target) {
+				return
+			}
+			if tp == stx.LEDGER_ENTRY_STATE {
+				if before == nil && !seen {
+					before = ae
+				}
+			} else {
+				seen = true
+				after = ae
+			}
+		})
+	if before == nil && after == nil {
 		return ""
+	} else if after == nil {
+		return "    deleted\n"
+	} else if before == nil {
+		return stcdetail.RepDiff("", net.ToRep(after))
 	}
-	changes := m.V1().TxChanges
-	for i := range changes {
-		var _ = i
-	}
-	return out.String()
+	return stcdetail.RepDiff(net.ToRep(before), net.ToRep(after))
 }
 
 type HorizonTxResult struct {
