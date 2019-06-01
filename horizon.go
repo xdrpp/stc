@@ -25,12 +25,8 @@ func (e horizonFailure) Error() string {
 
 const badHorizonURL horizonFailure = "Missing or invalid horizon URL"
 
-// Send an HTTP request to horizon
-func (net *StellarNet) Get(query string) ([]byte, error) {
-	if net.Horizon == "" {
-		return nil, badHorizonURL
-	}
-	resp, err := http.Get(net.Horizon + query)
+func getURL(url string) ([]byte, error) {
+	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -43,6 +39,14 @@ func (net *StellarNet) Get(query string) ([]byte, error) {
 		return nil, horizonFailure(body)
 	}
 	return body, nil
+}
+
+// Send an HTTP request to horizon
+func (net *StellarNet) Get(query string) ([]byte, error) {
+	if net.Horizon == "" {
+		return nil, badHorizonURL
+	}
+	return getURL(net.Horizon + query)
 }
 
 // Send an HTTP request to horizon and perse the result as JSON
@@ -98,6 +102,91 @@ func (net *StellarNet) StreamJSON(
 		}
 		return nil
 	})
+}
+
+type jsonInterface struct {
+	i interface{}
+}
+func (ji *jsonInterface) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, ji.i)
+}
+
+// Send a request to horizon and iterate through a series of embedded
+// records in the response, continuing to fetch more records until
+// zero records are returned.  cb is a callback function which must
+// have type func(obj *T)error or func(obj *T), where *T is a type
+// into which JSON can be unmarshalled.  Returns if there is an error
+// or the ctx argument is Done.
+func (net *StellarNet) IterateJSON(
+	ctx context.Context, query string, cb interface{}) error {
+	if net.Horizon == "" {
+		return badHorizonURL
+	}
+
+	var resp *http.Response
+	cleanup := func() {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+	}
+	defer cleanup()
+
+	cbv := reflect.ValueOf(cb)
+	tp := cbv.Type()
+	if tp.Kind() != reflect.Func ||
+		tp.NumIn() != 1 || tp.In(0).Kind() != reflect.Ptr ||
+		tp.NumOut() > 1 ||
+		(tp.NumOut() == 1 && tp.Out(0).String() != "error") {
+		panic(badCb)
+	}
+	tp = tp.In(0).Elem()
+
+	var j struct {
+		Links struct {
+			Next struct {
+				Href string
+			}
+		} `json:"_links"`
+		Embedded struct {
+			Records jsonInterface
+		} `json:"_embedded"`
+	}
+	j.Embedded.Records.i = reflect.New(reflect.SliceOf(tp)).Interface()
+
+	for url := net.Horizon + query; !stcdetail.IsDone(ctx); url =
+		j.Links.Next.Href {
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return err
+		} else if ctx != nil {
+			req = req.WithContext(ctx)
+		}
+		cleanup()
+		resp, err = http.DefaultClient.Do(req)
+		if err != nil || stcdetail.IsDone(ctx) {
+			return err
+		} else if resp.StatusCode != 200 {
+			return stcdetail.HTTPerror(resp.Status)
+		}
+		dec := json.NewDecoder(resp.Body)
+		if err = dec.Decode(&j); err != nil {
+			return err
+		}
+		v := reflect.ValueOf(j.Embedded.Records.i).Elem()
+		n := v.Len()
+		if n == 0 {
+			break
+		}
+		for i := 0; i < n; i++ {
+			errs := cbv.Call([]reflect.Value{v.Index(i).Addr()})
+			if len(errs) != 0 {
+				if err, ok := errs[0].Interface().(error); ok && err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 type HorizonThresholds struct {
@@ -290,40 +379,6 @@ func (net *StellarNet) GetTxResult(txid string) (*HorizonTxResult, error) {
 		return nil, err
 	}
 	return &ret, nil
-}
-
-func (net *StellarNet) GetAcctTxs(acct string, n int) (
-	[]HorizonTxResult, error) {
-	var j struct {
-		Embedded struct {
-			Records []HorizonTxResult
-		} `json:"_embedded"`
-	}
-	var ret []HorizonTxResult
-	var cursor string
-	for n > 0 {
-		lim := n
-		if lim > 100 {
-			lim = 100
-		}
-		q := fmt.Sprintf("accounts/%s/transactions?order=desc&limit=%d",
-			acct, lim)
-		if cursor != "" {
-			q += fmt.Sprintf("&cursor=%s", cursor)
-		}
-		if err := net.GetJSON(q, &j); err != nil {
-			return nil, err
-		} else if len(j.Embedded.Records) == 0 {
-			break
-		}
-		ret = append(ret, j.Embedded.Records...)
-		if len(ret) >= n {
-			ret = ret[:n]
-			break
-		}
-		cursor = j.Embedded.Records[len(j.Embedded.Records)-1].PagingToken
-	}
-	return ret, nil
 }
 
 var feeSuffix string = "_accepted_fee"

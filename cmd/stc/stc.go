@@ -576,23 +576,26 @@ func main() {
 			fmt.Fprintln(os.Stderr, "syntactically invalid account")
 			os.Exit(1)
 		}
-		txs, err := net.GetAcctTxs(arg, 0x7fffffff)
+
+		nl := false
+		err := net.IterateJSON(nil, "accounts/" + arg +
+			"/transactions?order=desc&limit=200",
+			func(r *HorizonTxResult) {
+				if *opt_verbose {
+					if !nl {
+						nl = true
+					} else {
+						fmt.Println()
+					}
+					fmt.Print(r)
+				} else {
+					fmt.Printf("%x\n", r.Txhash)
+					fmt.Printf(net.AccountDelta(&r.ResultMeta, acct))
+				}
+			})
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
-		}
-		if *opt_verbose {
-			for i := range txs {
-				if i != 0 {
-					fmt.Println()
-				}
-				fmt.Print(&txs[i])
-			}
-		} else {
-			for i := range txs {
-				fmt.Printf("%x\n", txs[i].Txhash)
-				fmt.Printf(net.AccountDelta(&txs[i].ResultMeta, acct))
-			}
 		}
 		return
 	}

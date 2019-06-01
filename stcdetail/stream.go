@@ -16,7 +16,7 @@ func (e HTTPerror) Error() string {
 	return string(e)
 }
 
-func isDone(ctx context.Context) bool {
+func IsDone(ctx context.Context) bool {
 	if ctx == nil {
 		return false
 	}
@@ -123,10 +123,10 @@ func Stream(ctx context.Context, url string,
 	}
 	defer cleanup()
 
-	for !isDone(ctx) {
+	for !IsDone(ctx) {
 		cleanup()
 		resp, err = http.DefaultClient.Do(req)
-		if err != nil || isDone(ctx) {
+		if err != nil || IsDone(ctx) {
 			return err
 		}
 		if resp.StatusCode != 200 {
