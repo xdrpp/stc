@@ -18,9 +18,14 @@ func (gxt *getXdrType) Marshal(name string, i stx.XdrType) {
 
 type fakeAggregate struct {
 	stx.XdrType
+	xdr_fn reflect.Value
 }
 func (a fakeAggregate) XdrMarshal(x stx.XDR, name string) {
-	x.Marshal(name, a.XdrType)
+	a.xdr_fn.Call([]reflect.Value{
+		reflect.ValueOf(x),
+		reflect.ValueOf(name),
+		reflect.ValueOf(a.XdrType.XdrPointer()),
+	})
 }
 
 var _ stx.XdrAggregate = fakeAggregate{}
@@ -40,10 +45,7 @@ func MakeAggregate(xdr_fn interface{}, t interface{}) stx.XdrAggregate {
 	tv := reflect.ValueOf(t)
 	var gxt getXdrType
 	xfv.Call([]reflect.Value{reflect.ValueOf(&gxt), reflect.ValueOf(""), tv})
-	if a, ok := gxt.t.(stx.XdrAggregate); ok {
-		return a
-	}
-	return fakeAggregate { gxt.t }
+	return fakeAggregate { gxt.t, xfv }
 }
 
 // Marshal an XDR aggregate to the raw binary bytes defined in
