@@ -54,6 +54,23 @@ func XdrToBin(t stx.XdrAggregate) []byte {
 	return out.Bytes()
 }
 
+// Unmarshal an XDR aggregate from the raw binary bytes defined in
+// RFC4506.
+func XdrFromBin(t stx.XdrAggregate, input []byte) (err error) {
+	defer func() {
+		if i := recover(); i != nil {
+			if xe, ok := i.(stx.XdrError); ok {
+				err = xe
+				return
+			}
+			panic(i)
+		}
+	}()
+	in := bytes.NewReader(input)
+	t.XdrMarshal(&stx.XdrIn{in}, "")
+	return
+}
+
 type forEachXdr struct {
 	fn func(stx.XdrType) bool
 }

@@ -31,7 +31,7 @@ func RepDiff(arep, brep string) string {
 	return out.String()
 }
 
-func GetLedgerEntryKey(e stx.LedgerEntry) stx.LedgerKey {
+func GetLedgerEntryKey(e *stx.LedgerEntry) stx.LedgerKey {
 	k := stx.LedgerKey{ Type: e.Data.Type }
 	switch k.Type {
 	case stx.ACCOUNT:
@@ -56,17 +56,18 @@ func GetAccountID(a stx.XdrAggregate) (ret *stx.AccountID) {
 	return
 }
 
-/*
-func ChangeInfo(c stx.LedgerEntryChange) (acct stx.AccountID,
-	key stx.LedgerKey, entrybody stx.XdrAggregate) {
+func ChangeInfo(c *stx.LedgerEntryChange) (acct *stx.AccountID,
+	key stx.LedgerKey, entry *stx.LedgerEntry) {
 	switch v := c.XdrUnionBody().(type) {
 	case *stx.LedgerKey:
-		
+		return GetAccountID(v), *v, nil
+	case *stx.LedgerEntry:
+		k := GetLedgerEntryKey(v)
+		return GetAccountID(&k), k, v
 	default:
 		panic("ChangeInfo: invalid LedgerEntryChange")
 	}
 }
-*/
 
 type aex struct {
 	tp stx.LedgerEntryChangeType
