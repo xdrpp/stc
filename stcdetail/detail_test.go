@@ -205,3 +205,10 @@ func ExampleMakeAggregate() {
 	// output:
 	// 12345678
 }
+
+func TestGetAccountID(t *testing.T) {
+	var e stx.LedgerEntry
+	if GetAccountID(&e) != &e.Data.Account().AccountID {
+		t.Fail()
+	}
+}

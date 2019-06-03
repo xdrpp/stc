@@ -49,6 +49,13 @@ func GetLedgerEntryKey(e stx.LedgerEntry) stx.LedgerKey {
 	return k
 }
 
+// Return the first AccountID found when traversing a data structure
+// (or nil if none).
+func GetAccountID(a stx.XdrAggregate) (ret *stx.AccountID) {
+	XdrExtract(a, &ret)
+	return
+}
+
 /*
 func ChangeInfo(c stx.LedgerEntryChange) (acct stx.AccountID,
 	key stx.LedgerKey, entrybody stx.XdrAggregate) {

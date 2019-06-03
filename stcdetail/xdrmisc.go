@@ -30,8 +30,6 @@ func (a fakeAggregate) XdrMarshal(x stx.XDR, name string) {
 
 var _ stx.XdrAggregate = fakeAggregate{}
 
-var xdr_type reflect.Type = reflect.TypeOf((*stx.XDR)(nil)).Elem()
-
 // Turn any type T with an XDR_T marshaling funcation into an
 // XdrAggregate.  Generic functions are easiest to write for
 // XdrAggregate instances, which have an XdrMarshal method.  If you
@@ -76,3 +74,23 @@ func ForEachXdr(t stx.XdrAggregate, fn func(stx.XdrType) bool) {
 	t.XdrMarshal(forEachXdr{fn}, "")
 }
 
+// If out is of type **T, then *out is set to point to the first
+// instance of T found when traversing t.
+func XdrExtract(t stx.XdrAggregate, out interface{}) (ret bool) {
+	vo := reflect.ValueOf(out).Elem()
+	to := vo.Type()
+	ForEachXdr(t, func(t stx.XdrType) bool {
+		tp := t.XdrPointer()
+		if tp == nil {
+			return false
+		}
+		v := reflect.ValueOf(t.XdrPointer())
+		if v.Type() != to {
+			return false
+		}
+		vo.Set(v)
+		ret = true
+		return true
+	})
+	return
+}
