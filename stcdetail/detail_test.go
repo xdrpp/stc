@@ -205,9 +205,22 @@ func ExampleMakeAggregate() {
 	// 12345678
 }
 
+func TestForEachXdrType(t *testing.T) {
+	var e stx.TransactionMetaV1
+	e.TxChanges = make([]stx.LedgerEntryChange, 5)
+	n := 0
+	ForEachXdrType(&e, func(acct *stx.AccountID) {
+		n++
+	})
+	if n != 5 {
+		t.Fail()
+	}
+}
+
 func TestGetAccountID(t *testing.T) {
-	var e stx.LedgerEntry
-	if GetAccountID(&e) != &e.Data.Account().AccountID {
+	var e stx.TransactionMetaV1
+	e.TxChanges = make([]stx.LedgerEntryChange, 5)
+	if GetAccountID(&e) != &e.TxChanges[0].Created().Data.Account().AccountID {
 		t.Fail()
 	}
 }

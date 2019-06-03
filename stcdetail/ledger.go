@@ -56,7 +56,7 @@ func GetAccountID(a stx.XdrAggregate) (ret *stx.AccountID) {
 	return
 }
 
-func ChangeInfo(c *stx.LedgerEntryChange) (acct *stx.AccountID,
+func changeInfo(c *stx.LedgerEntryChange) (acct *stx.AccountID,
 	key stx.LedgerKey, entry *stx.LedgerEntry) {
 	switch v := c.XdrUnionBody().(type) {
 	case *stx.LedgerKey:
@@ -68,6 +68,19 @@ func ChangeInfo(c *stx.LedgerEntryChange) (acct *stx.AccountID,
 		panic("ChangeInfo: invalid LedgerEntryChange")
 	}
 }
+
+type MetaDelta struct {
+	Key stx.LedgerKey
+	Old, New *stx.LedgerEntry
+}
+
+/*
+func GetMetaDeltas(m *stx.TransactionMeta) (ret []MetaDelta) {
+	kmap := make(map[string]int)
+}
+*/
+
+
 
 type aex struct {
 	tp stx.LedgerEntryChangeType

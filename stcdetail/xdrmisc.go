@@ -6,11 +6,14 @@ import (
 	"strings"
 )
 
+type trivSprintf struct{}
+func (trivSprintf) Sprintf(f string, args ...interface{}) string {
+	return ""
+}
+
 type getXdrType struct {
 	t stx.XdrType
-}
-func (*getXdrType) Sprintf(f string, args ...interface{}) string {
-	return ""
+	trivSprintf
 }
 func (gxt *getXdrType) Marshal(name string, i stx.XdrType) {
 	gxt.t = i
@@ -73,6 +76,7 @@ func XdrFromBin(t stx.XdrAggregate, input string) (err error) {
 
 type forEachXdr struct {
 	fn func(stx.XdrType) bool
+	trivSprintf
 }
 func (fex forEachXdr) Marshal(_ string, val stx.XdrType) {
 	if !fex.fn(val) {
@@ -81,33 +85,62 @@ func (fex forEachXdr) Marshal(_ string, val stx.XdrType) {
 		}
 	}
 }
-func (forEachXdr) Sprintf(string, ...interface{}) string {
-	return ""
-}
 
 // Calls fn, recursively, on every value inside an XdrAggregate.
 // Prunes the recursion if fn returns true.
 func ForEachXdr(t stx.XdrAggregate, fn func(stx.XdrType) bool) {
-	t.XdrMarshal(forEachXdr{fn}, "")
+	t.XdrMarshal(forEachXdr{fn: fn}, "")
+}
+
+// Calls fn on each instance of a type encountered while traversing a
+// data structure.  fn should be of type func(*T) or func(*T)bool
+// where T is an XDR structure.  By default, the traversal does not
+// recurse into T.  In the case that T is part of a linked list (or
+// otherwise contains a pointer to T internally), if the function
+// returns false then fields within T will continue to be examined
+// recursively.
+func ForEachXdrType(a stx.XdrAggregate, fn interface{}) {
+	fnv := reflect.ValueOf(fn)
+	fnt := fnv.Type()
+	if fnt.Kind() != reflect.Func || fnt.NumIn() != 1 || fnt.NumOut() > 1 ||
+		(fnt.NumOut() == 1 && fnt.Out(0).Kind() != reflect.Bool) {
+		panic("ForEachXdrType: invalid function")
+	}
+	argt := fnt.In(0)
+	argv := reflect.New(argt).Elem()
+	ForEachXdr(a, func(t stx.XdrType) bool {
+		if reflect.TypeOf(t).AssignableTo(argt) {
+			argv.Set(reflect.ValueOf(t))
+			res := fnv.Call([]reflect.Value{argv})
+			if len(res) == 0 || len(res) == 1 && res[0].Bool() {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+type xdrExtract struct {
+	out reflect.Value
+	done bool
+	trivSprintf
+}
+func (x *xdrExtract) Marshal(_ string, t stx.XdrType) {
+	if x.done {
+		return
+	} else if reflect.TypeOf(t).AssignableTo(x.out.Type()) {
+		x.out.Set(reflect.ValueOf(t))
+		x.done = true
+		return
+	} else if a, ok := t.(stx.XdrAggregate); ok {
+		a.XdrMarshal(x, "")
+	}
 }
 
 // If out is of type **T, then *out is set to point to the first
 // instance of T found when traversing t.
-func XdrExtract(t stx.XdrAggregate, out interface{}) (ret bool) {
-	vo := reflect.ValueOf(out).Elem()
-	to := vo.Type()
-	ForEachXdr(t, func(t stx.XdrType) bool {
-		tp := t.XdrPointer()
-		if tp == nil {
-			return false
-		}
-		v := reflect.ValueOf(t.XdrPointer())
-		if v.Type() != to {
-			return false
-		}
-		vo.Set(v)
-		ret = true
-		return true
-	})
-	return
+func XdrExtract(t stx.XdrAggregate, out interface{}) bool {
+	x := xdrExtract{ out: reflect.ValueOf(out).Elem() }
+	t.XdrMarshal(&x, "")
+	return x.done
 }
