@@ -94,9 +94,10 @@ Stream return by returning a non-nil error.  You will generally want
 to spawn Stream in a new goroutine, and may wish to wrap it in a loop
 to keep trying in the face of errors.
 
-In keeping with the Stellar Horizon REST API, Stream initialy modifies
-the url to have a cursor=now parameter, and updates the cursor to the
-latest event ID whenever it needs to reconnect.
+In keeping with the Stellar Horizon REST API, if url does not contain
+a cursor parameter, Stream adds cursor=now to the query.  It
+furthermore updates the cursor to the latest event ID whenever it
+needs to reconnect.
 
 */
 func Stream(ctx context.Context, url string,
@@ -112,8 +113,10 @@ func Stream(ctx context.Context, url string,
 	}
 	req.Header.Set("Accept", "text/event-stream")
 	q := req.URL.Query()
-	q.Set("cursor", "now")
-	req.URL.RawQuery = q.Encode()
+	if _, ok := q["cursor"]; !ok {
+		q.Set("cursor", "now")
+		req.URL.RawQuery = q.Encode()
+	}
 
 	var resp *http.Response
 	cleanup := func() {

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func XdrBin(t stx.XdrAggregate) []byte {
+func XdrToBin(t stx.XdrAggregate) []byte {
 	out := bytes.Buffer{}
 	t.XdrMarshal(&stx.XdrOut{&out}, "")
 	return out.Bytes()
