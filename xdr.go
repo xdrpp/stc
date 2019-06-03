@@ -260,27 +260,6 @@ func TxFromBase64(input string) (*TransactionEnvelope, error) {
 	return tx, nil
 }
 
-type forEachXdr struct {
-	fn func(stx.XdrType) bool
-}
-
-func (fex forEachXdr) Marshal(_ string, val stx.XdrType) {
-	if !fex.fn(val) {
-		if xa, ok := val.(stx.XdrAggregate); ok {
-			xa.XdrMarshal(fex, "")
-		}
-	}
-}
-func (forEachXdr) Sprintf(string, ...interface{}) string {
-	return ""
-}
-
-// Calls fn, recursively, on every value inside an XdrAggregate.
-// Prunes the recursion if fn returns true.
-func ForEachXdr(t stx.XdrAggregate, fn func(stx.XdrType) bool) {
-	t.XdrMarshal(forEachXdr{fn}, "")
-}
-
 type assignXdr struct {
 	fields []interface{}
 }

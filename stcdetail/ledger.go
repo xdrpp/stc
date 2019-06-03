@@ -1,17 +1,10 @@
 package stcdetail
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/xdrpp/stc/stx"
 	"strings"
 )
-
-func XdrToBin(t stx.XdrAggregate) []byte {
-	out := bytes.Buffer{}
-	t.XdrMarshal(&stx.XdrOut{&out}, "")
-	return out.Bytes()
-}
 
 func RepDiff(arep, brep string) string {
 	out := &strings.Builder{}
@@ -55,6 +48,18 @@ func GetLedgerEntryKey(e stx.LedgerEntry) stx.LedgerKey {
 	}
 	return k
 }
+
+/*
+func ChangeInfo(c stx.LedgerEntryChange) (acct stx.AccountID,
+	key stx.LedgerKey, entrybody stx.XdrAggregate) {
+	switch v := c.XdrUnionBody().(type) {
+	case *stx.LedgerKey:
+		
+	default:
+		panic("ChangeInfo: invalid LedgerEntryChange")
+	}
+}
+*/
 
 type aex struct {
 	tp stx.LedgerEntryChangeType

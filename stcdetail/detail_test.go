@@ -1,5 +1,6 @@
 package stcdetail_test
 
+import "bytes"
 import "fmt"
 import "math/rand"
 import "strings"
@@ -185,4 +186,22 @@ func TestMissingByteArray(t *testing.T) {
 	if err != nil {
 		t.Errorf("%s", err)
 	}
+}
+
+func TestMakeAggregate(t *testing.T) {
+	m := stc.MemoText("This is a test")
+	x1 := XdrToBin(&m)
+	a := MakeAggregate(stx.XDR_Memo, &m)
+	x2 := XdrToBin(a)
+	if !bytes.Equal(x1, x2) {
+		t.Errorf("TestMakeAggregate: mismatch")
+	}
+}
+
+func ExampleMakeAggregate() {
+	i := int32(0x12345678)
+	a := XdrToBin(MakeAggregate(stx.XDR_int32, &i))
+	fmt.Printf("%x\n", a)
+	// output:
+	// 12345678
 }

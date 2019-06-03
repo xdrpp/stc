@@ -21,7 +21,7 @@ import (
 
 func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 	accounts := make(map[stx.AccountID][]HorizonSigner)
-	ForEachXdr(e, func(t stx.XdrType)bool {
+	stcdetail.ForEachXdr(e, func(t stx.XdrType)bool {
 		if ac, ok := t.(*stx.AccountID); ok {
 			if !isZeroAccount(ac) {
 				acs := ac.ToSignerKey()

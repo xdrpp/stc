@@ -2,6 +2,7 @@ package stc
 
 import (
 	"fmt"
+	"github.com/xdrpp/stc/stcdetail"
 	"reflect"
 	"strings"
 	"testing"
@@ -125,7 +126,7 @@ func TestParseTxrep(t *testing.T) {
 		op.Body.Type = stx.OperationType(i)
 		txe.Tx.Operations = append(txe.Tx.Operations, op)
 	}
-	ForEachXdr(txe, func(i stx.XdrType) bool {
+	stcdetail.ForEachXdr(txe, func(i stx.XdrType) bool {
 		switch v := i.(type) {
 		case interface{ XdrInitialize() }:
 			v.XdrInitialize()
@@ -166,7 +167,7 @@ func TestXdr(t *testing.T) {
 		op.Body.Type = stx.OperationType(i)
 		txe.Tx.Operations = append(txe.Tx.Operations, op)
 	}
-	ForEachXdr(txe, func(i stx.XdrType) bool {
+	stcdetail.ForEachXdr(txe, func(i stx.XdrType) bool {
 		switch v := i.(type) {
 		case interface{ XdrInitialize() }:
 			v.XdrInitialize()
