@@ -312,7 +312,7 @@ func (net *StellarNet) AccountDelta(
 	seen := false
 	stcdetail.ForEachAccountEntry(m, func(tp stx.LedgerEntryChangeType,
 		ap *stx.AccountID, ae *stx.AccountEntry) {
-			if !bytes.Equal(stcdetail.XdrToBin(ap), target) {
+			if stcdetail.XdrToBin(ap) != target {
 				return
 			}
 			if tp == stx.LEDGER_ENTRY_STATE {

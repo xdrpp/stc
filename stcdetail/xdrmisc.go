@@ -1,9 +1,9 @@
 package stcdetail
 
 import (
-	"bytes"
 	"github.com/xdrpp/stc/stx"
 	"reflect"
+	"strings"
 )
 
 type getXdrType struct {
@@ -47,16 +47,16 @@ func MakeAggregate(xdr_fn interface{}, t interface{}) stx.XdrAggregate {
 }
 
 // Marshal an XDR aggregate to the raw binary bytes defined in
-// RFC4506.
-func XdrToBin(t stx.XdrAggregate) []byte {
-	out := bytes.Buffer{}
+// RFC4506.  The return value is not UTF-8.
+func XdrToBin(t stx.XdrAggregate) string {
+	out := strings.Builder{}
 	t.XdrMarshal(&stx.XdrOut{&out}, "")
-	return out.Bytes()
+	return out.String()
 }
 
 // Unmarshal an XDR aggregate from the raw binary bytes defined in
 // RFC4506.
-func XdrFromBin(t stx.XdrAggregate, input []byte) (err error) {
+func XdrFromBin(t stx.XdrAggregate, input string) (err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			if xe, ok := i.(stx.XdrError); ok {
@@ -66,7 +66,7 @@ func XdrFromBin(t stx.XdrAggregate, input []byte) (err error) {
 			panic(i)
 		}
 	}()
-	in := bytes.NewReader(input)
+	in := strings.NewReader(input)
 	t.XdrMarshal(&stx.XdrIn{in}, "")
 	return
 }

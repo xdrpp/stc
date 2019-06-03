@@ -1,6 +1,5 @@
 package stcdetail_test
 
-import "bytes"
 import "fmt"
 import "math/rand"
 import "strings"
@@ -193,7 +192,7 @@ func TestMakeAggregate(t *testing.T) {
 	x1 := XdrToBin(&m)
 	a := MakeAggregate(stx.XDR_Memo, &m)
 	x2 := XdrToBin(a)
-	if !bytes.Equal(x1, x2) {
+	if x1 != x2 {
 		t.Errorf("TestMakeAggregate: mismatch")
 	}
 }

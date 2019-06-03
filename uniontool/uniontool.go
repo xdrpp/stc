@@ -2,6 +2,8 @@
 // top-level directory to autogenerate uhelper.go in the stc library.
 package main
 
+// +build ignore
+
 import "fmt"
 import "reflect"
 import "sort"
