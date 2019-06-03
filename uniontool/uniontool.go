@@ -1,8 +1,8 @@
+// +build ignore
+
 // Ignore this program.  It is invoked by the Makefile in stc's
 // top-level directory to autogenerate uhelper.go in the stc library.
 package main
-
-// +build ignore
 
 import "fmt"
 import "reflect"

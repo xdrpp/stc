@@ -18,7 +18,7 @@ To install or upgrade this software if you don't plan to hack on it,
 run the following two commands (assuming your GOPATH is in the default
 location of `~/go`):
 
-    rm -rf ~/go/src/github.com/xdrpp/stc/
+    rm -rf ~/go/src/github.com/xdrpp/stc
     go get github.com/xdrpp/stc/...
 
 The `rm` command is necessary when upgrading because [some `go get`
