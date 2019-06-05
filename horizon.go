@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // A communication error with horizon
@@ -153,6 +154,7 @@ func (net *StellarNet) IterateJSON(
 	}
 	j.Embedded.Records.i = reflect.New(reflect.SliceOf(tp)).Interface()
 
+	backoff := time.Second
 	for url := net.Horizon + query; !stcdetail.IsDone(ctx); url =
 		j.Links.Next.Href {
 		req, err := http.NewRequest("GET", url, nil)
@@ -166,8 +168,21 @@ func (net *StellarNet) IterateJSON(
 		if err != nil || stcdetail.IsDone(ctx) {
 			return err
 		} else if resp.StatusCode != 200 {
-			return stcdetail.HTTPerror(resp.Status)
+			if resp.StatusCode != 429 {
+				return stcdetail.HTTPerror(resp.Status)
+			}
+			if ctx != nil {
+				select {
+				case <-ctx.Done():
+				case <-time.After(backoff):
+				}
+			} else {
+				time.Sleep(backoff)
+			}
+			backoff *= 2
+			continue
 		}
+		backoff = time.Second
 		dec := json.NewDecoder(resp.Body)
 		if err = dec.Decode(&j); err != nil {
 			return err
