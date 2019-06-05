@@ -321,36 +321,51 @@ func showLedgerKey(k stx.LedgerKey) string {
 }
 
 func (net *StellarNet) AccountDelta(
-	m *stx.TransactionMeta, acct AccountID) string {
+	m *stx.TransactionMeta, acct *AccountID, prefix string) string {
+	pprefix := prefix + "  "
 	out := &strings.Builder{}
 	mds := stcdetail.GetMetaDeltas(m)
-	target := stcdetail.XdrToBin(&acct)
+	target := ""
+	if acct != nil {
+		target = stcdetail.XdrToBin(acct)
+	}
 	for i := range mds {
-		if stcdetail.XdrToBin(mds[i].AccountID()) != target {
+		if target != "" && stcdetail.XdrToBin(mds[i].AccountID()) != target {
 			continue
 		}
 		ks := showLedgerKey(mds[i].Key)
 		if mds[i].Old != nil && mds[i].New != nil {
-			fmt.Fprintf(out, "  updated %s\n%s", ks, stcdetail.RepDiff(
-				net.ToRep(mds[i].Old), net.ToRep(mds[i].New)))
+			fmt.Fprintf(out, "%supdated %s\n%s", prefix, ks,
+				stcdetail.RepDiff(pprefix,
+				net.ToRep(mds[i].Old.Data.XdrUnionBody().(stx.XdrAggregate)),
+				net.ToRep(mds[i].New.Data.XdrUnionBody().(stx.XdrAggregate))))
 		} else if mds[i].New != nil {
-			fmt.Fprintf(out, "  created %s\n%s", ks, stcdetail.RepDiff(
-				"", net.ToRep(mds[i].New)))
+			fmt.Fprintf(out, "%screated %s\n%s", prefix, ks, stcdetail.RepDiff(
+				pprefix, "",
+				net.ToRep(mds[i].New.Data.XdrUnionBody().(stx.XdrAggregate))))
 		} else {
-			fmt.Fprintf(out, "  deleted %s\n", ks)
+			fmt.Fprintf(out, "%sdeleted %s\n%s", prefix, ks,
+				stcdetail.RepDiff(pprefix,
+				net.ToRep(mds[i].Old.Data.XdrUnionBody().(stx.XdrAggregate)),
+				""))
 		}
 	}
 	return out.String()
 }
 
 type HorizonTxResult struct {
-	stcdetail.XdrTxResult
+	Txhash stx.Hash;
+	Env stx.TransactionEnvelope;
+	Result stx.TransactionResult;
+	ResultMeta stx.TransactionMeta;
 	PagingToken string
 }
 
 func (r HorizonTxResult) String() string {
 	out := strings.Builder{}
-	stcdetail.XdrToTxrep(&out, &r.XdrTxResult)
+	stcdetail.XdrToTxrep(&out, "", &r.Env)
+	stcdetail.XdrToTxrep(&out, "", &r.Result)
+	stcdetail.XdrToTxrep(&out, "meta", &r.ResultMeta)
 	fmt.Fprintf(&out, "paging_token: %s\n", r.PagingToken)
 	return out.String()
 }

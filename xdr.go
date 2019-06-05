@@ -218,13 +218,13 @@ func (net *StellarNet) ToRep(txe stx.XdrAggregate) string {
 			helper
 			*StellarNet
 		}{e, (*StellarNet)(net)}
-		stcdetail.XdrToTxrep(&out, ntxe)
+		stcdetail.XdrToTxrep(&out, "", ntxe)
 	} else {
 		ntxe := struct {
 			stx.XdrAggregate
 			*StellarNet
 		}{txe, (*StellarNet)(net)}
-		stcdetail.XdrToTxrep(&out, ntxe)
+		stcdetail.XdrToTxrep(&out, "", ntxe)
 	}
 
 	return out.String()
@@ -240,7 +240,7 @@ func (net *StellarNet) TxToRep(txe *TransactionEnvelope) string {
 func TxFromRep(rep string) (*TransactionEnvelope, TxrepError) {
 	in := strings.NewReader(rep)
 	txe := NewTransactionEnvelope()
-	if err := stcdetail.XdrFromTxrep(in, txe); err != nil {
+	if err := stcdetail.XdrFromTxrep(in, "", txe); err != nil {
 		return txe, err
 	}
 	return txe, nil

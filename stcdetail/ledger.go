@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func RepDiff(arep, brep string) string {
+func RepDiff(prefix, arep, brep string) string {
 	out := &strings.Builder{}
 	amap := make(map [string]string)
 	for _, a := range strings.Split(arep, "\n") {
@@ -23,9 +23,9 @@ func RepDiff(arep, brep string) string {
 		}
 		av, ok := amap[kv[0]]
 		if !ok {
-			fmt.Fprintf(out, "    %s: -> %s\n", kv[0], kv[1])
+			fmt.Fprintf(out, "%s%s: -> %s\n", prefix, kv[0], kv[1])
 		} else if av != kv[1] {
-			fmt.Fprintf(out, "    %s: %s -> %s\n", kv[0], av, kv[1])
+			fmt.Fprintf(out, "%s%s: %s -> %s\n", prefix, kv[0], av, kv[1])
 		}
 	}
 	return out.String()

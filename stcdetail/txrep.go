@@ -232,7 +232,7 @@ func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 //
 // Help comment for field fieldname:
 //   GetHelp(fieldname string) bool
-func XdrToTxrep(out io.Writer, t stx.XdrAggregate) XdrBadValue {
+func XdrToTxrep(out io.Writer, name string, t stx.XdrAggregate) XdrBadValue {
 	ctx := txStringCtx{
 		accountIDNote: func(*stx.AccountID) string { return "" },
 		signerNote: func(*stx.TransactionEnvelope,
@@ -263,7 +263,7 @@ func XdrToTxrep(out io.Writer, t stx.XdrAggregate) XdrBadValue {
 		ctx.native = "NATIVE"
 	}
 
-	t.XdrMarshal(&ctx, "")
+	t.XdrMarshal(&ctx, name)
 	if len(ctx.err) > 0 {
 		return ctx.err
 	}
@@ -471,7 +471,7 @@ func (xs *xdrScan) readKvs(in io.Reader) {
 // Parse input in Txrep format into an XdrAggregate type.  If the
 // XdrAggregate has a method named SetHelp(string), then it is called
 // for field names when the value ends with '?'.
-func XdrFromTxrep(in io.Reader, t stx.XdrAggregate) TxrepError {
+func XdrFromTxrep(in io.Reader, name string, t stx.XdrAggregate) TxrepError {
 	xs := &xdrScan{}
 	if sh, ok := t.(interface{ SetHelp(string) }); ok {
 		xs.setHelp = sh.SetHelp
@@ -484,7 +484,7 @@ func XdrFromTxrep(in io.Reader, t stx.XdrAggregate) TxrepError {
 	}
 	xs.readKvs(in)
 	if xs.kvs != nil {
-		t.XdrMarshal(xs, "")
+		t.XdrMarshal(xs, name)
 	}
 	if len(xs.err) != 0 {
 		return xs.err
