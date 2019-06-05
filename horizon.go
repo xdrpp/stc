@@ -322,31 +322,25 @@ func showLedgerKey(k stx.LedgerKey) string {
 
 func (net *StellarNet) AccountDelta(
 	m *stx.TransactionMeta, acct AccountID) string {
+	out := &strings.Builder{}
+	mds := stcdetail.GetMetaDeltas(m)
 	target := stcdetail.XdrToBin(&acct)
-	var before, after *stx.AccountEntry
-	seen := false
-	stcdetail.ForEachAccountEntry(m, func(tp stx.LedgerEntryChangeType,
-		ap *stx.AccountID, ae *stx.AccountEntry) {
-			if stcdetail.XdrToBin(ap) != target {
-				return
-			}
-			if tp == stx.LEDGER_ENTRY_STATE {
-				if before == nil && !seen {
-					before = ae
-				}
-			} else {
-				seen = true
-				after = ae
-			}
-		})
-	if before == nil && after == nil {
-		return ""
-	} else if after == nil {
-		return "    deleted\n"
-	} else if before == nil {
-		return stcdetail.RepDiff("", net.ToRep(after))
+	for i := range mds {
+		if stcdetail.XdrToBin(mds[i].AccountID()) != target {
+			continue
+		}
+		ks := showLedgerKey(mds[i].Key)
+		if mds[i].Old != nil && mds[i].New != nil {
+			fmt.Fprintf(out, "  updated %s\n%s", ks, stcdetail.RepDiff(
+				net.ToRep(mds[i].Old), net.ToRep(mds[i].New)))
+		} else if mds[i].New != nil {
+			fmt.Fprintf(out, "  created %s\n%s", ks, stcdetail.RepDiff(
+				"", net.ToRep(mds[i].New)))
+		} else {
+			fmt.Fprintf(out, "  deleted %s\n", ks)
+		}
 	}
-	return stcdetail.RepDiff(net.ToRep(before), net.ToRep(after))
+	return out.String()
 }
 
 type HorizonTxResult struct {
