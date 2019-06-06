@@ -214,18 +214,54 @@ type HorizonFlags struct {
 	Auth_revocable bool
 	Auth_immutable bool
 }
+type HorizonSigner struct {
+	Key    SignerKey
+	Weight uint32
+}
+
 type HorizonBalance struct {
 	Balance             stcdetail.JsonInt64e7
 	Buying_liabilities  stcdetail.JsonInt64e7
 	Selling_liabilities stcdetail.JsonInt64e7
 	Limit               stcdetail.JsonInt64e7
-	Asset_type          string
-	Asset_code          string
-	Asset_issuer        *AccountID
+	Asset               stx.Asset `json:"-"`
 }
-type HorizonSigner struct {
-	Key    SignerKey
-	Weight uint32
+
+func (hb *HorizonBalance) UnmarshalJSON(data []byte) error {
+	type jhb HorizonBalance
+	var jasset struct {
+		Asset_type string
+		Asset_code string
+		Asset_issuer AccountID
+	}
+	if err := json.Unmarshal(data, (*jhb)(hb)); err != nil {
+		return err
+	} else if err = json.Unmarshal(data, &jasset); err != nil {
+		return err
+	}
+	var code []byte
+	switch jasset.Asset_type {
+	case "native":
+		hb.Asset.Type = stx.ASSET_TYPE_NATIVE
+		return nil
+	case "credit_alphanum4":
+		hb.Asset.Type = stx.ASSET_TYPE_CREDIT_ALPHANUM4
+		a := hb.Asset.AlphaNum4()
+		a.Issuer = jasset.Asset_issuer
+		code = a.AssetCode[:]
+	case "credit_alphanum12":
+		hb.Asset.Type = stx.ASSET_TYPE_CREDIT_ALPHANUM12
+		a := hb.Asset.AlphaNum12()
+		a.Issuer = jasset.Asset_issuer
+		code = a.AssetCode[:]
+	default:
+		return horizonFailure("unknown asset type " + jasset.Asset_type)
+	}
+	for i := range code {
+		code[i] = 0
+	}
+	copy(code, jasset.Asset_code)
+	return nil
 }
 
 // Structure into which you can unmarshal JSON returned by a query to
@@ -265,7 +301,7 @@ func (ae *HorizonAccountEntry) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	for i := range ae.Balances {
-		if ae.Balances[i].Asset_type == "native" {
+		if ae.Balances[i].Asset.Type == stx.ASSET_TYPE_NATIVE {
 			ae.Balance = ae.Balances[i].Balance
 			ae.Balances = append(ae.Balances[:i], ae.Balances[i+1:]...)
 			break
