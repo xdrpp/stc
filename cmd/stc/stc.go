@@ -21,15 +21,11 @@ import (
 
 func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 	accounts := make(map[stx.AccountID][]HorizonSigner)
-	stcdetail.ForEachXdr(e, func(t stx.XdrType)bool {
-		if ac, ok := t.(*stx.AccountID); ok {
-			if !isZeroAccount(ac) {
-				acs := ac.ToSignerKey()
-				accounts[*ac] = []HorizonSigner{{Key: acs}}
-			}
-			return true
+	stcdetail.ForEachXdrType(e, func(ac *stx.AccountID) {
+		if !isZeroAccount(ac) {
+			acs := ac.ToSignerKey()
+			accounts[*ac] = []HorizonSigner{{Key: acs}}
 		}
-		return false
 	})
 
 	if usenet {
@@ -372,7 +368,7 @@ var progname string
 func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to base64 XDR")
 	opt_keygen := flag.Bool("keygen", false, "Create a new signing keypair")
-	opt_sec2pub := flag.Bool("sec2pub", false, "Get public key from private")
+	opt_sec2pub := flag.Bool("pub", false, "Get public key from private")
 	opt_output := flag.String("o", "", "Output to `FILE` instead of stdout")
 	opt_preauth := flag.Bool("preauth", false,
 		"Hash transaction to strkey for use as a pre-auth transaction signer")
@@ -631,7 +627,7 @@ func main() {
 		return
 	}
 
-	e, _ := mustReadTx(arg)
+	e, compiled := mustReadTx(arg)
 	switch {
 	case *opt_post:
 		res, err := net.Post(e)
@@ -662,6 +658,9 @@ func main() {
 		}
 		if *opt_inplace {
 			*opt_output = arg
+			if compiled {
+				*opt_compile = true
+			}
 		}
 		mustWriteTx(*opt_output, e, net, *opt_compile)
 	}

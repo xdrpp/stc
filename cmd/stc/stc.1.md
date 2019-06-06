@@ -19,7 +19,7 @@ stc -qta [-net=ID] _accountID_ \
 stc -fee-stats \
 stc -create [-net=ID] _accountID_ \
 stc -keygen [_name_] \
-stc -sec2pub [_name_] \
+stc -pub [_name_] \
 stc -import-key _name_ \
 stc -export-key _name_ \
 stc -list-keys
@@ -150,7 +150,7 @@ the `-net` option is correct when using `-preauth`.
 ## Key management mode
 
 stc runs in key management mode when one of the following flags is
-selected:  `-keygen`, `-sec2pub`, `-import-key`, `-export-key`, and
+selected:  `-keygen`, `-pub`, `-import-key`, `-export-key`, and
 `-list-keys`.
 
 These options take a key name.  If the key name contains a slash, it
@@ -159,10 +159,10 @@ a slash, it refers to a file name in the stc configuration directory
 (see FILES below).  This allows keys to be stored in the configuration
 directory and then accessed from any directory in which stc runs.
 
-The `-keygen` and `-sec2pub` options can be run with no key name, in
-which case `-keygen` will output both the secret and public key to
-standard output, and `-sec2pub` will read a key from standard input or
-prompt for one to be pasted into the terminal.
+The `-keygen` and `-pub` options can be run with no key name, in which
+case `-keygen` will output both the secret and public key to standard
+output, and `-pub` will read a key from standard input or prompt for
+one to be pasted into the terminal.
 
 Keys are generally stored encrypted, but if you supply an empty
 passphrase, they will be stored in plaintext.  If you use the
@@ -263,7 +263,7 @@ ID as well as the transaction.
 `-qa`
 :	Query the network for the state of a particular account.
 
-`-sec2pub`
+`-pub`
 :	Print the public key corresponding to a particular private key.
 
 `-sign`

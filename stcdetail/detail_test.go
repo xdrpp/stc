@@ -181,7 +181,7 @@ func TestJsonToXdr(t *testing.T) {
 func TestMissingByteArray(t *testing.T) {
 	in := strings.NewReader("type: MEMO_HASH")
 	var m stx.Memo
-	err := XdrFromTxrep(in, &m)
+	err := XdrFromTxrep(in, "", &m)
 	if err != nil {
 		t.Errorf("%s", err)
 	}

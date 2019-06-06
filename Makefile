@@ -64,8 +64,7 @@ uhelper.go: stx/xdr_generated.go uniontool/uniontool.go
 	mv -f $@~ $@
 
 test: $(BUILT_SOURCES)
-	go test -v
-	go test -v ./stcdetail
+	go test -v . ./stcdetail
 	cd cmd/goxdr && $(MAKE) test
 
 clean:
