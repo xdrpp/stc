@@ -563,7 +563,7 @@ func main() {
 			fmt.Print("==== TRANSACTION ====\n", net.ToRep(&txr.Env),
 				"==== RESULT ====\n", net.ToRep(&txr.Result),
 				"==== EFFECTS ====\n",
-				net.AccountDelta(&txr.ResultMeta, nil, ""))
+				net.AccountDelta(&txr.StellarMetas, nil, ""))
 		}
 		return
 	}
@@ -588,7 +588,7 @@ func main() {
 					fmt.Print(r)
 				} else {
 					fmt.Printf("%x\n", r.Txhash)
-					fmt.Printf(net.AccountDelta(&r.ResultMeta, &acct, "  "))
+					fmt.Printf(net.AccountDelta(&r.StellarMetas, &acct, "  "))
 				}
 			})
 		if err != nil {

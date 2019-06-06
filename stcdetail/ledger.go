@@ -77,7 +77,7 @@ func (md MetaDelta) AccountID() *stx.AccountID {
 	return GetAccountID(&md.Key)
 }
 
-func GetMetaDeltas(m *stx.TransactionMeta) (ret []MetaDelta) {
+func GetMetaDeltas(m stx.XdrAggregate) (ret []MetaDelta) {
 	kmap := make(map[string]int)
 	ForEachXdrType(m, func(c *stx.LedgerEntryChange) {
 		k, e := changeInfo(c)

@@ -1,9 +1,7 @@
 
 // Local XDR data structures defined for use in STC library.
 
-struct XdrTxResult {
-  Hash txhash;
-  TransactionEnvelope env;
-  TransactionResult result;
+struct StellarMetas {
+  LedgerEntryChanges feeMeta;
   TransactionMeta resultMeta;
 };

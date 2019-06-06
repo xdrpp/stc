@@ -357,7 +357,7 @@ func showLedgerKey(k stx.LedgerKey) string {
 }
 
 func (net *StellarNet) AccountDelta(
-	m *stx.TransactionMeta, acct *AccountID, prefix string) string {
+	m *stcdetail.StellarMetas, acct *AccountID, prefix string) string {
 	pprefix := prefix + "  "
 	out := &strings.Builder{}
 	mds := stcdetail.GetMetaDeltas(m)
@@ -390,10 +390,10 @@ func (net *StellarNet) AccountDelta(
 }
 
 type HorizonTxResult struct {
-	Txhash stx.Hash;
-	Env stx.TransactionEnvelope;
-	Result stx.TransactionResult;
-	ResultMeta stx.TransactionMeta;
+	Txhash stx.Hash
+	Env stx.TransactionEnvelope
+	Result stx.TransactionResult
+	stcdetail.StellarMetas
 	PagingToken string
 }
 
@@ -401,7 +401,7 @@ func (r HorizonTxResult) String() string {
 	out := strings.Builder{}
 	stcdetail.XdrToTxrep(&out, "", &r.Env)
 	stcdetail.XdrToTxrep(&out, "", &r.Result)
-	stcdetail.XdrToTxrep(&out, "meta", &r.ResultMeta)
+	stcdetail.XdrToTxrep(&out, "", &r.StellarMetas)
 	fmt.Fprintf(&out, "paging_token: %s\n", r.PagingToken)
 	return out.String()
 }
@@ -411,6 +411,7 @@ func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 		Envelope_xdr string
 		Result_xdr string
 		Result_meta_xdr string
+		Fee_meta_xdr string
 		Paging_token string
 		Hash string
 	}
@@ -423,8 +424,8 @@ func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 	} else if err = stcdetail.XdrFromBase64(&r.Result,
 		j.Result_xdr); err != nil {
 		return err
-	} else if err = stcdetail.XdrFromBase64(&r.ResultMeta,
-		j.Result_meta_xdr); err != nil {
+	} else if err = stcdetail.XdrFromBase64s(&r.StellarMetas,
+		j.Fee_meta_xdr, j.Result_meta_xdr); err != nil {
 			return err
 	} else if _, err := fmt.Sscanf(j.Hash, "%x", &hash); err != nil {
 		return err
