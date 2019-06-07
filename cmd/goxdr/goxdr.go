@@ -218,7 +218,7 @@ func (v $PTR) XdrMarshalValue(x XDR, name string) {
 		XDR_$TYPE(x, name, *v.p)
 	}
 }
-func (v $PTR) XdrMarshal(x XDR, name string) {
+func (v $PTR) XdrRecurse(x XDR, name string) {
 	x.Marshal(name, _ptrflag_$TYPE(v))
 	v.XdrMarshalValue(x, name)
 }
@@ -338,7 +338,7 @@ func (v *$VEC) XdrMarshalN(x XDR, name string, n uint32) {
 		*v = (*v)[:int(n)]
 	}
 }
-func (v *$VEC) XdrMarshal(x XDR, name string) {
+func (v *$VEC) XdrRecurse(x XDR, name string) {
 	size := XdrSize{ Size: uint32(len(*v)), Bound: $BOUND }
 	x.Marshal(name, &size)
 	v.XdrMarshalN(x, name, size.Size)
@@ -369,7 +369,7 @@ func ($VEC) XdrArraySize() uint32 {
 	const bound uint32 = $BOUND // Force error if not const or doesn't fit
 	return bound
 }
-func (v *$VEC) XdrMarshal(x XDR, name string) {
+func (v *$VEC) XdrRecurse(x XDR, name string) {
 	for i := 0; i < len(*v); i++ {
 		XDR_$TYPE(x, x.Sprintf("%s[%d]", name, i), &(*v)[i])
 	}
@@ -622,7 +622,7 @@ func (r *rpc_struct) emit(e *emitter) {
 func (v %[1]s) XdrValue() interface{} {
 	return v
 }
-func (v *%[1]s) XdrMarshal(x XDR, name string) {
+func (v *%[1]s) XdrRecurse(x XDR, name string) {
 	if name != "" {
 		name = x.Sprintf("%%s.", name)
 	}
@@ -849,7 +849,7 @@ func (r *rpc_union) emit(e *emitter) {
 func (v %[1]s) XdrValue() interface{} {
 	return v
 }
-func (u *%[1]s) XdrMarshal(x XDR, name string) {
+func (u *%[1]s) XdrRecurse(x XDR, name string) {
 	if name != "" {
 		name = x.Sprintf("%%s.", name)
 	}

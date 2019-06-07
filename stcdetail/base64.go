@@ -14,7 +14,7 @@ import (
 func XdrToBase64(e stx.XdrAggregate) string {
 	out := &strings.Builder{}
 	b64o := base64.NewEncoder(base64.StdEncoding, out)
-	e.XdrMarshal(&stx.XdrOut{b64o}, "")
+	e.XdrRecurse(&stx.XdrOut{b64o}, "")
 	b64o.Close()
 	return out.String()
 }
@@ -32,7 +32,7 @@ func XdrFromBase64(e stx.XdrAggregate, input string) (err error) {
 	}()
 	in := strings.NewReader(input)
 	b64i := base64.NewDecoder(base64.StdEncoding, in)
-	e.XdrMarshal(&stx.XdrIn{b64i}, "")
+	e.XdrRecurse(&stx.XdrIn{b64i}, "")
 	return nil
 }
 
@@ -52,6 +52,6 @@ func XdrFromBase64s(e stx.XdrAggregate, inputs ...string) (err error) {
 		readers = append(readers,
 			base64.NewDecoder(base64.StdEncoding, strings.NewReader(s)))
 		}
-	e.XdrMarshal(&stx.XdrIn{io.MultiReader(readers...)}, "")
+	e.XdrRecurse(&stx.XdrIn{io.MultiReader(readers...)}, "")
 	return nil
 }

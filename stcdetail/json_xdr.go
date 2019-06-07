@@ -71,7 +71,7 @@ func (j *jsonIn) Marshal(name string, xval stx.XdrType) {
 	case stx.XdrVec:
 		v.XdrMarshalN(&jsonIn{jval}, "", uint32(len(jval.([]interface{}))))
 	case stx.XdrAggregate:
-		v.XdrMarshal(&jsonIn{jval}, "")
+		v.XdrRecurse(&jsonIn{jval}, "")
 	}
 }
 
@@ -87,7 +87,7 @@ func JsonToXdr(dst stx.XdrAggregate, src []byte) (err error) {
 	}()
 	var j jsonIn
 	json.Unmarshal(src, &j.obj)
-	dst.XdrMarshal(&j, "")
+	dst.XdrRecurse(&j, "")
 	return nil
 }
 
@@ -126,11 +126,11 @@ func (j *jsonOut) aggregate(val stx.XdrAggregate) {
 		j.out.WriteString("\n" + oldIndent + "]")
 	case stx.XdrArray:
 		j.out.WriteString("[")
-		v.XdrMarshal(j, "")
+		v.XdrRecurse(j, "")
 		j.out.WriteString("\n" + oldIndent + "]")
 	case stx.XdrAggregate:
 		j.out.WriteString("{")
-		v.XdrMarshal(j, "")
+		v.XdrRecurse(j, "")
 		j.out.WriteString("\n" + oldIndent + "}")
 	}
 }

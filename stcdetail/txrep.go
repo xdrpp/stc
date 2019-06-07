@@ -214,7 +214,7 @@ func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 		fmt.Fprintf(xp.out, "%[1]s.hint: %[2]s\n%[1]s.signature: %[3]s\n",
 			name, hint, PrintVecOpaque(v.Signature))
 	case stx.XdrAggregate:
-		v.XdrMarshal(xp, name)
+		v.XdrRecurse(xp, name)
 	default:
 		fmt.Fprintf(xp.out, "%s: %v\n", name, i)
 	}
@@ -263,7 +263,7 @@ func XdrToTxrep(out io.Writer, name string, t stx.XdrAggregate) XdrBadValue {
 		ctx.native = "NATIVE"
 	}
 
-	t.XdrMarshal(&ctx, name)
+	t.XdrRecurse(&ctx, name)
 	if len(ctx.err) > 0 {
 		return ctx.err
 	}
@@ -410,7 +410,7 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 		}
 		v.XdrMarshalValue(xs, name)
 	case stx.XdrAggregate:
-		v.XdrMarshal(xs, name)
+		v.XdrRecurse(xs, name)
 	default:
 		if !ok {
 			return
@@ -484,7 +484,7 @@ func XdrFromTxrep(in io.Reader, name string, t stx.XdrAggregate) TxrepError {
 	}
 	xs.readKvs(in)
 	if xs.kvs != nil {
-		t.XdrMarshal(xs, name)
+		t.XdrRecurse(xs, name)
 	}
 	if len(xs.err) != 0 {
 		return xs.err

@@ -333,7 +333,7 @@ func (ax *assignXdr) Marshal(name string, val stx.XdrType) {
 		ax.fields = ax.fields[1:]
 		return
 	case stx.XdrAggregate:
-		t.XdrMarshal(ax, name)
+		t.XdrRecurse(ax, name)
 		return
 	}
 	stx.XdrPanic("Set: cannot assign %T to %s (type %T)",
@@ -392,5 +392,5 @@ current aggregate.  For example, it is valid to say:
 
 */
 func Set(t stx.XdrAggregate, fieldValues ...interface{}) {
-	t.XdrMarshal(&assignXdr{fieldValues}, "")
+	t.XdrRecurse(&assignXdr{fieldValues}, "")
 }

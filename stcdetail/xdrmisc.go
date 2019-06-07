@@ -23,7 +23,7 @@ type fakeAggregate struct {
 	stx.XdrType
 	xdr_fn reflect.Value
 }
-func (a fakeAggregate) XdrMarshal(x stx.XDR, name string) {
+func (a fakeAggregate) XdrRecurse(x stx.XDR, name string) {
 	a.xdr_fn.Call([]reflect.Value{
 		reflect.ValueOf(x),
 		reflect.ValueOf(name),
@@ -53,7 +53,7 @@ func MakeAggregate(xdr_fn interface{}, t interface{}) stx.XdrAggregate {
 // RFC4506.  The return value is not UTF-8.
 func XdrToBin(t stx.XdrAggregate) string {
 	out := strings.Builder{}
-	t.XdrMarshal(&stx.XdrOut{&out}, "")
+	t.XdrRecurse(&stx.XdrOut{&out}, "")
 	return out.String()
 }
 
@@ -70,7 +70,7 @@ func XdrFromBin(t stx.XdrAggregate, input string) (err error) {
 		}
 	}()
 	in := strings.NewReader(input)
-	t.XdrMarshal(&stx.XdrIn{in}, "")
+	t.XdrRecurse(&stx.XdrIn{in}, "")
 	return
 }
 
@@ -81,7 +81,7 @@ type forEachXdr struct {
 func (fex forEachXdr) Marshal(_ string, val stx.XdrType) {
 	if !fex.fn(val) {
 		if xa, ok := val.(stx.XdrAggregate); ok {
-			xa.XdrMarshal(fex, "")
+			xa.XdrRecurse(fex, "")
 		}
 	}
 }
@@ -89,7 +89,7 @@ func (fex forEachXdr) Marshal(_ string, val stx.XdrType) {
 // Calls fn, recursively, on every value inside an XdrAggregate.
 // Prunes the recursion if fn returns true.
 func ForEachXdr(t stx.XdrAggregate, fn func(stx.XdrType) bool) {
-	t.XdrMarshal(forEachXdr{fn: fn}, "")
+	t.XdrRecurse(forEachXdr{fn: fn}, "")
 }
 
 // Calls fn on each instance of a type encountered while traversing a
@@ -133,7 +133,7 @@ func (x *xdrExtract) Marshal(_ string, t stx.XdrType) {
 		x.done = true
 		return
 	} else if a, ok := t.(stx.XdrAggregate); ok {
-		a.XdrMarshal(x, "")
+		a.XdrRecurse(x, "")
 	}
 }
 
@@ -141,6 +141,6 @@ func (x *xdrExtract) Marshal(_ string, t stx.XdrType) {
 // instance of T found when traversing t.
 func XdrExtract(t stx.XdrAggregate, out interface{}) bool {
 	x := xdrExtract{ out: reflect.ValueOf(out).Elem() }
-	t.XdrMarshal(&x, "")
+	t.XdrRecurse(&x, "")
 	return x.done
 }

@@ -38,17 +38,13 @@ import (
 //     a type switch without knowing the exact length of the array,
 //     while one can always dynamically test the length of a slice.
 //
-//   - Pointer types, in their XdrMarshal methods, marshal a special
+//   - Pointer types, in their XdrRecurse methods, marshal a special
 //     XdrNum32 type of 0 or 1 to record whether the pointer is nil or
 //     the value is present.  Since this bool does not exist,
 //     XdrPointer() returns nil (while XdrValue returns a bool).
 //
 //   - For arrays, XdrValue() passes a slice, rather than the full
 //     array, so as to avoid copying the array.
-//
-// Note that arrays of types other than opaque are never passed to the
-// Marshal method.  Rather, the XDR_Type function loops over the array
-// and calls Marshal for each element of the array.
 type XdrType interface {
 	XdrValue() interface{}
 	XdrPointer() interface{}
@@ -96,7 +92,7 @@ type XDR interface {
 	//   cannot have methods).
 	//
 	// Note that the Marshal method is responsible for recursing into
-	// XdrAggregate instance by calling the XdrMarshal method.
+	// XdrAggregate instance by calling the XdrRecurse method.
 	// Requiring the Marshal method to recurse manually allows it to
 	// refrain from recursing in cases where it needs to special-case
 	// the handling of specific types.
@@ -186,27 +182,27 @@ type XdrVarBytes interface {
 // Any struct, union, pointer, or variable-length array type (except
 // opaque<> and string<>) is passed to XDR.Marshal as a pointer
 // implementing the XdrAggregate interface.  It is the responsibility
-// of the XDR.Marshal function to call the XdrMarshal method so as to
+// of the XDR.Marshal function to call the XdrRecurse method so as to
 // recurse into the data structure.  Placing reponsibility on
 // XDR.Marshal for recursing allows a custom XDR to prune the
 // serialization at particular types (e.g., for pretty-printing a
 // partucular struct in a non-standard way).
 type XdrAggregate interface {
 	XdrType
-	XdrMarshal(XDR, string)
+	XdrRecurse(XDR, string)
 }
 
 // Any pointer type is passed to XDR.Marshal as a struct implementing
 // the XdrPtr interface.  Note XdrPtr is a superset of XdrAggregate.
 // When a Marshal function does nothing special for XdrPtr and treats
-// the XdrPtr like any other XdrAggregate (calling XdrMarshal), the
+// the XdrPtr like any other XdrAggregate (calling XdrRecurse), the
 // Marshal function will then get called one or two more times, first
 // with an XdrNum32 (to marshal the non-NULL bit) and then again with
 // the underlying value if the pointer is non-NULL.  An XDR.Marshal
 // function that wants to special case pointers can access the present
 // bit from the GetPresent and SetPresent methods, then bypass
 // marshaling of the bit by calling XdrMarshalValue instead of
-// XdrMarshal.
+// XdrRecurse.
 type XdrPtr interface {
 	// Marshals first the present/not-present bool, then if true, the
 	// underlying value.
@@ -222,7 +218,7 @@ type XdrPtr interface {
 
 // Any vector type is passed as a pointer to a user-defined slice type
 // that implements the XdrVec interface.  XdrVec is a superset of
-// XdrAggregate, so calling XdrMarshal will recurse to call
+// XdrAggregate, so calling XdrRecurse will recurse to call
 // XDR.Marshal first on the size (of type XdrSize), then on each
 // element of the slice.  An XDR.Marshal function can manually marshal
 // the size and then call XdrMarshalN to marshal n vector elements.
@@ -490,7 +486,7 @@ type XdrPrint struct {
 // Generic function that converts any XDR struct or union to a string
 func XdrToString(t XdrAggregate) string {
 	out := &strings.Builder{}
-	t.XdrMarshal(&XdrPrint{out}, "")
+	t.XdrRecurse(&XdrPrint{out}, "")
 	return out.String()
 }
 
@@ -509,7 +505,7 @@ func (xp *XdrPrint) Marshal(name string, i XdrType) {
 		fmt.Fprintf(xp.Out, "%s.len: %d\n", name, v.GetVecLen())
 		v.XdrMarshalN(xp, name, v.GetVecLen())
 	case XdrAggregate:
-		v.XdrMarshal(xp, name)
+		v.XdrRecurse(xp, name)
 	default:
 		fmt.Fprintf(xp.Out, "%s: %v\n", name, i)
 	}
@@ -563,7 +559,7 @@ func (xo *XdrOut) Marshal(name string, i XdrType) {
 	case XdrBytes:
 		xdrPutBytes(xo.Out, v.GetByteSlice())
 	case XdrAggregate:
-		v.XdrMarshal(xo, name)
+		v.XdrRecurse(xo, name)
 	default:
 		panic(fmt.Sprintf("XdrOut: unhandled type %T", i))
 	}
@@ -624,7 +620,7 @@ func (xi *XdrIn) Marshal(name string, i XdrType) {
 		}
 		xdrReadPad(xi.In, uint32(len(v.GetByteSlice())))
 	case XdrAggregate:
-		v.XdrMarshal(xi, name)
+		v.XdrRecurse(xi, name)
 	}
 }
 
