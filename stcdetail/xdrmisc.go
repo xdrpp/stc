@@ -11,55 +11,16 @@ func (trivSprintf) Sprintf(f string, args ...interface{}) string {
 	return ""
 }
 
-type getXdrType struct {
-	t stx.XdrType
-	trivSprintf
-}
-func (gxt *getXdrType) Marshal(name string, i stx.XdrType) {
-	gxt.t = i
-}
-
-type fakeAggregate struct {
-	stx.XdrType
-	xdr_fn reflect.Value
-}
-func (a fakeAggregate) XdrRecurse(x stx.XDR, name string) {
-	a.xdr_fn.Call([]reflect.Value{
-		reflect.ValueOf(x),
-		reflect.ValueOf(name),
-		reflect.ValueOf(a.XdrType.XdrPointer()),
-	})
-}
-
-var _ stx.XdrAggregate = fakeAggregate{}
-
-// Turn any type T with an XDR_T marshaling funcation into an
-// XdrAggregate.  Generic functions are easiest to write for
-// XdrAggregate instances, which have an XdrMarshal method.  If you
-// want to run such a generic function on a type T that is not an
-// instance of XdrAggregate, you can turn a variable t of type T into
-// aggregate by running:
-//
-//     MakeAggregate(XDR_T, &t)
-func MakeAggregate(xdr_fn interface{}, t interface{}) stx.XdrAggregate {
-	xfv := reflect.ValueOf(xdr_fn)
-	tv := reflect.ValueOf(t)
-	var gxt getXdrType
-	xfv.Call([]reflect.Value{reflect.ValueOf(&gxt), reflect.ValueOf(""), tv})
-	return fakeAggregate { gxt.t, xfv }
-}
-
-// Marshal an XDR aggregate to the raw binary bytes defined in
-// RFC4506.  The return value is not UTF-8.
-func XdrToBin(t stx.XdrAggregate) string {
+// Marshal an XDR type to the raw binary bytes defined in RFC4506.
+// The return value is not UTF-8.
+func XdrToBin(t stx.XdrType) string {
 	out := strings.Builder{}
-	t.XdrRecurse(&stx.XdrOut{&out}, "")
+	t.XdrMarshal(&stx.XdrOut{&out}, "")
 	return out.String()
 }
 
-// Unmarshal an XDR aggregate from the raw binary bytes defined in
-// RFC4506.
-func XdrFromBin(t stx.XdrAggregate, input string) (err error) {
+// Unmarshal an XDR type from the raw binary bytes defined in RFC4506.
+func XdrFromBin(t stx.XdrType, input string) (err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			if xe, ok := i.(stx.XdrError); ok {
@@ -70,7 +31,7 @@ func XdrFromBin(t stx.XdrAggregate, input string) (err error) {
 		}
 	}()
 	in := strings.NewReader(input)
-	t.XdrRecurse(&stx.XdrIn{in}, "")
+	t.XdrMarshal(&stx.XdrIn{in}, "")
 	return
 }
 
@@ -88,8 +49,8 @@ func (fex forEachXdr) Marshal(_ string, val stx.XdrType) {
 
 // Calls fn, recursively, on every value inside an XdrAggregate.
 // Prunes the recursion if fn returns true.
-func ForEachXdr(t stx.XdrAggregate, fn func(stx.XdrType) bool) {
-	t.XdrRecurse(forEachXdr{fn: fn}, "")
+func ForEachXdr(t stx.XdrType, fn func(stx.XdrType) bool) {
+	t.XdrMarshal(forEachXdr{fn: fn}, "")
 }
 
 // Calls fn on each instance of a type encountered while traversing a
@@ -99,7 +60,7 @@ func ForEachXdr(t stx.XdrAggregate, fn func(stx.XdrType) bool) {
 // otherwise contains a pointer to T internally), if the function
 // returns false then fields within T will continue to be examined
 // recursively.
-func ForEachXdrType(a stx.XdrAggregate, fn interface{}) {
+func ForEachXdrType(a stx.XdrType, fn interface{}) {
 	fnv := reflect.ValueOf(fn)
 	fnt := fnv.Type()
 	if fnt.Kind() != reflect.Func || fnt.NumIn() != 1 || fnt.NumOut() > 1 ||
@@ -139,8 +100,8 @@ func (x *xdrExtract) Marshal(_ string, t stx.XdrType) {
 
 // If out is of type **T, then *out is set to point to the first
 // instance of T found when traversing t.
-func XdrExtract(t stx.XdrAggregate, out interface{}) bool {
+func XdrExtract(t stx.XdrType, out interface{}) bool {
 	x := xdrExtract{ out: reflect.ValueOf(out).Elem() }
-	t.XdrRecurse(&x, "")
+	t.XdrMarshal(&x, "")
 	return x.done
 }

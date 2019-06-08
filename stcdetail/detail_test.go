@@ -187,24 +187,6 @@ func TestMissingByteArray(t *testing.T) {
 	}
 }
 
-func TestMakeAggregate(t *testing.T) {
-	m := stc.MemoText("This is a test")
-	x1 := XdrToBin(&m)
-	a := MakeAggregate(stx.XDR_Memo, &m)
-	x2 := XdrToBin(a)
-	if x1 != x2 {
-		t.Errorf("TestMakeAggregate: mismatch")
-	}
-}
-
-func ExampleMakeAggregate() {
-	i := int32(0x12345678)
-	a := XdrToBin(MakeAggregate(stx.XDR_int32, &i))
-	fmt.Printf("%x\n", a)
-	// output:
-	// 12345678
-}
-
 func TestForEachXdrType(t *testing.T) {
 	var e stx.TransactionMetaV1
 	e.TxChanges = make([]stx.LedgerEntryChange, 5)

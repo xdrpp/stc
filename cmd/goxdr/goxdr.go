@@ -204,6 +204,7 @@ func (v _ptrflag_$TYPE) SetU32(nv uint32) {
 }
 func (v _ptrflag_$TYPE) XdrPointer() interface{} { return nil }
 func (v _ptrflag_$TYPE) XdrValue() interface{} { return v.GetU32() != 0 }
+func (v _ptrflag_$TYPE) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
 func (v _ptrflag_$TYPE) XdrBound() uint32 { return 1 }
 func (v $PTR) GetPresent() bool { return *v.p != nil }
 func (v $PTR) SetPresent(present bool) {
@@ -215,9 +216,10 @@ func (v $PTR) SetPresent(present bool) {
 }
 func (v $PTR) XdrMarshalValue(x XDR, name string) {
 	if *v.p != nil {
-		XDR_$TYPE(x, name, *v.p)
+		XDR_$TYPE(*v.p).XdrMarshal(x, name)
 	}
 }
+func (v $PTR) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
 func (v $PTR) XdrRecurse(x XDR, name string) {
 	x.Marshal(name, _ptrflag_$TYPE(v))
 	v.XdrMarshalValue(x, name)
@@ -332,7 +334,7 @@ func (v *$VEC) XdrMarshalN(x XDR, name string, n uint32) {
 		if (i >= len(*v)) {
 			v.SetVecLen(uint32(i+1))
 		}
-		XDR_$TYPE(x, x.Sprintf("%s[%d]", name, i), &(*v)[i])
+		XDR_$TYPE(&(*v)[i]).XdrMarshal(x, x.Sprintf("%s[%d]", name, i))
 	}
 	if int(n) < len(*v) {
 		*v = (*v)[:int(n)]
@@ -345,6 +347,7 @@ func (v *$VEC) XdrRecurse(x XDR, name string) {
 }
 func (v *$VEC) XdrPointer() interface{} { return (*[]$TYPE)(v) }
 func (v $VEC) XdrValue() interface{} { return ([]$TYPE)(v) }
+func (v *$VEC) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
 `
 	frag = strings.Replace(frag, "$VEC", vectyp, -1)
 	frag = strings.Replace(frag, "$TYPE", typ.getgo(), -1)
@@ -371,11 +374,12 @@ func ($VEC) XdrArraySize() uint32 {
 }
 func (v *$VEC) XdrRecurse(x XDR, name string) {
 	for i := 0; i < len(*v); i++ {
-		XDR_$TYPE(x, x.Sprintf("%s[%d]", name, i), &(*v)[i])
+		XDR_$TYPE(&(*v)[i]).XdrMarshal(x, x.Sprintf("%s[%d]", name, i))
 	}
 }
 func (v *$VEC) XdrPointer() interface{} { return (*[$BOUND]$TYPE)(v) }
 func (v *$VEC) XdrValue() interface{} { return v[:] }
+func (v *$VEC) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
 `
 	frag = strings.Replace(frag, "$VEC", vectyp, -1)
 	frag = strings.Replace(frag, "$TYPE", typ.getgo(), -1)
@@ -393,7 +397,7 @@ func (e *emitter) xdrgen(target, name string, context idval,
 		if typ.getgo() == "string" {
 			frag = "\tx.Marshal($NAME, XdrString{$TARGET, $BOUND})\n"
 		} else {
-			frag = "\tXDR_$TYPE(x, $NAME, $TARGET)\n"
+			frag = "\tXDR_$TYPE($TARGET).XdrMarshal(x, $NAME)\n"
 		}
 	case PTR:
 		ptrtype := e.gen_ptr(typ)
@@ -442,15 +446,23 @@ func (r0 *rpc_typedef) emit(e *emitter) {
 	}
 	e.printf("type %s = %s\n", r.id, e.decltypeb(gid(""), r))
 	e.xprintf(
-`func XDR_%[1]s(x XDR, name string, v *%[1]s) {
+`type _XdrTypedef_%[1]s struct {
+	p *%[1]s
+}
+func (v _XdrTypedef_%[1]s) XdrPointer() interface{} { return v.p }
+func (v _XdrTypedef_%[1]s) XdrValue() interface{} { return *v.p }
+func (v _XdrTypedef_%[1]s) XdrMarshal(x XDR, name string) {
 	if xs, ok := x.(interface{
 		Marshal_%[1]s(string, *%[1]s)
 	}); ok {
-		xs.Marshal_%[1]s(name, v)
+		xs.Marshal_%[1]s(name, v.p)
 	} else {
 	%[2]s	}
 }
-`, r.id, e.xdrgen("v", "name", gid(""), r))
+func XDR_%[1]s(v *%[1]s) _XdrTypedef_%[1]s {
+	return _XdrTypedef_%[1]s{ v }
+}
+`, r.id, e.xdrgen("v.p", "name", gid(""), r))
 }
 
 func normalize_comment(comment string) string {
@@ -516,11 +528,6 @@ func (r *rpc_enum) emit(e *emitter) {
 	fmt.Fprintf(out, ")\n")
 	e.append(out)
 	out.Reset()
-	fmt.Fprintf(out,
-`func XDR_%s(x XDR, name string, v *%[1]s) {
-	x.Marshal(name, v)
-}
-`, r.id)
 	fmt.Fprintf(out, "var _XdrNames_%s = map[int32]string{\n", r.id)
 	for _, tag := range r.tags {
 		fmt.Fprintf(out, "\tint32(%s): \"%s\",\n", tag.id, tag.id.getx())
@@ -558,18 +565,12 @@ func (v *%[1]s) Scan(ss fmt.ScanState, _ rune) error {
 		return XdrError(fmt.Sprintf("%%s is not a valid %[1]s.", stok))
 	}
 }
-func (v %[1]s) GetU32() uint32 {
-	return uint32(v)
-}
-func (v *%[1]s) SetU32(n uint32) {
-	*v = %[1]s(n)
-}
-func (v *%[1]s) XdrPointer() interface{} {
-	return v
-}
-func (v %[1]s) XdrValue() interface{} {
-	return v
-}
+func (v %[1]s) GetU32() uint32 { return uint32(v) }
+func (v *%[1]s) SetU32(n uint32) { *v = %[1]s(n) }
+func (v *%[1]s) XdrPointer() interface{} { return v }
+func (v %[1]s) XdrValue() interface{} { return v }
+func (v *%[1]s) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
+func XDR_%[1]s(v *%[1]s) *%[1]s { return v }
 `, r.id)
 
 	if e.enum_comments {
@@ -616,12 +617,9 @@ func (r *rpc_struct) emit(e *emitter) {
 	out.Reset()
 
 	fmt.Fprintf(out,
-`func (v *%[1]s) XdrPointer() interface{} {
-	return v
-}
-func (v %[1]s) XdrValue() interface{} {
-	return v
-}
+`func (v *%[1]s) XdrPointer() interface{} { return v }
+func (v %[1]s) XdrValue() interface{} { return v }
+func (v *%[1]s) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
 func (v *%[1]s) XdrRecurse(x XDR, name string) {
 	if name != "" {
 		name = x.Sprintf("%%s.", name)
@@ -633,9 +631,7 @@ func (v *%[1]s) XdrRecurse(x XDR, name string) {
 			r.id, &r.decls[i]))
 	}
 	fmt.Fprintf(out, "}\n")
-	fmt.Fprintf(out, "func XDR_%s(x XDR, name string, v *%s) {\n" +
-		"\tx.Marshal(name, v)\n" +
-		"}\n", r.id, r.id)
+	fmt.Fprintf(out, "func XDR_%[1]s(v *%[1]s) *%[1]s { return v }\n", r.id)
 	e.xappend(out)
 }
 
@@ -843,17 +839,14 @@ func (r *rpc_union) emit(e *emitter) {
 	fmt.Fprintf(out, "}\n")
 
 	fmt.Fprintf(out,
-`func (v *%[1]s) XdrPointer() interface{} {
-	return v
-}
-func (v %[1]s) XdrValue() interface{} {
-	return v
-}
+`func (v *%[1]s) XdrPointer() interface{} { return v }
+func (v %[1]s) XdrValue() interface{} { return v }
+func (v *%[1]s) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
 func (u *%[1]s) XdrRecurse(x XDR, name string) {
 	if name != "" {
 		name = x.Sprintf("%%s.", name)
 	}
-	XDR_%[2]s(x, x.Sprintf("%%s%[4]s", name), &u.%[3]s)
+	XDR_%[2]s(&u.%[3]s).XdrMarshal(x, x.Sprintf("%%s%[4]s", name))
 	switch %[5]s {
 `, r.id, r.tagtype, r.tagid, r.tagid.getx(), discriminant)
 	for i := range r.fields {
@@ -908,10 +901,7 @@ func (u *%[1]s) XdrRecurse(x XDR, name string) {
 	skip:
 	}
 
-	fmt.Fprintf(out, "func XDR_%s(x XDR, name string, v *%s) {\n" +
-		"\tx.Marshal(name, v)\n" +
-		"}\n", r.id, r.id)
-
+	fmt.Fprintf(out, "func XDR_%[1]s(v *%[1]s) *%[1]s { return v}\n", r.id)
 	e.xappend(out)
 }
 

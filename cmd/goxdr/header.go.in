@@ -48,6 +48,7 @@ import (
 type XdrType interface {
 	XdrValue() interface{}
 	XdrPointer() interface{}
+	XdrMarshal(XDR, string)
 }
 
 // The interface through which values are serialized, printed, etc.
@@ -271,7 +272,8 @@ func (v *XdrBool) SetU32(nv uint32) {
 }
 func (v *XdrBool) XdrPointer() interface{} { return (*bool)(v) }
 func (v XdrBool) XdrValue() interface{} { return bool(v) }
-func XDR_bool(x XDR, name string, v *bool) { x.Marshal(name, (*XdrBool)(v)) }
+func (v *XdrBool) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
+func XDR_bool(v *bool) *XdrBool { return (*XdrBool)(v) }
 
 type XdrInt32 int32
 func (v XdrInt32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
@@ -283,9 +285,8 @@ func (v XdrInt32) GetU32() uint32 { return uint32(v) }
 func (v *XdrInt32) SetU32(nv uint32) { *v = XdrInt32(nv) }
 func (v *XdrInt32) XdrPointer() interface{} { return (*int32)(v) }
 func (v XdrInt32) XdrValue() interface{} { return int32(v) }
-func XDR_int32(x XDR, name string, v *int32) {
-	x.Marshal(name, (*XdrInt32)(v))
-}
+func (v *XdrInt32) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
+func XDR_int32(v *int32) *XdrInt32 { return (*XdrInt32)(v) }
 
 type XdrUint32 uint32
 func (v XdrUint32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
@@ -297,9 +298,8 @@ func (v XdrUint32) GetU32() uint32 { return uint32(v) }
 func (v *XdrUint32) SetU32(nv uint32) { *v = XdrUint32(nv) }
 func (v *XdrUint32) XdrPointer() interface{} { return (*uint32)(v) }
 func (v XdrUint32) XdrValue() interface{} { return uint32(v) }
-func XDR_uint32(x XDR, name string, v *uint32) {
-	x.Marshal(name, (*XdrUint32)(v))
-}
+func (v *XdrUint32) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
+func XDR_uint32(v *uint32) *XdrUint32 { return (*XdrUint32)(v) }
 
 type XdrFloat32 float32
 func (v XdrFloat32) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
@@ -313,9 +313,8 @@ func (v *XdrFloat32) SetU32(nv uint32) {
 }
 func (v *XdrFloat32) XdrPointer() interface{} { return (*float32)(v) }
 func (v XdrFloat32) XdrValue() interface{} { return float32(v) }
-func XDR_float32(x XDR, name string, v *float32) {
-	x.Marshal(name, (*XdrFloat32)(v))
-}
+func (v *XdrFloat32) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
+func XDR_float32(v *float32) *XdrFloat32 { return (*XdrFloat32)(v) }
 
 type XdrSize struct {
 	Size uint32
@@ -346,6 +345,7 @@ func (v *XdrSize) SetU32(nv uint32) {
 }
 func (v *XdrSize) XdrPointer() interface{} { return &v.Size }
 func (v XdrSize) XdrValue() interface{} { return v.Size }
+func (v *XdrSize) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
 func (v XdrSize) XdrBound() uint32 { return v.Bound }
 
 type XdrInt64 int64
@@ -358,7 +358,8 @@ func (v XdrInt64) GetU64() uint64 { return uint64(v) }
 func (v *XdrInt64) SetU64(nv uint64) { *v = XdrInt64(nv) }
 func (v *XdrInt64) XdrPointer() interface{} { return (*int64)(v) }
 func (v XdrInt64) XdrValue() interface{} { return int64(v) }
-func XDR_int64(x XDR, name string, v *int64) { x.Marshal(name, (*XdrInt64)(v)) }
+func (v *XdrInt64) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
+func XDR_int64(v *int64) *XdrInt64 { return (*XdrInt64)(v) }
 
 type XdrUint64 uint64
 func (v XdrUint64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
@@ -370,9 +371,8 @@ func (v XdrUint64) GetU64() uint64 { return uint64(v) }
 func (v *XdrUint64) SetU64(nv uint64) { *v = XdrUint64(nv) }
 func (v *XdrUint64) XdrPointer() interface{} { return (*uint64)(v) }
 func (v XdrUint64) XdrValue() interface{} { return uint64(v) }
-func XDR_uint64(x XDR, name string, v *uint64) {
-	x.Marshal(name, (*XdrUint64)(v))
-}
+func (v *XdrUint64) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
+func XDR_uint64(v *uint64) *XdrUint64 { return (*XdrUint64)(v) }
 
 type XdrFloat64 float64
 func (v XdrFloat64) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
@@ -386,9 +386,8 @@ func (v *XdrFloat64) SetU64(nv uint64) {
 }
 func (v *XdrFloat64) XdrPointer() interface{} { return (*float64)(v) }
 func (v XdrFloat64) XdrValue() interface{} { return float64(v) }
-func XDR_float64(x XDR, name string, v *float64) {
-	x.Marshal(name, (*XdrFloat64)(v))
-}
+func (v *XdrFloat64) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
+func XDR_float64(v *float64) *XdrFloat64 { return (*XdrFloat64)(v) }
 
 type XdrString struct {
 	Str *string
@@ -423,6 +422,7 @@ func (v XdrString) SetByteSlice(bs []byte) {
 }
 func (v XdrString) XdrPointer() interface{} { return v.Str }
 func (v XdrString) XdrValue() interface{} { return *v.Str }
+func (v XdrString) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
 
 type XdrVecOpaque struct {
 	Bytes *[]byte
@@ -449,11 +449,13 @@ func (v XdrVecOpaque) SetByteSlice(bs []byte) {
 }
 func (v XdrVecOpaque) XdrPointer() interface{} { return v.Bytes }
 func (v XdrVecOpaque) XdrValue() interface{} { return *v.Bytes }
+func (v XdrVecOpaque) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
 
 type XdrArrayOpaque []byte
 func (v XdrArrayOpaque) GetByteSlice() []byte { return ([]byte)(v) }
 func (v XdrArrayOpaque) XdrValue() interface{} { return v }
 func (v XdrArrayOpaque) XdrPointer() interface{} { return nil }
+func (v XdrArrayOpaque) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
 func (v XdrArrayOpaque) String() string { return fmt.Sprintf("%x", []byte(v)) }
 func (v XdrArrayOpaque) Scan(ss fmt.ScanState, _ rune) error {
 	var bs []byte
@@ -477,7 +479,7 @@ var _, _, _ fmt.Scanner = XdrString{}, XdrVecOpaque{}, XdrArrayOpaque{}
 // Back end that renders an XDR data structure as simple text.
 // Example:
 //
-//    XDR_MyType(&XdrPrint{os.Stdout}, "", &myVal)
+//    XDR_MyType(&myVal).XdrMarshal(&XdrPrint{os.Stdout}, "")
 //
 type XdrPrint struct {
 	Out io.Writer
