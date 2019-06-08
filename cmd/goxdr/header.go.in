@@ -21,13 +21,18 @@ import (
 	"strings"
 )
 
-// Types passed to the XDR Marshal method are cast into or wrapped by
-// helper types that help collapse similar cases (e.g., all 32-bit
-// numbers are cast to a pointer implementing XdrNum32).  However, the
-// XdrValue and XdrPointer methods give you access to a value or
-// pointer to the original underlying type.
+// Types passed to the XDR Marshal method implementing the XdrType
+// interface.  Pointers to some generated types T already implement
+// the interface.  However, since built-in types such as string and
+// int32 cannot implement interfaces, each type T has a function
+// XDR_T(*T) that returns some type implementing XdrType.  These
+// XdrType interfaces also encode limits on string and vector sizes
+// and simplify code by collapsing similar cases (e.g., all 32-bit
+// numbers are cast to a pointer implementing XdrNum32).
 //
-// There are a few exceptions:
+// For most XdrType instances, XdrPointer() and XdrValue() provide
+// access to the underlying type (which might not implement XdrType),
+// with the following exceptions:
 //
 //   - opaque[] (fixed-length arrays of bytes) are returned as
 //     XdrArrayOpaque (by XdrValue()) or nil (by XdrPointer()).  This
@@ -53,11 +58,11 @@ type XdrType interface {
 
 // The interface through which values are serialized, printed, etc.
 // Note that in addition to the Marshal method, if you have a method
-// Marshal_Type(string, *Type) and Type is a typedef (and only a
-// typedef), then Marshal_Type will get called instead of Marshal for
-// fields of type Type.  (For non-typedefs, you don't need this
+// Marshal_Type(string, *Type) and Type is a typedef (and only if it
+// is a typedef), then Marshal_Type will get called instead of Marshal
+// for fields of type Type.  (For non-typedefs, you don't need this
 // feature because the Marshal function can do a type switch on the
-// interface it receives.)
+// XdrType it receives.)
 type XDR interface {
 	// A function that gets called for each value to be marshalled.
 	// The val XdrType argument will be one of the following:
@@ -104,7 +109,7 @@ type XDR interface {
 	Sprintf(string, ...interface{}) string
 }
 
-// The error thrown by marshaling functions when data has bad value.
+// The error thrown by marshaling functions when data has a bad value.
 type XdrError string
 func (v XdrError) Error() string { return string(v) }
 func XdrPanic(s string, args ...interface{}) {
@@ -113,8 +118,10 @@ func XdrPanic(s string, args ...interface{}) {
 
 // RFC4506 defines bool as equivalent to an enum with values all-caps
 // TRUE and FALSE.  For convenience, we represent an XDR bool as a Go
-// bool instead, and so define these constants in case they show up in
-// union cases.
+// bool instead, and so define these constants for use in union cases.
+// (XDR source files should not use lower-case true and false, as
+// these will not work in other languages or with other XDR
+// compilers.)
 const (
 	TRUE = true
 	FALSE = false
