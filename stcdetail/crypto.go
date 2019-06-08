@@ -15,9 +15,9 @@ import (
 )
 
 // Computes the SHA-256 hash of an arbitrary XDR data structure.
-func xdrSHA256(t stx.XdrAggregate) (ret stx.Hash) {
+func xdrSHA256(t stx.XdrType) (ret stx.Hash) {
 	sha := sha256.New()
-	t.XdrRecurse(&stx.XdrOut{sha}, "")
+	t.XdrMarshal(&stx.XdrOut{sha}, "")
 	copy(ret[:], sha.Sum(nil))
 	return
 }

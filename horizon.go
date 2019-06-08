@@ -373,16 +373,16 @@ func (net *StellarNet) AccountDelta(
 		if mds[i].Old != nil && mds[i].New != nil {
 			fmt.Fprintf(out, "%supdated %s\n%s", prefix, ks,
 				stcdetail.RepDiff(pprefix,
-				net.ToRep(mds[i].Old.Data.XdrUnionBody().(stx.XdrAggregate)),
-				net.ToRep(mds[i].New.Data.XdrUnionBody().(stx.XdrAggregate))))
+				net.ToRep(mds[i].Old.Data.XdrUnionBody().(stx.XdrType)),
+				net.ToRep(mds[i].New.Data.XdrUnionBody().(stx.XdrType))))
 		} else if mds[i].New != nil {
 			fmt.Fprintf(out, "%screated %s\n%s", prefix, ks, stcdetail.RepDiff(
 				pprefix, "",
-				net.ToRep(mds[i].New.Data.XdrUnionBody().(stx.XdrAggregate))))
+				net.ToRep(mds[i].New.Data.XdrUnionBody().(stx.XdrType))))
 		} else {
 			fmt.Fprintf(out, "%sdeleted %s\n%s", prefix, ks,
 				stcdetail.RepDiff(pprefix,
-				net.ToRep(mds[i].Old.Data.XdrUnionBody().(stx.XdrAggregate)),
+				net.ToRep(mds[i].Old.Data.XdrUnionBody().(stx.XdrType)),
 				""))
 		}
 	}
@@ -424,8 +424,11 @@ func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 	} else if err = stcdetail.XdrFromBase64(&r.Result,
 		j.Result_xdr); err != nil {
 		return err
-	} else if err = stcdetail.XdrFromBase64s(&r.StellarMetas,
-		j.Fee_meta_xdr, j.Result_meta_xdr); err != nil {
+	} else if err = stcdetail.XdrFromBase64(
+		stx.XDR_LedgerEntryChanges(&r.FeeMeta), j.Fee_meta_xdr); err != nil {
+			return err
+	} else if err = stcdetail.XdrFromBase64(&r.ResultMeta,
+		j.Result_meta_xdr); err != nil {
 			return err
 	} else if _, err := fmt.Sscanf(j.Hash, "%x", &hash); err != nil {
 		return err

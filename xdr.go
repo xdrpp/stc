@@ -206,11 +206,11 @@ func (net *StellarNet) AccountIDNote(acct *stx.AccountID) string {
 
 // Convert an arbitrary XDR data structure to human-readable Txrep
 // format.
-func (net *StellarNet) ToRep(txe stx.XdrAggregate) string {
+func (net *StellarNet) ToRep(txe stx.XdrType) string {
 	var out strings.Builder
 
 	type helper interface {
-		stx.XdrAggregate
+		stx.XdrType
 		GetHelp(string) bool
 	}
 	if e, ok := txe.(helper); ok {
@@ -221,7 +221,7 @@ func (net *StellarNet) ToRep(txe stx.XdrAggregate) string {
 		stcdetail.XdrToTxrep(&out, "", ntxe)
 	} else {
 		ntxe := struct {
-			stx.XdrAggregate
+			stx.XdrType
 			*StellarNet
 		}{txe, (*StellarNet)(net)}
 		stcdetail.XdrToTxrep(&out, "", ntxe)
@@ -391,6 +391,6 @@ current aggregate.  For example, it is valid to say:
 	Set(&asset, ASSET_TYPE_CREDIT_ALPHANUM12, otherAsset.AlphaNum12)
 
 */
-func Set(t stx.XdrAggregate, fieldValues ...interface{}) {
-	t.XdrRecurse(&assignXdr{fieldValues}, "")
+func Set(t stx.XdrType, fieldValues ...interface{}) {
+	t.XdrMarshal(&assignXdr{fieldValues}, "")
 }

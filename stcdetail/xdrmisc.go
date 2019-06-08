@@ -47,8 +47,8 @@ func (fex forEachXdr) Marshal(_ string, val stx.XdrType) {
 	}
 }
 
-// Calls fn, recursively, on every value inside an XdrAggregate.
-// Prunes the recursion if fn returns true.
+// Calls fn, recursively, on every value inside an XdrType.  Prunes
+// the recursion if fn returns true.
 func ForEachXdr(t stx.XdrType, fn func(stx.XdrType) bool) {
 	t.XdrMarshal(forEachXdr{fn: fn}, "")
 }
