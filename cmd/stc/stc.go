@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	. "github.com/xdrpp/stc"
 	"github.com/xdrpp/stc/stcdetail"
@@ -365,6 +366,16 @@ func b2i(bs ...bool) int {
 
 var progname string
 
+var dateFormats = []string {
+	time.RFC3339,
+	"2006-01-02T15:04:05",
+	"2006-01-02T15:04",
+	"2006-01-02",
+	"20060102150405",
+	"200601021504",
+	"20060102",
+}
+
 func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to base64 XDR")
 	opt_keygen := flag.Bool("keygen", false, "Create a new signing keypair")
@@ -403,6 +414,8 @@ func main() {
 		"Query Horizon for transactions on account")
 	opt_friendbot := flag.Bool("create", false,
 		"Create and fund account (on testnet only)")
+	opt_date := flag.Bool("date", false,
+		"Convert data to Unix time (for use in TimeBounds)")
 	opt_verbose := flag.Bool("v", false,
 		"Be more verbose for some operations")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
@@ -427,6 +440,7 @@ func main() {
        %[1]s -import-key NAME
        %[1]s -export-key NAME
        %[1]s -list-keys
+       %[1]s -date YYYY-MM-DD[Thh:mm:ss[Z]]
 `, progname)
 		flag.PrintDefaults()
 	}
@@ -438,7 +452,7 @@ func main() {
 	}
 
 	if n := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit, *opt_keygen,
-		*opt_sec2pub, *opt_import_key, *opt_export_key,
+		*opt_date, *opt_sec2pub, *opt_import_key, *opt_export_key,
 		*opt_acctinfo, *opt_txinfo, *opt_txacct, *opt_friendbot,
 		*opt_list_keys, *opt_fee_stats); n > 1 || len(flag.Args()) > 1 ||
 		(len(flag.Args()) == 0 &&
@@ -482,6 +496,16 @@ func main() {
 	}
 
 	switch {
+	case *opt_date:
+		for _, f := range dateFormats {
+			t, err := time.ParseInLocation(f, arg, time.Local)
+			if err == nil {
+				fmt.Printf("%d\n", t.Unix())
+				return
+			}
+		}
+		fmt.Fprintf(os.Stderr, "%s: cannot parse date %q\n", progname, arg)
+		os.Exit(1)
 	case *opt_keygen:
 		if arg != "" {
 			arg = AdjustKeyName(arg)
@@ -560,6 +584,7 @@ func main() {
 		} else if *opt_verbose {
 			fmt.Print(txr)
 		} else {
+			fmt.Printf("created_at: %s\n", txr.Time)
 			fmt.Print("==== TRANSACTION ====\n", net.ToRep(&txr.Env),
 				"==== RESULT ====\n", net.ToRep(&txr.Result),
 				"==== EFFECTS ====\n",
@@ -587,7 +612,7 @@ func main() {
 					}
 					fmt.Print(r)
 				} else {
-					fmt.Printf("%x\n", r.Txhash)
+					fmt.Printf("%x\n  time %s\n", r.Txhash, r.Time)
 					fmt.Printf(net.AccountDelta(&r.StellarMetas, &acct, "  "))
 				}
 			})

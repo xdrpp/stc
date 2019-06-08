@@ -22,7 +22,8 @@ stc -keygen [_name_] \
 stc -pub [_name_] \
 stc -import-key _name_ \
 stc -export-key _name_ \
-stc -list-keys
+stc -list-keys \
+stc -date YYYY-MM-DDThh:mm:ss
 
 # DESCRIPTION
 
@@ -39,10 +40,10 @@ and fees, translating the transaction to/from human-readable form, or
 signing it.  In edit mode, stc repeatedly invokes a text editor to
 allow somewhat interactive editing of transactions.  In hash mode, stc
 hashes a transactions to facilitate creation of pre-signed
-transactions or lookup of transaction results.  In post mode, stc
-posts a transaction to the network.  Finally, key management mode
-allows one to maintain a set of signing keys, while network query mode
-allows one to query the network for account and fee status.
+transactions or lookup of transaction results.  Key management mode
+allows one to maintain a set of signing keys.  Finally, network mode
+allows one to post transactions or query the network for account and
+fee status.
 
 ## Default mode
 
@@ -110,12 +111,6 @@ Edit mode terminates when you quit the editor without modifying the
 file, at which point stc writes the transaction back to the original
 file.
 
-## Post mode
-
-Post-mode submits a transaction to the Stellar network.  This is how
-you actually execute a transaction you have properly formatted and
-signed.
-
 ## Hash mode
 
 Stellar hashes transactions to a unique 32-byte value that depends on
@@ -171,18 +166,35 @@ assume you do not encrypt your private keys.
 
 ## Network query mode
 
-stc runs in network query mode when the `-fee-stats`, `-qa`, `-qt`,
-`-qta`, or `-create` option is provided.  `-fee-stats` reports on
-recent transaction fees.  `-qa` reports on the state of a particular
-account.  `-qt` reports the result of a transaction that has been
-previously submitted.  `-qta` reports transactions on an account in
-reverse chronological order (use `-qt` to get more detail on any
-transaction ID).  Unfortunately, some of these requests are parsed
-from horizon responses in JSON rather than XDR format, and so are
-reported in a somewhat incomparable style to txrep format.  For
-example, balances are shown as a fixed-point number 10^7 times the
-underlying int64.  `-create` creates and funds an account (which only
-works when the test network is specified).
+stc runs in network query mode when one of the `-post`, `-fee-stats`,
+`-qa`, `-qt`, `-qta`, or `-create` option is provided.
+
+Post-mode, selected by `-post`, submits a transaction to the Stellar
+network.  This is how you actually execute a transaction you have
+properly formatted and signed.
+
+`-fee-stats` reports on recent transaction fees.  `-qa` reports on the
+state of a particular account.  `-qt` reports the result of a
+transaction that has been previously submitted.  `-qta` reports
+transactions on an account in reverse chronological order (use `-qt`
+to get more detail on any transaction ID).  Unfortunately, some of
+these requests are parsed from horizon responses in JSON rather than
+XDR format, and so are reported in a somewhat incomparable style to
+txrep format.  For example, balances are shown as a fixed-point number
+10^7 times the underlying int64.  `-create` creates and funds an
+account (which only works when the test network is specified).
+
+## Miscellaneous modes
+
+The `-date` option parses a date and converts it to a Unix time.  This
+is convenient for determining the Unix time to place in Timebounds.
+The time can have one of several formats:
+
+* `2006-01-02T15:04:05Z` (for parsing in UTC timezone, all other
+  formats are parsed in local time)
+* `2006-01-02T15:04:05`
+* `2006-01-02T15:04`
+* `2006-01-02`
 
 # OPTIONS
 
@@ -194,6 +206,9 @@ is to output in text mode.  Only available in default mode.
 :	Create and fund an account on a network with a "friendbot" that
 gives away coins.  Currently the stellar test network has such a bot
 available by querying the `/friendbot?addr=ACCOUNT` path on horizon.
+
+`-date`
+:	Compute a Unix time from a human-readable time.
 
 `-edit`
 :	Select edit mode.

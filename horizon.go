@@ -391,6 +391,8 @@ func (net *StellarNet) AccountDelta(
 
 type HorizonTxResult struct {
 	Txhash stx.Hash
+	Ledger uint32
+	Time time.Time
 	Env stx.TransactionEnvelope
 	Result stx.TransactionResult
 	stcdetail.StellarMetas
@@ -399,6 +401,8 @@ type HorizonTxResult struct {
 
 func (r HorizonTxResult) String() string {
 	out := strings.Builder{}
+	fmt.Fprintf(&out, "ledger: %d\ncreated_at: %d (%s)\n",
+		r.Ledger, r.Time.Unix(), r.Time.Format(time.UnixDate))
 	stcdetail.XdrToTxrep(&out, "", &r.Env)
 	stcdetail.XdrToTxrep(&out, "", &r.Result)
 	stcdetail.XdrToTxrep(&out, "feeMeta",
@@ -416,6 +420,8 @@ func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 		Fee_meta_xdr string
 		Paging_token string
 		Hash string
+		Ledger uint32
+		Created_at string
 	}
 	hash := stx.XdrArrayOpaque(r.Txhash[:])
 	if err := json.Unmarshal(data, &j); err != nil {
@@ -434,7 +440,12 @@ func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 			return err
 	} else if _, err := fmt.Sscanf(j.Hash, "%x", &hash); err != nil {
 		return err
+	} else if r.Time, err = time.ParseInLocation("2006-01-02T15:04:05Z",
+		j.Created_at, time.UTC); err != nil {
+			return err
 	}
+	r.Time = r.Time.Local()
+	r.Ledger = j.Ledger
 	r.PagingToken = j.Paging_token
 	return nil
 }
