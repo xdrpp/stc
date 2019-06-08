@@ -75,7 +75,7 @@ clean:
 	rm -f *~ .*~ */*~
 	rm -rf goroot gh-pages
 
-maintainer-clean:
+maintainer-clean: clean
 	for dir in cmd/goxdr cmd/stc; do \
 		(cd $$dir && $(MAKE) $@); \
 	done
