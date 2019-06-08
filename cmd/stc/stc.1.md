@@ -23,7 +23,7 @@ stc -pub [_name_] \
 stc -import-key _name_ \
 stc -export-key _name_ \
 stc -list-keys \
-stc -date YYYY-MM-DDThh:mm:ss
+stc -date YYYY-MM-DDThh:mm:ss[Z]
 
 # DESCRIPTION
 
@@ -190,11 +190,11 @@ The `-date` option parses a date and converts it to a Unix time.  This
 is convenient for determining the Unix time to place in Timebounds.
 The time can have one of several formats:
 
-* `2006-01-02T15:04:05Z` (for parsing in UTC timezone, all other
-  formats are parsed in local time)
-* `2006-01-02T15:04:05`
-* `2006-01-02T15:04`
-* `2006-01-02`
+* `2006-01-02T15:04:05Z` (for parsing in UTC timezone)
+* `2006-01-02T15:04:05-07:00` (for parsing in a specific timezone)
+* `2006-01-02T15:04:05` (local time)
+* `2006-01-02T15:04` (local time)
+* `2006-01-02` (local time)
 
 # OPTIONS
 
