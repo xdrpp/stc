@@ -401,7 +401,9 @@ func (r HorizonTxResult) String() string {
 	out := strings.Builder{}
 	stcdetail.XdrToTxrep(&out, "", &r.Env)
 	stcdetail.XdrToTxrep(&out, "", &r.Result)
-	stcdetail.XdrToTxrep(&out, "", &r.StellarMetas)
+	stcdetail.XdrToTxrep(&out, "feeMeta",
+		stx.XDR_LedgerEntryChanges(&r.FeeMeta))
+	stcdetail.XdrToTxrep(&out, "resultMeta", &r.ResultMeta)
 	fmt.Fprintf(&out, "paging_token: %s\n", r.PagingToken)
 	return out.String()
 }
