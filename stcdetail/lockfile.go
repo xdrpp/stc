@@ -1,9 +1,13 @@
 package stcdetail
 
 import (
-	"io"
 	"os"
 )
+
+type ErrIsDirectory string
+func (e ErrIsDirectory) Error() string {
+	return string(e) + ": is a directory"
+}
 
 // Updates a file in a safe way, by first writing data to an
 // exclusively lockfile (which is path with ".lock" appended).  If the
@@ -12,6 +16,14 @@ import (
 // configuration files.
 func UpdateFile(path string, perm os.FileMode,
 	action func(*os.File)error) (err error) {
+	if path == "" {
+		return os.ErrInvalid
+	} else if fi, e := os.Stat(path); e != nil && !os.IsNotExist(e) {
+		return e
+	} else if e == nil && fi.Mode().IsDir() {
+		return ErrIsDirectory(path)
+	}
+
 	lockpath := path + ".lock"
 	var f *os.File
 	f, err = os.OpenFile(lockpath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, perm)
@@ -22,7 +34,7 @@ func UpdateFile(path string, perm os.FileMode,
 		if f != nil {
 			f.Close()
 		}
-		if err != nil {
+		if lockpath != "" {
 			os.Remove(lockpath)
 		}
 	}()
@@ -38,7 +50,9 @@ func UpdateFile(path string, perm os.FileMode,
 	tildepath := path + "~"
 	os.Remove(tildepath)
 	os.Link(path, tildepath)
-	err = os.Rename(lockpath, path)
+	if err = os.Rename(lockpath, path); err == nil {
+		lockpath = ""
+	}
 	return
 }
 
@@ -52,8 +66,8 @@ func SafeWriteFile(path string, data string, perm os.FileMode) error {
 		n, err := f.WriteString(data)
 		if err != nil {
 			return err
-		} else if n < len(data) {
-			return io.ErrShortWrite
+		} else if n != len(data) {
+			panic("Short write should have returned an error")
 		}
 		return nil
 	})

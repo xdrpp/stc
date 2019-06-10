@@ -196,7 +196,6 @@ func writeTx(outfile string, e *TransactionEnvelope, net *StellarNet,
 		fmt.Print(output)
 	} else {
 		if err := stcdetail.SafeWriteFile(outfile, output, 0666); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
 			return err
 		}
 	}
