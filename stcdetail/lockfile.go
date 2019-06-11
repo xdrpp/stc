@@ -129,3 +129,22 @@ func SafeWriteFile(path string, data string, perm os.FileMode) error {
 		return nil
 	})
 }
+
+func SafeWriteFileIfUnchanged(path, data string, info os.FileInfo) error {
+	perm := os.FileMode(0666)
+	if info != nil {
+		perm = info.Mode() & os.ModePerm
+	}
+	return UpdateFile(path, perm, func(f *os.File)error {
+		fi, err := os.Stat(path)
+		if err == nil {
+			if info == nil || FileChanged(info, fi) {
+				return ErrFileHasChanged(path)
+			}
+		} else if ! os.IsNotExist(err) {
+			return err
+		}
+		f.WriteString(data)
+		return nil
+	})
+}
