@@ -213,6 +213,21 @@ func TestGetAccountID(t *testing.T) {
 func TestFileChanged(t *testing.T) {
 	fi1, e := os.Stat("/etc/fstab")
 	if e != nil { t.Skip(e) }
+
+	f, e := ioutil.TempFile("", "TestFileChanged")
+	if e != nil {
+		t.Fatal(e)
+	}
+	tmp := f.Name()
+	f.WriteString("Hello world\n")
+	f.Sync()
+	f.Close()
+	fi4, e := os.Stat(tmp)
+
+	// Scary, but the sleep is needed on linux or the tv_nsec fields
+	// don't seem to change.
+	time.Sleep(time.Second)
+
 	ioutil.ReadFile("/etc/fstab")
 	fi2, e := os.Stat("/etc/fstab")
 	if e != nil { t.Skip(e) }
@@ -224,24 +239,11 @@ func TestFileChanged(t *testing.T) {
 		t.Errorf("failed to detect file change")
 	}
 
-	f, e := ioutil.TempFile("", "TestFileChanged")
-	if e != nil {
-		t.Error(e)
-	}
-	tmp := f.Name()
-	f.WriteString("Hello world\n")
-	f.Sync()
-	f.Close()
-
-	fi4, e := os.Stat(tmp)
 	if e = os.Link(tmp, tmp + "~"); e != nil {
 		os.Remove(tmp)
 		t.Fatal(e)
 	}
 	fi5, e := os.Stat(tmp)
-	// Scary, but the sleep is needed on linux or the ctime.tv_nsec
-	// doesn't seem to change.
-	time.Sleep(time.Second)
 	if e = os.Remove(tmp + "~"); e != nil {
 		os.Remove(tmp)
 		t.Fatal(e)
