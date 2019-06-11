@@ -46,7 +46,7 @@ func FileChanged(a, b os.FileInfo) bool {
 	if !clearAtime(sa) || !clearAtime(sb) {
 		fmt.Fprintf(os.Stderr, "Can't parse FileInfo.Sys()\n")
 	}
-	return reflect.DeepEqual(a, b)
+	return !reflect.DeepEqual(a, b)
 }
 
 func ReadFile(path string) ([]byte, os.FileInfo, error) {

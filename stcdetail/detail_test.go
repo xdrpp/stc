@@ -1,12 +1,15 @@
 package stcdetail_test
 
 import "fmt"
+import "io/ioutil"
 import "math/rand"
 import "strings"
 import "testing"
 import "github.com/xdrpp/stc"
 import "github.com/xdrpp/stc/stx"
 import . "github.com/xdrpp/stc/stcdetail"
+import "time"
+import "os"
 
 func ExampleScaleFmt() {
 	fmt.Println(ScaleFmt(987654321, 7))
@@ -204,5 +207,54 @@ func TestGetAccountID(t *testing.T) {
 	e.TxChanges = make([]stx.LedgerEntryChange, 5)
 	if GetAccountID(&e) != &e.TxChanges[0].Created().Data.Account().AccountID {
 		t.Fail()
+	}
+}
+
+func TestFileChanged(t *testing.T) {
+	fi1, e := os.Stat("/etc/fstab")
+	if e != nil { t.Skip(e) }
+	ioutil.ReadFile("/etc/fstab")
+	fi2, e := os.Stat("/etc/fstab")
+	if e != nil { t.Skip(e) }
+	fi3, e := os.Stat("/etc/hosts")
+	if e != nil { t.Skip(e) }
+	if FileChanged(fi1, fi2) {
+		t.Errorf("falsely reported file change")
+	} else if !FileChanged(fi2, fi3) {
+		t.Errorf("failed to detect file change")
+	}
+
+	f, e := ioutil.TempFile("", "TestFileChanged")
+	if e != nil {
+		t.Error(e)
+	}
+	tmp := f.Name()
+	f.WriteString("Hello world\n")
+	f.Sync()
+	f.Close()
+
+	fi4, e := os.Stat(tmp)
+	if e = os.Link(tmp, tmp + "~"); e != nil {
+		os.Remove(tmp)
+		t.Fatal(e)
+	}
+	fi5, e := os.Stat(tmp)
+	// Scary, but the sleep is needed on linux or the ctime.tv_nsec
+	// doesn't seem to change.
+	time.Sleep(time.Second)
+	if e = os.Remove(tmp + "~"); e != nil {
+		os.Remove(tmp)
+		t.Fatal(e)
+	}
+	fi6, e := os.Stat(tmp)
+
+	if !FileChanged(fi4, fi5) {
+		t.Errorf("Failed to detect nlink change in %s\n%#v",
+			tmp, fi4.Sys())
+	} else if !FileChanged(fi4, fi6) {
+		t.Errorf("Failed to detect ctime change in %s\n%#v\n%#v",
+			tmp, fi5.Sys(), fi6.Sys())
+	} else {
+		os.Remove(tmp)
 	}
 }
