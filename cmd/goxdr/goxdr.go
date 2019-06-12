@@ -405,14 +405,14 @@ func (e *emitter) xdrgen(target, name string, context idval,
 	case ARRAY:
 		if typ.getgo() == "byte" {
 			frag = "\tx.Marshal($NAME, XdrArrayOpaque((*$TARGET)[:]))\n"
-			break;
+			break
 		}
 		vectyp := e.gen_array(typ, d.bound)
 		frag = fmt.Sprintf("\tx.Marshal($NAME, (*%s)($TARGET))\n", vectyp)
 	case VEC:
 		if typ.getgo() == "byte" {
 			frag = "\tx.Marshal($NAME, XdrVecOpaque{$TARGET, $BOUND})\n"
-			break;
+			break
 		}
 		vectyp := e.gen_vec(typ, d.bound)
 		frag = fmt.Sprintf("\tx.Marshal($NAME, (*%s)($TARGET))\n", vectyp)
