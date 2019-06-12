@@ -6,7 +6,7 @@ import (
 )
 
 type IniDumper struct {}
-func (IniDumper) Consume(item stcdetail.IniItem) error {
+func (IniDumper) Item(item stcdetail.IniItem) error {
 	if item.IniSection != nil {
 		fmt.Printf("%s.", item.Section)
 		if item.Subsection != nil {

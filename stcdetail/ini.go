@@ -22,8 +22,12 @@ func (s IniSection) String() string {
 	return fmt.Sprintf("[%s]", s.Section)
 }
 
-func (s IniSection) Eq(s2 IniSection) bool {
-	if s.Section != s2.Section {
+func (s *IniSection) Eq(s2 *IniSection) bool {
+	if s == nil && s2 == nil {
+		return true
+	} else if s == nil || s2 == nil {
+		return false
+	} else if s.Section != s2.Section {
 		return false
 	} else if s.Subsection == nil && s2.Subsection == nil {
 		return true
@@ -45,7 +49,12 @@ type IniItem struct {
 
 // Type that receives and processes the parsed INI file.
 type IniSink interface {
-	Consume(IniItem) error
+	Item(IniItem) error
+}
+
+type IniSecStart struct {
+	IniSection
+	IniRange
 }
 
 // If an IniSink also implements IniSecSink, then it will receive a
@@ -55,7 +64,7 @@ type IniSink interface {
 // argument.)
 type IniSecSink interface {
 	IniSink
-	Section(sec IniSection) error
+	Section(sec IniSecStart) error
 }
 
 // Error that an IniSink's Value method should return when there is a
@@ -112,7 +121,7 @@ type iniParse struct {
 	file string
 	sec *IniSection
 	Value func (IniItem) error
-	Section func (sec IniSection) error
+	Section func (sec IniSecStart) error
 }
 
 func (l *iniParse) throwAt(pos position, msg string) {
@@ -281,6 +290,21 @@ func (l *iniParse) getSection() *IniSection {
 	return &ret
 }
 
+func EscapeIniValue(val string) string {
+	ret := strings.Builder{}
+	ret.WriteByte('"')
+	for _, b := range []byte(val) {
+		switch b {
+		case '\t':
+			ret.WriteString("\\t")
+		default:
+			ret.WriteByte(b)
+		}
+	}
+	ret.WriteByte('"')
+	return ret.String()
+}
+
 func (l *iniParse) getValue() string {
 	ret := strings.Builder{}
 	escape, inquote := false, false
@@ -348,8 +372,16 @@ func (l *iniParse) do1() (err *ParseError) {
 	l.skipWS()
 	keypos := l.position
 	if sec := l.getSection(); sec != nil {
+		l.skipWS()
+		l.match("\n")
 		l.sec = sec
-		if err := l.Section(*sec); err != nil {
+		if err := l.Section(IniSecStart{
+			IniSection: *sec,
+			IniRange: IniRange{
+				StartIndex: startindex,
+				EndIndex: l.index,
+			},
+		}); err != nil {
 			l.throwAt(keypos, err.Error())
 		}
 	} else if isAlpha(l.peek()) {
@@ -408,11 +440,11 @@ func newParser(sink IniSink, path string, input []byte) *iniParse {
 	var ret iniParse
 	ret.file = path
 	ret.input = input
-	ret.Value = sink.Consume
+	ret.Value = sink.Item
 	if iss, ok := sink.(IniSecSink); ok {
 		ret.Section = iss.Section
 	} else {
-		ret.Section = func(IniSection) error { return nil }
+		ret.Section = func(IniSecStart)error { return nil }
 	}
 	return &ret
 }
@@ -436,4 +468,81 @@ func IniParse(sink IniSink, filename string) error {
 		}
 		return newParser(sink, filename, contents).do()
 	}
+}
+
+type iniUpdater struct {
+	targetSec *IniSection
+	targetKey string
+	sectionEnd int
+	items []IniItem
+}
+
+func (iu *iniUpdater) Section(ss IniSecStart) error {
+	if ss.Eq(iu.targetSec) {
+		iu.sectionEnd = ss.EndIndex
+	}
+	return nil
+}
+
+func (iu *iniUpdater) Item(ii IniItem) error {
+	if ii.Eq(iu.targetSec) {
+		iu.sectionEnd = ii.EndIndex
+		if ii.Key == iu.targetKey {
+			iu.items = append(iu.items, ii)
+		}
+	}
+	return nil
+}
+
+func IniDelKeyContents(sec IniSection, key string, valpred func (string)bool,
+	filename string, contents []byte) ([][]byte, error) {
+	var iu iniUpdater
+    if err := IniParseContents(&iu, filename, contents); err != nil {
+		return nil, err
+	}
+	var ret [][]byte
+	index := 0
+	for i := range iu.items {
+		ii := &iu.items[i]
+		if valpred != nil && !valpred(ii.Value) {
+			continue
+		}
+		if ii.StartIndex > index {
+			ret = append(ret, contents[index:ii.StartIndex])
+		}
+		index = ii.EndIndex
+	}
+	if len(contents) > index {
+		ret = append(ret, contents[index:])
+	}
+	if len(contents) <= 1 && iu.sectionEnd != 0 {
+		ret = [][]byte{ contents[0:iu.sectionEnd], contents[iu.sectionEnd:] }
+	}
+	return ret, nil
+}
+
+func IniSet(filename string, sec IniSection, key string, value string) error {
+	return UpdateFile(filename, 0666, func(f *os.File)error {
+		contents, err := ioutil.ReadFile(filename)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
+		out, err := IniDelKeyContents(sec, key, nil, filename, contents)
+		if err != nil {
+			return err
+		}
+		if len(out) > 1 {
+			fmt.Fprintf(f, "\t%s = %s\n", key, EscapeIniValue(value))
+			for _, o := range out[1:] {
+				f.Write(o)
+			}
+		} else {
+			if len(out) == 1 {
+				f.Write(out[0])
+			}
+			fmt.Fprintf(f, "%s\n\t%s = %s\n", sec.String(),
+				key, EscapeIniValue(value))
+		}
+		return nil
+	})
 }

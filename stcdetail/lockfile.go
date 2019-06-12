@@ -79,6 +79,9 @@ func UpdateFile(path string, perm os.FileMode,
 		return e
 	} else if e == nil && fi.Mode().IsDir() {
 		return ErrIsDirectory(path)
+	} else if e == nil {
+		// Would be impolite to increase permissions...
+		perm &= fi.Mode()
 	}
 
 	lockpath := path + ".lock"
