@@ -22,6 +22,17 @@ func (s IniSection) String() string {
 	return fmt.Sprintf("[%s]", s.Section)
 }
 
+func (s IniSection) Eq(s2 IniSection) bool {
+	if s.Section != s2.Section {
+		return false
+	} else if s.Subsection == nil && s2.Subsection == nil {
+		return true
+	} else if s.Subsection == nil || s2.Subsection == nil {
+		return false
+	}
+	return *s.Subsection == *s2.Subsection
+}
+
 // Type that receives and processes the parsed INI file.
 type IniSink interface {
 	Value(sec *IniSection, k string, v string) error
@@ -82,7 +93,7 @@ func (err ParseErrors) Error() string {
 }
 
 type position struct {
-	lineno, colno int
+	index, lineno, colno int
 }
 
 type iniParse struct {
@@ -108,17 +119,31 @@ func (l *iniParse) throw(msg string, args ...interface{}) {
 }
 
 func (l *iniParse) peek() rune {
-	if len(l.input) == 0 {
+	if l.index >= len(l.input) {
 		return eofRune
 	}
-	return rune(l.input[0])
+	return rune(l.input[l.index])
+}
+
+func (l *iniParse) at(n int) rune {
+	n += l.index
+	if n > len(l.input) || n < 0 {
+		return eofRune
+	}
+	return rune(l.input[n])
+}
+
+func (l *iniParse) remaining() int {
+	return len(l.input) - l.index
 }
 
 func (l *iniParse) skip(n int) {
-	if n > len(l.input) {
-		n = len(l.input)
+	if n < 0 || n > l.remaining() {
+		n = l.remaining()
 	}
-	for i := 0; i < n; i++ {
+	i := l.index
+	stop := i + n
+	for ; i < stop; i++ {
 		switch l.input[i] {
 		case '\n':
 			l.lineno++
@@ -129,18 +154,18 @@ func (l *iniParse) skip(n int) {
 			l.colno++
 		}
 	}
-	l.input = l.input[n:]
+	l.index = i
 }
 
 func (l *iniParse) take(n int) string {
-	ret := string(l.input[:n])
+	i := l.index
 	l.skip(n)
-	return ret
+	return string(l.input[i:l.index])
 }
 
 func (l *iniParse) match(text string) bool {
 	n := len(text)
-	if len(l.input) >= n && string(l.input[:n]) == text {
+	if l.remaining() >= n && string(l.input[l.index:l.index+n]) == text {
 		l.skip(n)
 		return true
 	}
@@ -148,34 +173,35 @@ func (l *iniParse) match(text string) bool {
 }
 
 func (l *iniParse) skipWhile(fn func(rune)bool) bool {
-	var n int
-	for n = 0; n < len(l.input) && fn(rune(l.input[n])); n++ {
+	i := l.index
+	for ; i < len(l.input) && fn(rune(l.input[i])); i++ {
 	}
-	if n > 0 {
-		l.skip(n)
+	if i > l.index {
+		l.skip(i - l.index)
 		return true
 	}
 	return false
 }
 
 func (l *iniParse) skipTo(c byte) bool {
-	if i := bytes.IndexByte(l.input, c); i >= 0 {
+	if i := bytes.IndexByte(l.input[l.index:], c); i >= 0 {
 		l.skip(i)
 		return true
 	}
-	l.skip(len(l.input))
+	l.skip(l.remaining())
 	return false
 }
 
 func (l *iniParse) takeWhile(fn func(rune)bool) string {
-	var n int
-	for n = 0; n < len(l.input) && fn(rune(l.input[n])); n++ {
-	}
-	return l.take(n)
+	i := l.index
+	l.skipWhile(fn)
+	return string(l.input[i:l.index])
 }
 
 func (l *iniParse) skipWS() bool {
-	return l.skipWhile(func (r rune) bool { return r == ' ' || r == '\t' })
+	return l.skipWhile(func (r rune) bool {
+		return r == ' ' || r == '\t' || r == '\r'
+	})
 }
 
 func isAlpha(c rune) bool {
@@ -191,13 +217,13 @@ func (l *iniParse) getKey() string {
 }
 
 func (l *iniParse) getSubsection() *string {
-	if len(l.input) < 2 || l.input[0] != '"' {
+	if l.remaining() < 2 || l.peek() != '"' {
 		return nil
 	}
 	ret := &strings.Builder{}
 	var i int
 loop:
-	for i = 1; i + 1 < len(l.input); i++ {
+	for i = l.index+1; i + 1 < len(l.input); i++ {
 		switch c := l.input[i]; c {
 		case '"':
 			break loop
@@ -216,7 +242,7 @@ loop:
 	if l.input[i] != '"' {
 		return nil
 	}
-	l.skip(i+1)
+	l.skip(i+1 - l.index)
 	s := ret.String()
 	return &s
 }
@@ -248,15 +274,8 @@ func (l *iniParse) getSection() *IniSection {
 func (l *iniParse) getValue() string {
 	ret := strings.Builder{}
 	escape, inquote := false, false
-	var i int
 	for {
-		var c rune
-		if i < len(l.input) {
-			c = rune(l.input[i])
-		} else {
-			c = eofRune
-		}
-		i++
+		c := l.peek()
 		if escape {
 			escape = false
 			switch c {
@@ -270,8 +289,13 @@ func (l *iniParse) getValue() string {
 				ret.WriteByte('\b')
 			case '\n':
 				// ignore
+			case '\r':
+				if l.at(1) == '\n' {
+					l.skip(1)
+					break
+				}
+				fallthrough
 			default:
-				l.skip(i-2)
 				if c == eofRune {
 					l.throw("incomplete escape sequence at EOF")
 				}
@@ -281,19 +305,21 @@ func (l *iniParse) getValue() string {
 			escape = true
 		} else if c == '"' {
 			inquote = !inquote
-		} else if c == '\n' || c == eofRune {
+		} else if c == '\n' || c == eofRune || (c == '\r' && l.at(1) == '\n') {
+			if c == '\r' {
+				l.skip(1)
+			}
 			if inquote {
-				l.skip(i-1)
 				l.throw("missing close quotes")
 			}
-			l.skip(i)
+			l.skip(1)
 			return ret.String()
 		} else if !inquote && (c == '#' || c == ';') {
-			l.skip(i)
 			l.skipTo('\n')
 		} else {
 			ret.WriteByte(byte(c))
 		}
+		l.skip(1)
 	}
 }
 
@@ -349,7 +375,7 @@ func (l *iniParse) do1() (err *ParseError) {
 
 func (l *iniParse) do() error {
 	var err ParseErrors
-	for len(l.input) > 0 {
+	for l.remaining() > 0 {
 		if e := l.do1(); e != nil {
 			err = append(err, *e)
 		}
