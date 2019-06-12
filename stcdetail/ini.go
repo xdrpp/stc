@@ -33,9 +33,19 @@ func (s IniSection) Eq(s2 IniSection) bool {
 	return *s.Subsection == *s2.Subsection
 }
 
+type IniRange struct {
+	StartIndex, EndIndex int
+}
+
+type IniItem struct {
+	*IniSection
+	Key, Value string
+	IniRange
+}
+
 // Type that receives and processes the parsed INI file.
 type IniSink interface {
-	Value(sec *IniSection, k string, v string) error
+	Consume(IniItem) error
 }
 
 // If an IniSink also implements IniSecSink, then it will receive a
@@ -101,7 +111,7 @@ type iniParse struct {
 	input []byte
 	file string
 	sec *IniSection
-	Value func (sec *IniSection, k string, v string) error
+	Value func (IniItem) error
 	Section func (sec IniSection) error
 }
 
@@ -334,6 +344,7 @@ func (l *iniParse) do1() (err *ParseError) {
 			}
 		}
 	}()
+	startindex := l.index
 	l.skipWS()
 	keypos := l.position
 	if sec := l.getSection(); sec != nil {
@@ -357,7 +368,14 @@ func (l *iniParse) do1() (err *ParseError) {
 			valpos = l.position
 			v = l.getValue()
 		}
-		if err := l.Value(l.sec, k, v); err != nil {
+		if err := l.Value(IniItem{
+			IniSection: l.sec,
+			Key: k,
+			Value: v,
+			IniRange: IniRange{
+				StartIndex: startindex,
+				EndIndex: l.index,
+			}}); err != nil {
 			if ke, ok := err.(BadKey); ok {
 				l.throwAt(keypos, string(ke))
 			} else {
@@ -390,7 +408,7 @@ func newParser(sink IniSink, path string, input []byte) *iniParse {
 	var ret iniParse
 	ret.file = path
 	ret.input = input
-	ret.Value = sink.Value
+	ret.Value = sink.Consume
 	if iss, ok := sink.(IniSecSink); ok {
 		ret.Section = iss.Section
 	} else {

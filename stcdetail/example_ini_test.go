@@ -6,14 +6,14 @@ import (
 )
 
 type IniDumper struct {}
-func (IniDumper) Value(sec *stcdetail.IniSection, k string, v string) error {
-	if sec != nil {
-		fmt.Printf("%s.", sec.Section)
-		if sec.Subsection != nil {
-			fmt.Printf("%s.", *sec.Subsection)
+func (IniDumper) Consume(item stcdetail.IniItem) error {
+	if item.IniSection != nil {
+		fmt.Printf("%s.", item.Section)
+		if item.Subsection != nil {
+			fmt.Printf("%s.", *item.Subsection)
 		}
 	}
-	fmt.Printf("%s = %s\n", k, v)
+	fmt.Printf("%s = %s\n", item.Key, item.Value)
 	return nil
 }
 
