@@ -2,6 +2,7 @@ package stcdetail
 
 import "bytes"
 import "fmt"
+import "io"
 import "io/ioutil"
 import "os"
 import "strings"
@@ -638,4 +639,52 @@ func IniAdd(filename string, sec IniSection, key string, value string) error {
 		}
 		return nil
 	})
+}
+
+type IniSetItem struct {
+	IniSection
+	Key string
+	Value *string
+}
+
+type iniMultiSetterSecinfo struct {
+	lastIndex int				// XXX doesn't work
+	keys map[string]*string
+}
+type iniMultiSetter struct {
+	secs map[string]*iniMultiSetterSecinfo
+	out io.Writer
+}
+
+func (ims *iniMultiSetter) Section(ss IniSecStart) error {
+	if si, ok := ims.secs[ss.IniSection.String()]; ok {
+		si.lastIndex = ss.EndIndex
+	}
+	return nil
+}
+
+func (ims *iniMultiSetter) Item(ii IniItem) error {
+	return nil
+}
+
+func IniMultiSet(filename string, actions []IniSetItem) error {
+	ims := &iniMultiSetter{
+		secs: make(map[string]*iniMultiSetterSecinfo),
+	}
+	for i := range actions {
+		ss := actions[i].IniSection.String()
+		si := ims.secs[ss]
+		if si == nil {
+			si = &iniMultiSetterSecinfo{
+				keys: make(map[string]*string),
+			}
+			ims.secs[ss] = si
+		}
+		si.keys[actions[i].Key] = actions[i].Value
+	}
+
+
+	// XXX
+
+	return nil
 }
