@@ -294,11 +294,35 @@ func (l *iniParse) getSection() *IniSection {
 	return &ret
 }
 
+func needQuotes(val string) bool {
+	if val == "" {
+		return false
+	} else if val[0] == ' ' || val[0] == '\t' {
+		return true
+	}
+	for _, c := range ([]byte)(val) {
+		if c < ' ' || c >= 0x7f || strings.IndexByte("\"#;\\", c) != -1 {
+			return true
+		}
+	}
+	return false
+}
+
 func EscapeIniValue(val string) string {
+	if !needQuotes(val) {
+		return val
+	}
 	ret := strings.Builder{}
 	ret.WriteByte('"')
 	for _, b := range []byte(val) {
 		switch b {
+		case '"', '\\':
+			ret.WriteByte('\\')
+			ret.WriteByte(b)
+		case '\b':
+			ret.WriteString("\\b")
+		case '\n':
+			ret.WriteString("\\n")
 		case '\t':
 			ret.WriteString("\\t")
 		default:
