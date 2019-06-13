@@ -1,6 +1,6 @@
 package stcdetail
 
-import(
+import (
 	"fmt"
 	"reflect"
 	"strings"

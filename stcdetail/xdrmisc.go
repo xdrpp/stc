@@ -7,6 +7,7 @@ import (
 )
 
 type trivSprintf struct{}
+
 func (trivSprintf) Sprintf(f string, args ...interface{}) string {
 	return ""
 }
@@ -39,6 +40,7 @@ type forEachXdr struct {
 	fn func(stx.XdrType) bool
 	trivSprintf
 }
+
 func (fex forEachXdr) Marshal(_ string, val stx.XdrType) {
 	if !fex.fn(val) {
 		if xa, ok := val.(stx.XdrAggregate); ok {
@@ -82,10 +84,11 @@ func ForEachXdrType(a stx.XdrType, fn interface{}) {
 }
 
 type xdrExtract struct {
-	out reflect.Value
+	out  reflect.Value
 	done bool
 	trivSprintf
 }
+
 func (x *xdrExtract) Marshal(_ string, t stx.XdrType) {
 	if x.done {
 		return
@@ -101,7 +104,7 @@ func (x *xdrExtract) Marshal(_ string, t stx.XdrType) {
 // If out is of type **T, then *out is set to point to the first
 // instance of T found when traversing t.
 func XdrExtract(t stx.XdrType, out interface{}) bool {
-	x := xdrExtract{ out: reflect.ValueOf(out).Elem() }
+	x := xdrExtract{out: reflect.ValueOf(out).Elem()}
 	t.XdrMarshal(&x, "")
 	return x.done
 }

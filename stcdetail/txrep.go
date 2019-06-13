@@ -14,8 +14,8 @@ import (
 
 // pseudo-selectors
 const (
-	ps_len       = "len"
-	ps_present   = "_present"
+	ps_len     = "len"
+	ps_present = "_present"
 )
 
 //

@@ -76,8 +76,8 @@ func ExampleXdrToJson() {
 	txe.Tx.Memo = stc.MemoText("Hello")
 	txe.Append(nil, stc.Payment{
 		Destination: yourkey,
-		Asset: stc.NativeAsset(),
-		Amount: 20000000,
+		Asset:       stc.NativeAsset(),
+		Amount:      20000000,
 	})
 	// ... Can keep appending operations with txe.Append
 
@@ -142,20 +142,20 @@ func TestJsonToXdr(t *testing.T) {
 	txe.Tx.Memo = stc.MemoText("Hello")
 	txe.Append(nil, stc.Payment{
 		Destination: yourkey,
-		Asset: stc.NativeAsset(),
-		Amount: 20000000,
+		Asset:       stc.NativeAsset(),
+		Amount:      20000000,
 	})
 	txe.Append(nil, stc.Inflation{})
 	txe.Append(&yourkey, stc.AllowTrust{
-		Trustor: mykey.Public(),
-		Asset: stc.MkAllowTrustAsset("ABCDE"),
+		Trustor:   mykey.Public(),
+		Asset:     stc.MkAllowTrustAsset("ABCDE"),
 		Authorize: true,
 	})
 	txe.Append(nil, stc.SetOptions{
 		InflationDest: stc.NewAccountID(mykey.Public()),
-		HomeDomain: stc.NewString("stellar.org"),
-		MasterWeight: stc.NewUint(255),
-		Signer: stc.NewSignerKey(yourkey, 1),
+		HomeDomain:    stc.NewString("stellar.org"),
+		MasterWeight:  stc.NewUint(255),
+		Signer:        stc.NewSignerKey(yourkey, 1),
 	})
 
 	// Sign the transaction
@@ -212,7 +212,9 @@ func TestGetAccountID(t *testing.T) {
 
 func TestFileChanged(t *testing.T) {
 	fi1, e := os.Stat("/etc/fstab")
-	if e != nil { t.Skip(e) }
+	if e != nil {
+		t.Skip(e)
+	}
 
 	f, e := ioutil.TempFile("", "TestFileChanged")
 	if e != nil {
@@ -230,16 +232,20 @@ func TestFileChanged(t *testing.T) {
 
 	ioutil.ReadFile("/etc/fstab")
 	fi2, e := os.Stat("/etc/fstab")
-	if e != nil { t.Skip(e) }
+	if e != nil {
+		t.Skip(e)
+	}
 	fi3, e := os.Stat("/etc/hosts")
-	if e != nil { t.Skip(e) }
+	if e != nil {
+		t.Skip(e)
+	}
 	if FileChanged(fi1, fi2) {
 		t.Errorf("falsely reported file change")
 	} else if !FileChanged(fi2, fi3) {
 		t.Errorf("failed to detect file change")
 	}
 
-	if e = os.Link(tmp, tmp + "~"); e != nil {
+	if e = os.Link(tmp, tmp+"~"); e != nil {
 		os.Remove(tmp)
 		t.Fatal(e)
 	}

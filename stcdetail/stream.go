@@ -1,4 +1,3 @@
-
 package stcdetail
 
 import (
@@ -12,6 +11,7 @@ import (
 
 // A status line for a non-200 HTTP response
 type HTTPerror string
+
 func (e HTTPerror) Error() string {
 	return string(e)
 }
@@ -29,9 +29,9 @@ func IsDone(ctx context.Context) bool {
 }
 
 type streamEvent struct {
-	Type string
-	Data []byte
-	Id []byte
+	Type  string
+	Data  []byte
+	Id    []byte
 	Retry *int64
 }
 

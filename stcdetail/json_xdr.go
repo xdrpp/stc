@@ -92,8 +92,8 @@ func JsonToXdr(dst stx.XdrAggregate, src []byte) (err error) {
 }
 
 type jsonOut struct {
-	out *bytes.Buffer
-	indent string
+	out       *bytes.Buffer
+	indent    string
 	needComma bool
 }
 

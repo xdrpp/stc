@@ -1,4 +1,3 @@
-
 package stcdetail
 
 import (
@@ -9,6 +8,7 @@ import (
 // An error type that groups together a bunch of errors and renders
 // them separated by newlines.
 type Errors []error
+
 func (errs Errors) Error() string {
 	out := strings.Builder{}
 	for i := range errs {
@@ -23,7 +23,7 @@ type Async struct {
 	jobs []chan error
 }
 
-func (a *Async) Run(fn func()error) {
+func (a *Async) Run(fn func() error) {
 	c := make(chan error, 1)
 	a.jobs = append(a.jobs, c)
 	go func() {

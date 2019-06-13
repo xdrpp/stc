@@ -9,11 +9,13 @@ import (
 )
 
 type ErrIsDirectory string
+
 func (e ErrIsDirectory) Error() string {
 	return string(e) + ": is a directory"
 }
 
 type ErrFileHasChanged string
+
 func (e ErrFileHasChanged) Error() string {
 	return string(e) + ": file has changed since read"
 }
@@ -26,7 +28,7 @@ func clearAtime(sys interface{}) bool {
 	if v.Kind() != reflect.Struct {
 		return false
 	}
-	atv := v.FieldByNameFunc(func(s string)bool {
+	atv := v.FieldByNameFunc(func(s string) bool {
 		return strings.HasPrefix(s, "Atim")
 	})
 	if (atv != reflect.Value{}) {
@@ -72,7 +74,7 @@ func ReadFile(path string) ([]byte, os.FileInfo, error) {
 // renamed to path.  This is the same scheme git uses to lock
 // configuration files.
 func UpdateFile(path string, perm os.FileMode,
-	action func(*os.File)error) (err error) {
+	action func(*os.File) error) (err error) {
 	if path == "" {
 		return os.ErrInvalid
 	} else if fi, e := os.Stat(path); e != nil && !os.IsNotExist(e) {
@@ -138,13 +140,13 @@ func SafeWriteFileIfUnchanged(path, data string, info os.FileInfo) error {
 	if info != nil {
 		perm = info.Mode() & os.ModePerm
 	}
-	return UpdateFile(path, perm, func(f *os.File)error {
+	return UpdateFile(path, perm, func(f *os.File) error {
 		fi, err := os.Stat(path)
 		if err == nil {
 			if info == nil || FileChanged(info, fi) {
 				return ErrFileHasChanged(path)
 			}
-		} else if ! os.IsNotExist(err) {
+		} else if !os.IsNotExist(err) {
 			return err
 		}
 		f.WriteString(data)

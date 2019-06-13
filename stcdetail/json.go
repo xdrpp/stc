@@ -1,6 +1,6 @@
 package stcdetail
 
-import(
+import (
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -49,7 +49,7 @@ func (i JsonInt64e7) MarshalText() ([]byte, error) {
 			int64(i)%10000000)), nil
 	} else {
 		return []byte(fmt.Sprintf("%d.%07d", int64(i)/10000000,
-			-(int64(i)%10000000))), nil
+			-(int64(i) % 10000000))), nil
 	}
 }
 
@@ -59,7 +59,7 @@ func (i *JsonInt64e7) UnmarshalText(text []byte) error {
 		frac = text[point+1:]
 		text = text[:point]
 		if len(frac) < 7 {
-			frac = append(frac, bytes.Repeat([]byte{'0'}, 7 - len(frac))...)
+			frac = append(frac, bytes.Repeat([]byte{'0'}, 7-len(frac))...)
 		} else {
 			frac = frac[:7]
 		}

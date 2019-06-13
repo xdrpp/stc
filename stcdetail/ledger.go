@@ -8,7 +8,7 @@ import (
 
 func RepDiff(prefix, arep, brep string) string {
 	out := &strings.Builder{}
-	amap := make(map [string]string)
+	amap := make(map[string]string)
 	for _, a := range strings.Split(arep, "\n") {
 		kv := strings.SplitN(a, ": ", 2)
 		if len(kv) != 2 {
@@ -32,7 +32,7 @@ func RepDiff(prefix, arep, brep string) string {
 }
 
 func GetLedgerEntryKey(e *stx.LedgerEntry) stx.LedgerKey {
-	k := stx.LedgerKey{ Type: e.Data.Type }
+	k := stx.LedgerKey{Type: e.Data.Type}
 	switch k.Type {
 	case stx.ACCOUNT:
 		k.Account().AccountID = e.Data.Account().AccountID
@@ -70,9 +70,10 @@ func changeInfo(c *stx.LedgerEntryChange) (key stx.LedgerKey,
 }
 
 type MetaDelta struct {
-	Key stx.LedgerKey
+	Key      stx.LedgerKey
 	Old, New *stx.LedgerEntry
 }
+
 func (md MetaDelta) AccountID() *stx.AccountID {
 	return GetAccountID(&md.Key)
 }
@@ -89,7 +90,7 @@ func GetMetaDeltas(m stx.XdrAggregate) (ret []MetaDelta) {
 		} else {
 			i = len(ret)
 			first = true
-			ret = append(ret, MetaDelta{ Key: k })
+			ret = append(ret, MetaDelta{Key: k})
 			kmap[kk] = i
 			md = &ret[i]
 		}

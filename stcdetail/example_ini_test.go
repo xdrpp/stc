@@ -5,7 +5,8 @@ import (
 	"github.com/xdrpp/stc/stcdetail"
 )
 
-type IniDumper struct {}
+type IniDumper struct{}
+
 func (IniDumper) Item(item stcdetail.IniItem) error {
 	if item.IniSection != nil {
 		fmt.Printf("%s.", item.Section)
