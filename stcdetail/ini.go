@@ -18,7 +18,21 @@ type IniSection struct {
 
 func (s IniSection) String() string {
 	if s.Subsection != nil {
-		return fmt.Sprintf("[%s %q]", s.Section, *s.Subsection)
+		ret := strings.Builder{}
+		fmt.Fprintf(&ret, "[%s \"", s.Section)
+		for i := 0; i < len(*s.Subsection); i++ {
+			switch b := (*s.Subsection)[i]; b {
+			case '\n', '\000':
+				panic("illegal character in IniSection Subsection")
+			case '\\', '"':
+				ret.WriteByte('\\')
+				fallthrough
+			default:
+				ret.WriteByte(b)
+			}
+		}
+		ret.WriteString("\"]")
+		return ret.String()
 	}
 	return fmt.Sprintf("[%s]", s.Section)
 }
