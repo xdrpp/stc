@@ -513,6 +513,44 @@ func IniParse(sink IniSink, filename string) error {
 	}
 }
 
+
+type IniEdit struct {
+	Fragments [][]byte
+	SecEnd map[string]int
+	Values map[string][]int
+}
+
+type iniEditParser struct {
+	*IniEdit
+	input []byte
+	lastIdx int
+}
+
+func (iep *iniEditParser) fill(ir IniRange) int {
+	if ir.StartIndex > iep.lastIdx {
+		iep.Fragments = append(iep.Fragments,
+			iep.input[iep.lastIdx:ir.StartIndex])
+	}
+	iep.Fragments = append(iep.Fragments, iep.input[ir.StartIndex:ir.EndIndex])
+	iep.lastIdx = ir.EndIndex
+	return len(iep.Fragments) - 1
+}
+
+func (iep *iniEditParser) Section(ss IniSecStart) error {
+	iep.SecEnd[ss.IniSection.String()] = iep.fill(ss.IniRange)
+	return nil
+}
+
+func (iep *iniEditParser) Item(ii IniItem) error {
+	k, n := ii.IniSection.String(), iep.fill(ii.IniRange)
+	iep.Values[k] = append(iep.Values[k], n)
+	iep.SecEnd[ii.IniSection.String()] = n
+	return nil
+}
+
+
+
+
 type iniUpdater struct {
 	targetSec  *IniSection
 	targetKey  string
