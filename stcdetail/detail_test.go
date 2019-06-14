@@ -266,3 +266,15 @@ func TestFileChanged(t *testing.T) {
 		os.Remove(tmp)
 	}
 }
+
+func ExampleLockFile() error {
+	lf, err := LockFile("testfile", 0666)
+	if err != nil {
+		return err
+	}
+	defer lf.Abort()
+
+	fmt.Fprintf(lf, "New file contents\n")
+
+	return lf.Commit()
+}

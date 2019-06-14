@@ -1,3 +1,5 @@
+// XXX consider using golang.org/x/sync/errgroup instead.
+
 package stcdetail
 
 import (

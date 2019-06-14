@@ -554,91 +554,103 @@ func IniDelKeyContents(sec IniSection, key string, valpred func(string) bool,
 }
 
 func IniDel(filename string, sec IniSection, key string) error {
-	return UpdateFile(filename, 0666, func(f *os.File) error {
-		contents, err := ioutil.ReadFile(filename)
-		if err != nil && !os.IsNotExist(err) {
+	lf, err := LockFile(filename, 0666)
+	if err != nil {
+		return err
+	}
+	defer lf.Abort()
+
+	contents, err := lf.ReadFile()
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	out, err := IniDelKeyContents(sec, key, nil, filename, contents)
+	if err != nil {
+		return err
+	}
+	for i := range out {
+		if _, err := lf.Write(out[i]); err != nil {
 			return err
 		}
-		out, err := IniDelKeyContents(sec, key, nil, filename, contents)
-		if err != nil {
-			return err
-		}
-		for i := range out {
-			if _, err := f.Write(out[i]); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	}
+	return lf.Commit()
 }
 
 func IniSet(filename string, sec IniSection, key string, value string) error {
-	return UpdateFile(filename, 0666, func(f *os.File) error {
-		contents, err := ioutil.ReadFile(filename)
-		if err != nil && !os.IsNotExist(err) {
+	lf, err := LockFile(filename, 0666)
+	if err != nil {
+		return err
+	}
+	defer lf.Abort()
+
+	contents, err := lf.ReadFile()
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	out, err := IniDelKeyContents(sec, key, nil, filename, contents)
+	if err != nil {
+		return err
+	}
+	if len(out) > 1 {
+		if _, err := lf.Write(out[0]); err != nil {
 			return err
 		}
-		out, err := IniDelKeyContents(sec, key, nil, filename, contents)
-		if err != nil {
-			return err
-		}
-		if len(out) > 1 {
-			if _, err := f.Write(out[0]); err != nil {
+		fmt.Fprintf(lf, "\t%s = %s\n", key, EscapeIniValue(value))
+		for _, o := range out[1:] {
+			if _, err := lf.Write(o); err != nil {
 				return err
 			}
-			fmt.Fprintf(f, "\t%s = %s\n", key, EscapeIniValue(value))
-			for _, o := range out[1:] {
-				if _, err := f.Write(o); err != nil {
-					return err
-				}
-			}
-		} else {
-			if len(out) == 1 {
-				if _, err := f.Write(out[0]); err != nil {
-					return err
-				}
-			}
-			fmt.Fprintf(f, "%s\n\t%s = %s\n", sec.String(),
-				key, EscapeIniValue(value))
 		}
-		return nil
-	})
+	} else {
+		if len(out) == 1 {
+			if _, err := lf.Write(out[0]); err != nil {
+				return err
+			}
+		}
+		fmt.Fprintf(lf, "%s\n\t%s = %s\n", sec.String(),
+			key, EscapeIniValue(value))
+	}
+	return lf.Commit()
 }
 
 func IniAdd(filename string, sec IniSection, key string, value string) error {
-	return UpdateFile(filename, 0666, func(f *os.File) error {
-		contents, err := ioutil.ReadFile(filename)
-		if err != nil && !os.IsNotExist(err) {
+	lf, err := LockFile(filename, 0666)
+	if err != nil {
+		return err
+	}
+	defer lf.Abort()
+
+	contents, err := lf.ReadFile()
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	iu := iniUpdater{
+		targetSec: &sec,
+		targetKey: key,
+	}
+	if err := IniParseContents(&iu, filename, contents); err != nil {
+		return err
+	}
+	var out [][]byte
+	if iu.sectionEnd > 0 {
+		out = [][]byte{
+			contents[:iu.sectionEnd],
+			[]byte(fmt.Sprintf("\t%s = %s\n", key, value)),
+			contents[iu.sectionEnd:],
+		}
+	} else {
+		out = [][]byte{
+			contents,
+			[]byte(fmt.Sprintf("%s\n\t%s = %s\n", sec.String(),
+				key, EscapeIniValue(value))),
+		}
+	}
+	for i := range out {
+		if _, err := lf.Write(out[i]); err != nil {
 			return err
 		}
-		iu := iniUpdater{
-			targetSec: &sec,
-			targetKey: key,
-		}
-		if err := IniParseContents(&iu, filename, contents); err != nil {
-			return err
-		}
-		var out [][]byte
-		if iu.sectionEnd > 0 {
-			out = [][]byte{
-				contents[:iu.sectionEnd],
-				[]byte(fmt.Sprintf("\t%s = %s\n", key, value)),
-				contents[iu.sectionEnd:],
-			}
-		} else {
-			out = [][]byte{
-				contents,
-				[]byte(fmt.Sprintf("%s\n\t%s = %s\n", sec.String(),
-					key, EscapeIniValue(value))),
-			}
-		}
-		for i := range out {
-			if _, err := f.Write(out[i]); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	}
+	return lf.Commit()
 }
 
 type IniSetItem struct {
