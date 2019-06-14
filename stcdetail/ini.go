@@ -532,6 +532,12 @@ func (ie *IniEdit) WriteTo(w io.Writer) (int64, error) {
 	return ret, nil
 }
 
+func (ie IniEdit) String() string {
+	ret := strings.Builder{}
+	ie.WriteTo(&ret)
+	return ret.String()
+}
+
 // Delete an entry that was already in the Ini file.  (Does not delete
 // new keys that were just added with Add.)
 func (ie *IniEdit) Del(is IniSection, key string) {
