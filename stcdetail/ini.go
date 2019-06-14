@@ -513,16 +513,15 @@ func IniParse(sink IniSink, filename string) error {
 	}
 }
 
-
 type IniEdit struct {
 	Fragments [][]byte
-	SecEnd map[string]int
-	Values map[string][]int
+	SecEnd    map[string]int
+	Values    map[string][]int
 }
 
 type iniEditParser struct {
 	*IniEdit
-	input []byte
+	input   []byte
 	lastIdx int
 }
 
@@ -547,9 +546,6 @@ func (iep *iniEditParser) Item(ii IniItem) error {
 	iep.SecEnd[ii.IniSection.String()] = n
 	return nil
 }
-
-
-
 
 type iniUpdater struct {
 	targetSec  *IniSection
@@ -707,17 +703,17 @@ func IniAdd(filename string, sec IniSection, key string, value string) error {
 
 type IniSetItem struct {
 	IniSection
-	Key string
+	Key   string
 	Value *string
 }
 
 type iniMultiSetterSecinfo struct {
-	lastIndex int				// XXX doesn't work
-	keys map[string]*string
+	lastIndex int // XXX doesn't work
+	keys      map[string]*string
 }
 type iniMultiSetter struct {
 	secs map[string]*iniMultiSetterSecinfo
-	out io.Writer
+	out  io.Writer
 }
 
 func (ims *iniMultiSetter) Section(ss IniSecStart) error {
@@ -746,7 +742,6 @@ func IniMultiSet(filename string, actions []IniSetItem) error {
 		}
 		si.keys[actions[i].Key] = actions[i].Value
 	}
-
 
 	// XXX
 

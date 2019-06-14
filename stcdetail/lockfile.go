@@ -1,6 +1,7 @@
 package stcdetail
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,11 +11,13 @@ import (
 )
 
 type ErrIsDirectory string
+
 func (e ErrIsDirectory) Error() string {
 	return string(e) + ": is a directory"
 }
 
 type ErrFileHasChanged string
+
 func (e ErrFileHasChanged) Error() string {
 	return string(e) + ": file has changed since read"
 }
@@ -70,10 +73,10 @@ func ReadFile(path string) ([]byte, os.FileInfo, error) {
 }
 
 type lockedFile struct {
-	path string
+	path     string
 	lockpath string
-	f *os.File
-	err error
+	f        *os.File
+	*bufio.Writer
 	fi os.FileInfo
 }
 
@@ -82,91 +85,69 @@ func (lf *lockedFile) Abort() {
 		lf.f.Close()
 		lf.f = nil
 	}
+	lf.Writer = nil
 	if lf.lockpath != "" {
 		os.Remove(lf.lockpath)
 		lf.lockpath = ""
 	}
-	if lf.err == nil {
-		lf.err = ErrAborted
-	}
 }
 
-func (lf *lockedFile) check(err error) error {
-	if lf.err == nil && err != nil {
-		lf.err = err
-		lf.Abort()
-	}
-	return lf.err
+type errAccum struct {
+	error
 }
 
-func (lf *lockedFile) Status() error {
-	if lf.err != nil {
-		return lf.err
+func (ea *errAccum) accum(err error) error {
+	if ea.error == nil && err != nil {
+		ea.error = err
 	}
-	fi, err := os.Stat(lf.path)
-	if !os.IsNotExist(err) && lf.check(err) != nil {
-		return lf.err
-	}
-	if lf.fi == nil && err == nil ||
-		lf.fi != nil && fi != nil && FileChanged(fi, lf.fi) {
-		return lf.check(ErrFileHasChanged(lf.path))
-	}
-	return nil
-}
-
-func (lf *lockedFile) Write(b []byte) (int, error) {
-	if lf.err != nil {
-		return 0, lf.err
-	}
-	n, err := lf.f.Write(b)
-	return n, lf.check(err)
-}
-
-func (lf *lockedFile) WriteString(s string) (int, error) {
-	if lf.err != nil {
-		return 0, lf.err
-	}
-	n, err := lf.f.WriteString(s)
-	return n, lf.check(err)
+	return ea.error
 }
 
 func (lf *lockedFile) Commit() error {
-	if lf.f == nil {
-		return lf.err
-	}
-	if lf.check(lf.f.Sync()) != nil {
-		return lf.err
-	}
-	err := lf.f.Close()
+	var ea errAccum
+	ea.accum(lf.Flush())
+	lf.Writer = nil
+	ea.accum(lf.f.Sync())
+	fi0, err := lf.f.Stat()
+	ea.accum(err)
+	ea.accum(lf.f.Close())
 	lf.f = nil
-	if lf.check(err) != nil {
-		return lf.err
+	if ea.error != nil {
+		lf.Abort()
+		return ea.error
+	}
+
+	if fi, err := os.Stat(lf.path); err == nil &&
+		(lf.fi == nil || FileChanged(lf.fi, fi)) {
+		lf.Abort()
+		return ErrFileHasChanged(lf.path)
+	} else if fi, err = os.Stat(lf.lockpath); err != nil {
+		lf.Abort()
+		return err
+	} else if FileChanged(fi0, fi) {
+		err = ErrFileHasChanged(lf.lockpath)
+		lf.Abort()
+		return err
 	}
 
 	tildepath := lf.path + "~"
 	os.Remove(tildepath)
 	os.Link(lf.path, tildepath)
-	ret := lf.check(os.Rename(lf.lockpath, lf.path))
-	lf.lockpath = ""
-	if lf.err == nil {
-		lf.err = os.ErrInvalid
+
+	if ea.accum(os.Rename(lf.lockpath, lf.path)) == nil {
+		lf.lockpath = ""
 	}
-	return ret
+	lf.Abort()
+	return ea.error
 }
 
 func (lf *lockedFile) ReadFile() ([]byte, error) {
-	if lf.err != nil {
-		return nil, lf.err
-	}
-	if ret, fi, err := ReadFile(lf.path); err == nil {
-		if lf.fi != nil && FileChanged(lf.fi, fi) {
-			return nil, lf.check(ErrFileHasChanged(lf.path))
-		}
-		lf.fi = fi
-		return ret, nil
-	} else if !os.IsNotExist(err) {
-		return nil, lf.check(err)
+	if ret, fi, err := ReadFile(lf.path); err != nil {
+		return ret, err
+	} else if lf.fi == nil || FileChanged(lf.fi, fi) {
+		return nil, ErrFileHasChanged(lf.path)
 	} else {
+		lf.fi = fi
 		return ret, err
 	}
 }
@@ -184,22 +165,17 @@ type LockedFile interface {
 
 	// Returns the contents of the locked file.  (This is not the
 	// contents of the lockfile itself, which is initially empty and
-	// to which you must write the new contents you want to swap in
-	// atomically.)  Also checks the file modification time, so as to
-	// cause an abort if anyone else changes the file after you've
+	// to which you must write the new contents that you want to swap
+	// in atomically.)  Also checks the file modification time, so as
+	// to cause an abort if anyone else changes the file after you've
 	// locked it and before you've called Commit().
 	ReadFile() ([]byte, error)
 
 	// You must call Abort() to clean up the lockfile, unless you have
 	// called Commit().  However, it is safe to call Abort() multiple
 	// times, or to call Abort() after Commit(), so the best use is to
-	// call defer lf.Abort() as soon as you have a lockedfile.
+	// call defer lf.Abort() as soon as you have a LockedFile.
 	Abort()
-
-	// A LockedFile accumulates errors from the Write() function so
-	// you don't have to check every time you write.  If there has
-	// been an error, Status() will return it.
-	Status() error
 }
 
 // Locks a file for updating.  Exclusively creates a file with name
@@ -210,7 +186,7 @@ type LockedFile interface {
 // is to defer a call to Abort() immediately.
 func LockFile(path string, perm os.FileMode) (LockedFile, error) {
 	lf := lockedFile{
-		path: path,
+		path:     path,
 		lockpath: path + ".lock",
 	}
 	if path == "" {
@@ -230,6 +206,7 @@ func LockFile(path string, perm os.FileMode) (LockedFile, error) {
 		return nil, err
 	}
 	lf.f = f
+	lf.Writer = bufio.NewWriter(lf.f)
 	return &lf, nil
 }
 
