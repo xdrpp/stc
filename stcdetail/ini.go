@@ -562,7 +562,7 @@ func (ie *IniEdit) Add(is IniSection, key, value string) {
 		ie.Fragments = append(ie.Fragments, []byte(k + "\n"))
 	}
 	ie.Fragments[i] = append(ie.Fragments[i],
-		[]byte(fmt.Sprintf("\t%s = %s\n", key, EscapeIniValue(value)))...)
+		fmt.Sprintf("\t%s = %s\n", key, EscapeIniValue(value))...)
 }
 
 
