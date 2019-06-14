@@ -513,11 +513,58 @@ func IniParse(sink IniSink, filename string) error {
 	}
 }
 
+
 type IniEdit struct {
 	Fragments [][]byte
 	SecEnd    map[string]int
 	Values    map[string][]int
 }
+
+func (ie *IniEdit) WriteTo(w io.Writer) (int64, error) {
+	var ret int64
+	for i := range ie.Fragments {
+		n, err := w.Write(ie.Fragments[i])
+		ret += int64(n)
+		if err != nil {
+			return ret, err
+		}
+	}
+	return ret, nil
+}
+
+// Delete an entry that was already in the Ini file.  (Does not delete
+// new keys that were just added with Add.)
+func (ie *IniEdit) Del(is IniSection, key string) {
+	k := is.String() + key
+	for _, i := range ie.Values[k] {
+		ie.Fragments[i] = nil
+	}
+}
+
+func (ie *IniEdit) Set(is IniSection, key, value string) {
+	ie.Del(is, key)
+	k := is.String() + key
+	vs := ie.Values[k]
+	if len(vs) > 0 {
+		ie.Fragments[vs[0]] = []byte(
+			fmt.Sprintf("\t%s = %s\n", key, EscapeIniValue(value)))
+	} else {
+		ie.Add(is, key, value)
+	}
+}
+
+func (ie *IniEdit) Add(is IniSection, key, value string) {
+	k := is.String()
+	i, ok := ie.SecEnd[k]
+	if !ok {
+		i = len(ie.Fragments)
+		ie.SecEnd[k] = i
+		ie.Fragments = append(ie.Fragments, []byte(k + "\n"))
+	}
+	ie.Fragments[i] = append(ie.Fragments[i],
+		[]byte(fmt.Sprintf("\t%s = %s\n", key, EscapeIniValue(value)))...)
+}
+
 
 type iniEditParser struct {
 	*IniEdit
@@ -541,12 +588,23 @@ func (iep *iniEditParser) Section(ss IniSecStart) error {
 }
 
 func (iep *iniEditParser) Item(ii IniItem) error {
-	k, n := ii.IniSection.String(), iep.fill(ii.IniRange)
+	k, n := ii.IniSection.String() + ii.Key, iep.fill(ii.IniRange)
 	iep.Values[k] = append(iep.Values[k], n)
 	iep.SecEnd[ii.IniSection.String()] = n
 	return nil
 }
 
+func NewIniEdit(filename string, contents []byte) (*IniEdit, error) {
+	var ret IniEdit
+	iep := iniEditParser{
+		IniEdit: &ret,
+		input: contents,
+	}
+	return &ret, IniParseContents(&iep, filename, contents)
+}
+
+
+/*
 type iniUpdater struct {
 	targetSec  *IniSection
 	targetKey  string
@@ -747,3 +805,4 @@ func IniMultiSet(filename string, actions []IniSetItem) error {
 
 	return nil
 }
+*/
