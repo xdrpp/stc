@@ -493,9 +493,9 @@ type XdrPrint struct {
 }
 
 // Generic function that converts any XDR struct or union to a string
-func XdrToString(t XdrAggregate) string {
+func XdrToString(t XdrType) string {
 	out := &strings.Builder{}
-	t.XdrRecurse(&XdrPrint{out}, "")
+	t.XdrMarshal(&XdrPrint{out}, "")
 	return out.String()
 }
 
