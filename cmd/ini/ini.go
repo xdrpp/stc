@@ -36,7 +36,10 @@ func getSecKey(arg string) (sec *stcdetail.IniSection, key string) {
 		sec.Subsection = &subsec
 	}
 	key = arg
-	return
+	if stcdetail.ValidIniKey(key) && sec.Valid() {
+		return
+	}
+	return nil, ""
 }
 
 func doupdates(target string, actions []func(*stcdetail.IniEdit)) int {
@@ -93,7 +96,7 @@ func main() {
 
 	for len(av) >= 2 {
 		sec, key := getSecKey(av[1])
-		if sec == nil {
+		if key == "" {
 			fmt.Fprintf(os.Stderr, "%s: bad section.key argument %q\n",
 				progname, av[1])
 			os.Exit(1)
@@ -104,7 +107,7 @@ func main() {
 				usage(1)
 			}
 			actions = append(actions, func(ie *stcdetail.IniEdit) {
-				ie.Del(*sec, key)
+				ie.Del(sec, key)
 			})
 			av = av[2:]
 		case "-s":
@@ -113,7 +116,7 @@ func main() {
 			}
 			val := av[2]
 			actions = append(actions, func(ie *stcdetail.IniEdit) {
-				ie.Set(*sec, key, val)
+				ie.Set(sec, key, val)
 			})
 			av = av[3:]
 		case "-a":
@@ -122,7 +125,7 @@ func main() {
 			}
 			val := av[2]
 			actions = append(actions, func(ie *stcdetail.IniEdit) {
-				ie.Add(*sec, key, val)
+				ie.Add(sec, key, val)
 			})
 			av = av[3:]
 		default:

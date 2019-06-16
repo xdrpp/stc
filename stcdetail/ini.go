@@ -10,14 +10,43 @@ import "strings"
 const tabwidth = 8
 const eofRune rune = -1
 
+func ValidIniSection(s string) bool {
+	return len(s) > 0 && -1 == strings.IndexFunc(s, func(r rune)bool {
+		return !isKeyChar(r)
+	})
+}
+
+// Test if a string is a valid subsection name in an INI file.
+// Specifically, subsection names may not contain a newline or NUL
+// byte.
+func ValidIniSubsection(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\n' || s[i] == '\000' {
+			return false
+		}
+	}
+	return true
+}
+
 // Section of an INI file.
 type IniSection struct {
 	Section    string
 	Subsection *string
 }
 
-func (s IniSection) String() string {
-	if s.Subsection != nil {
+func (s *IniSection) Valid() bool {
+	if s == nil {
+		return true
+	} else if !ValidIniSection(s.Section) {
+		return false
+	}
+	return s.Subsection == nil || ValidIniSubsection(*s.Subsection)
+}
+
+func (s *IniSection) String() string {
+	if s == nil {
+		return ""
+	} else if s.Subsection != nil {
 		ret := strings.Builder{}
 		fmt.Fprintf(&ret, "[%s \"", s.Section)
 		for i := 0; i < len(*s.Subsection); i++ {
@@ -251,6 +280,15 @@ func isKeyChar(c rune) bool {
 	return isAlpha(c) || (c >= '0' && c <= '9') || c == '-'
 }
 
+// Test if string is a valid INI file key.  Valid keys contain one or
+// more alphanumeric characters or '-'.
+func ValidIniKey(s string) bool {
+	return s != "" && isAlpha(rune(s[0])) &&
+		-1 == strings.IndexFunc(s, func(r rune)bool {
+		return !isKeyChar(r)
+	})
+}
+
 func (l *iniParse) getKey() string {
 	return l.takeWhile(isKeyChar)
 }
@@ -299,7 +337,7 @@ func (l *iniParse) getSection() *IniSection {
 		return &ret
 	}
 	if !l.skipWS() {
-		l.throw("expected ']' or space followed by quoted-subsection")
+		l.throw("expected ']' or space followed by quoted subsection")
 	}
 	if ret.Subsection = l.getSubsection(); ret.Subsection == nil {
 		l.throw("expected quoted subsection after space")
@@ -543,31 +581,13 @@ func (ie IniEdit) String() string {
 	return ret.String()
 }
 
-// Delete an entry that was already in the Ini file.  (Does not delete
-// new keys that were just added with Add.)
-func (ie *IniEdit) Del(is IniSection, key string) {
-	k := is.String() + key
-	for _, i := range ie.Values[k] {
-		ie.Fragments[i] = nil
-	}
-}
-
-func (ie *IniEdit) Set(is IniSection, key, value string) {
-	ie.Del(is, key)
-	k := is.String() + key
-	vs := ie.Values[k]
-	if len(vs) > 0 {
-		ie.Fragments[vs[0]] = []byte(
-			fmt.Sprintf("\t%s = %s\n", key, EscapeIniValue(value)))
-	} else {
-		ie.Add(is, key, value)
-	}
-}
-
-func (ie *IniEdit) Add(is IniSection, key, value string) {
+func (ie *IniEdit) newItem(is *IniSection, key, value string) {
 	k := is.String()
 	i, ok := ie.SecEnd[k]
 	if !ok {
+		if is == nil {
+			panic("IniEdit bug: forgot to close empty section")
+		}
 		i = len(ie.Fragments)
 		ie.SecEnd[k] = i
 		ie.Fragments = append(ie.Fragments, []byte(k + "\n"))
@@ -576,11 +596,38 @@ func (ie *IniEdit) Add(is IniSection, key, value string) {
 		fmt.Sprintf("\t%s = %s\n", key, EscapeIniValue(value))...)
 }
 
+// Delete an entry that was already in the Ini file.  (Does not delete
+// new keys that were just added with Add.)
+func (ie *IniEdit) Del(is *IniSection, key string) {
+	k := is.String() + key
+	for _, i := range ie.Values[k] {
+		ie.Fragments[i] = nil
+	}
+}
+
+func (ie *IniEdit) Set(is *IniSection, key, value string) {
+	ie.Del(is, key)
+	ie.Add(is, key, value)
+}
+
+func (ie *IniEdit) Add(is *IniSection, key, value string) {
+	k := is.String()
+	vs, _ := ie.Values[k+key]
+	if len(vs) > 0 {
+		n := vs[len(vs)-1]
+		ie.Fragments[n] = append(ie.Fragments[n],
+			fmt.Sprintf("\t%s = %s\n", key, EscapeIniValue(value))...)
+	} else {
+		ie.newItem(is, key, value)
+	}
+}
+
 
 type iniEditParser struct {
 	*IniEdit
 	input   []byte
 	lastIdx int
+	cursec *IniSection
 }
 
 func (iep *iniEditParser) fill(ir IniRange) int {
@@ -593,15 +640,23 @@ func (iep *iniEditParser) fill(ir IniRange) int {
 	return len(iep.Fragments) - 1
 }
 
+func (iep *iniEditParser) closeSection() {
+	iep.SecEnd[iep.cursec.String()] = len(iep.Fragments)
+	iep.Fragments = append(iep.Fragments, nil)
+}
+
 func (iep *iniEditParser) Section(ss IniSecStart) error {
-	iep.SecEnd[ss.IniSection.String()] = iep.fill(ss.IniRange)
+	if !ss.Eq(iep.cursec) {
+		iep.closeSection()
+		iep.cursec = &ss.IniSection
+	}
+	iep.fill(ss.IniRange)
 	return nil
 }
 
 func (iep *iniEditParser) Item(ii IniItem) error {
 	k, n := ii.IniSection.String() + ii.Key, iep.fill(ii.IniRange)
 	iep.Values[k] = append(iep.Values[k], n)
-	iep.SecEnd[ii.IniSection.String()] = n
 	return nil
 }
 
@@ -614,5 +669,7 @@ func NewIniEdit(filename string, contents []byte) (*IniEdit, error) {
 		IniEdit: &ret,
 		input: contents,
 	}
-	return &ret, IniParseContents(&iep, filename, contents)
+	err := IniParseContents(&iep, filename, contents)
+	iep.closeSection()
+	return &ret, err
 }
