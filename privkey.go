@@ -76,7 +76,7 @@ func (sk *PrivateKey) Save(file string, passphrase []byte) error {
 		w0.Close()
 		out.WriteString("\n")
 	}
-	return stcdetail.SafeWriteFile(file, out.String(), 0600)
+	return stcdetail.SafeCreateFile(file, out.String(), 0600)
 }
 
 var InvalidPassphrase = errors.New("Invalid passphrase")

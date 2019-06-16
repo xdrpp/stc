@@ -11,18 +11,14 @@ import (
 )
 
 type ErrIsDirectory string
-
 func (e ErrIsDirectory) Error() string {
 	return string(e) + ": is a directory"
 }
 
 type ErrFileHasChanged string
-
 func (e ErrFileHasChanged) Error() string {
 	return string(e) + ": file has changed since read"
 }
-
-var ErrAborted = fmt.Errorf("Aborted")
 
 func clearAtime(sys interface{}) bool {
 	v := reflect.ValueOf(sys)
@@ -237,6 +233,25 @@ func SafeWriteFile(path string, data string, perm os.FileMode) error {
 		return err
 	}
 	defer lf.Abort()
+	lf.WriteString(data)
+	return lf.Commit()
+}
+
+// Like SafeWriteFile, but fails if the file already exists after the
+// lock is acquired.  Does not exclusively create the target file, but
+// rather uses a lockfile to ensure that if the file is created it
+// will have data as its contents.  (Exclusively creating the target
+// file could lead to the file being existing and being empty after a
+// crash.)
+func SafeCreateFile(path string, data string, perm os.FileMode) error {
+	lf, err := LockFile(path, perm)
+	if err != nil {
+		return err
+	}
+	defer lf.Abort()
+	if lf.(*lockedFile).fi != nil {
+		return os.ErrExist
+	}
 	lf.WriteString(data)
 	return lf.Commit()
 }
