@@ -68,7 +68,7 @@ test: $(BUILT_SOURCES)
 	cd cmd/goxdr && $(MAKE) test
 
 clean:
-	for dir in cmd/goxdr cmd/stc; do \
+	for dir in cmd/goxdr cmd/stc cmd/ini; do \
 		(cd $$dir && $(MAKE) $@); \
 	done
 	go clean
