@@ -14,22 +14,31 @@ func (IniDumper) Item(item stcdetail.IniItem) error {
 			fmt.Printf("%s.", *item.Subsection)
 		}
 	}
-	fmt.Printf("%s = %s\n", item.Key, item.Value)
+	if item.Value == nil {
+		fmt.Printf("%s\n", item.Key)
+	} else {
+		fmt.Printf("%s = %s\n", item.Key, *item.Value)
+	}
 	return nil
 }
 
 var contents = []byte(`
-bare-key = bar value
+# discouraged (like git-config, you can't edit keys outside of sections)
+bare-key = bare value
 [section]
 key1 = value1
-[another-section "with-subsection"]
+[other "sub"]
 key2 = value2
+key3 # this one has no value
+key4 = " value4"   ; this one started with a space
 `)
 
 func ExampleIniParseContents() {
 	stcdetail.IniParseContents(IniDumper{}, "(test)", contents)
 	// Output:
-	// bare-key = bar value
+	// bare-key = bare value
 	// section.key1 = value1
-	// another-section.with-subsection.key2 = value2
+	// other.sub.key2 = value2
+	// other.sub.key3
+	// other.sub.key4 =  value4
 }

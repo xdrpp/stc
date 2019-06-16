@@ -58,7 +58,8 @@ type IniRange struct {
 
 type IniItem struct {
 	*IniSection
-	Key, Value string
+	Key string
+	Value *string
 	IniRange
 }
 
@@ -430,7 +431,7 @@ func (l *iniParse) do1() (err *ParseError) {
 	} else if isAlpha(l.peek()) {
 		k := l.getKey()
 		l.skipWS()
-		var v string
+		var v *string
 		var valpos position
 		if !l.match("=") {
 			if c := l.peek(); c != '\n' && c != '#' &&
@@ -438,10 +439,14 @@ func (l *iniParse) do1() (err *ParseError) {
 				l.throw("Expected '=' after %s", k)
 			}
 			valpos = l.position
+			if l.skipTo('\n') {
+				l.skip(1)
+			}
 		} else {
 			l.skipWS()
 			valpos = l.position
-			v = l.getValue()
+			val := l.getValue()
+			v = &val
 		}
 		if err := l.Value(IniItem{
 			IniSection: l.sec,
