@@ -178,13 +178,8 @@ type LockedFile interface {
 	Abort()
 }
 
-// Locks a file for updating.  Exclusively creates a file with name
-// path + ".lock", returns a writer that lets you write into this
-// lockfile, and then when you call Commit() replaces path with what
-// you have just written.  You must call Abort() or Commit() on the
-// returned interface.  Since it is safe to call both, best practice
-// is to defer a call to Abort() immediately.
-func LockFile(path string, perm os.FileMode) (LockedFile, error) {
+func doLockFile(path string, perm os.FileMode,
+	readfi os.FileInfo) (LockedFile, error) {
 	lf := lockedFile{
 		path:     path,
 		lockpath: path + ".lock",
@@ -201,6 +196,10 @@ func LockFile(path string, perm os.FileMode) (LockedFile, error) {
 		lf.fi = fi
 	}
 
+	if readfi != nil && (lf.fi == nil || FileChanged(readfi, lf.fi)) {
+		return nil, ErrFileHasChanged(path)
+	}
+
 	f, err := os.OpenFile(lf.lockpath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, perm)
 	if err != nil {
 		return nil, err
@@ -208,6 +207,23 @@ func LockFile(path string, perm os.FileMode) (LockedFile, error) {
 	lf.f = f
 	lf.Writer = bufio.NewWriter(lf.f)
 	return &lf, nil
+}
+
+
+// Locks a file for updating.  Exclusively creates a file with name
+// path + ".lock", returns a writer that lets you write into this
+// lockfile, and then when you call Commit() replaces path with what
+// you have just written.  You must call Abort() or Commit() on the
+// returned interface.  Since it is safe to call both, best practice
+// is to defer a call to Abort() immediately.
+func LockFile(path string, perm os.FileMode) (LockedFile, error) {
+	return doLockFile(path, perm, nil)
+}
+
+// Like LockFile, but fails if file's stat information (other than
+// atime) does not exactly match fi.
+func LockFileIfUnchanged(path string, fi os.FileInfo) (LockedFile, error) {
+	return doLockFile(path, fi.Mode() & os.ModePerm, fi)
 }
 
 // Writes data tile filename in a safe way.  If path is "foo", then
