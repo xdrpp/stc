@@ -99,6 +99,10 @@ func (ea *errAccum) accum(err error) error {
 	return ea.error
 }
 
+func (lf *lockedFile) Status() os.FileInfo {
+	return lf.fi
+}
+
 func (lf *lockedFile) Commit() error {
 	var ea errAccum
 	ea.accum(lf.Flush())
@@ -167,6 +171,10 @@ type LockedFile interface {
 	// locked it and before you've called Commit().
 	ReadFile() ([]byte, error)
 
+	// Return the file info at the time the lock was taken (or nil if
+	// the file did not exist).
+	Status() os.FileInfo
+
 	// You must call Abort() to clean up the lockfile, unless you have
 	// called Commit().  However, it is safe to call Abort() multiple
 	// times, or to call Abort() after Commit(), so the best use is to
@@ -219,7 +227,11 @@ func LockFile(path string, perm os.FileMode) (LockedFile, error) {
 // Like LockFile, but fails if file's stat information (other than
 // atime) does not exactly match fi.
 func LockFileIfUnchanged(path string, fi os.FileInfo) (LockedFile, error) {
-	return doLockFile(path, fi.Mode() & os.ModePerm, fi)
+	if fi != nil {
+		return doLockFile(path, fi.Mode() & os.ModePerm, fi)
+	} else {
+		return doLockFile(path, 0666, nil)
+	}
 }
 
 // Writes data tile filename in a safe way.  If path is "foo", then

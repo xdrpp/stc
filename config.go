@@ -142,25 +142,27 @@ func (snp *StellarNetParser) Section(iss stcdetail.IniSecStart) error {
 	case "net":
 		if iss.Subsection != nil {
 			if *iss.Subsection == snp.Name {
+				snp.ItemCB = snp.doNet
 			}
 			return nil
 		}
 	case "accounts":
 		if iss.Subsection != nil {
 			if *iss.Subsection == snp.Name {
+				snp.ItemCB = snp.doAccounts
 			}
 			return nil
 		}
 	case "signers":
 		if iss.Subsection == nil {
+			snp.ItemCB = snp.doSigners
 			return nil
 		}
 	}
-	// return fmt.Errorf("unrecognized section %s", iss.IniSection.String())
 	return nil
 }
 
-func LoatStellarNet(name, configPath string) *StellarNet {
+func LoadStellarNet(name, configPath string) *StellarNet {
 	if configPath == "" {
 		configPath = DefaultConfigFile()
 	}
@@ -175,8 +177,58 @@ func LoatStellarNet(name, configPath string) *StellarNet {
 		path.Join(GetConfigDir(), defaultConf)); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}
-	if err := stcdetail.IniParse(&snp, configPath); err != nil {
+
+	if contents, fi, err := stcdetail.ReadFile(configPath); err != nil {
 		fmt.Fprintln(os.Stderr, err)
+	} else {
+		ret.Status = fi
+		err = stcdetail.IniParseContents(&snp, configPath, contents)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+
 	}
 	return &ret
+}
+
+func (net *StellarNet) Save() error {
+	lf, err := stcdetail.LockFileIfUnchanged(net.SavePath, net.Status)
+	if err != nil {
+		return err
+	}
+	defer lf.Abort()
+
+	contents, err := lf.ReadFile()
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	ie, _ := stcdetail.NewIniEdit(net.SavePath, contents)
+
+	// XXX below isn't great because it blows away comments on keys
+	// that haven't changed.
+
+	sec := stcdetail.IniSection{
+		Section: "net",
+		Subsection: &net.Name,
+	}
+	ie.Set(&sec, "horizon", net.Horizon)
+	ie.Set(&sec, "native-asset", net.NativeAsset)
+	ie.Set(&sec, "network-id", net.GetNetworkId())
+
+	sec.Section = "accounts"
+	for k, v := range net.Accounts {
+		ie.Set(&sec, k, v)
+	}
+
+	sec.Section = "signers"
+	sec.Subsection = nil
+	for _, ski := range net.Signers {
+		for i := range ski {
+			ie.Set(&sec, ski[i].Key.String(), ski[i].Comment)
+		}
+	}
+
+	ie.WriteTo(lf)
+	return lf.Commit()
 }

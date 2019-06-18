@@ -32,6 +32,10 @@ type StellarNet struct {
 
 	// Changes will be saved to this file.
 	SavePath string
+
+	// File status at the time the configuration file was parsed (so
+	// you can tell if it's been changed since it was parsed).
+	Status os.FileInfo
 }
 
 // Default parameters for the Stellar main net (including the address
