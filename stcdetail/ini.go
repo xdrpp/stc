@@ -92,6 +92,14 @@ type IniItem struct {
 	IniRange
 }
 
+// Returns Value or an empty string if Value is nil.
+func (ii *IniItem) Val() string {
+	if ii.Value == nil {
+		return ""
+	}
+	return *ii.Value
+}
+
 // Type that receives and processes the parsed INI file.
 type IniSink interface {
 	Item(IniItem) error

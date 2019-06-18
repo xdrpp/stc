@@ -29,6 +29,9 @@ type StellarNet struct {
 	// Annotations to show on particular accounts when rendering them
 	// in human-readable txrep format.
 	Accounts AccountHints
+
+	// Changes will be saved to this file.
+	SavePath string
 }
 
 // Default parameters for the Stellar main net (including the address
@@ -199,6 +202,38 @@ func (c SignerCache) Add(strkey, comment string) error {
 		c[hint] = append(c[hint], SignerKeyInfo{Key: signer, Comment: comment})
 	} else {
 		c[hint] = []SignerKeyInfo{{Key: signer, Comment: comment}}
+	}
+	return nil
+}
+
+// Adds a signer to a SignerCache if the signer is not already in the
+// cache.  If the signer is already in the cache, the comment is left
+// unchanged.
+func (c SignerCache) Del(strkey string) error {
+	var signer stx.SignerKey
+	_, err := fmt.Sscan(strkey, &signer)
+	if err != nil {
+		return err
+	}
+	hint := signer.Hint()
+	skis, ok := c[hint]
+	if !ok {
+		return nil
+	}
+	for i := 0; i < len(skis); i++ {
+		if strkey == skis[i].Key.String() {
+			if i == len(skis) - 1 {
+				skis = skis[:i]
+			} else {
+				skis = append(skis[:i], skis[i+1:]...)
+				i--
+			}
+		}
+	}
+	if len(skis) == 0 {
+		delete(c, hint)
+	} else {
+		c[hint] = skis
 	}
 	return nil
 }
