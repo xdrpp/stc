@@ -636,6 +636,7 @@ type iniEditParser struct {
 	input   []byte
 	lastIdx int
 	cursec *IniSection
+	filter func(IniItem)bool
 }
 
 func (iep *iniEditParser) fill(ir IniRange) int {
@@ -664,11 +665,16 @@ func (iep *iniEditParser) Section(ss IniSecStart) error {
 
 func (iep *iniEditParser) Item(ii IniItem) error {
 	k, n := ii.IniSection.String() + ii.Key, iep.fill(ii.IniRange)
-	iep.Values[k] = append(iep.Values[k], n)
+	if iep.filter == nil || iep.filter(ii) {
+		iep.Values[k] = append(iep.Values[k], n)
+	} else {
+		iep.Fragments = iep.Fragments[:n]
+	}
 	return nil
 }
 
-func NewIniEdit(filename string, contents []byte) (*IniEdit, error) {
+func NewIniEditFilter(filename string, contents []byte,
+	filter func(IniItem)bool) (*IniEdit, error) {
 	ret := IniEdit{
 		SecEnd: make(map[string]int),
 		Values: make(map[string][]int),
@@ -676,8 +682,13 @@ func NewIniEdit(filename string, contents []byte) (*IniEdit, error) {
 	iep := iniEditParser{
 		IniEdit: &ret,
 		input: contents,
+		filter: filter,
 	}
 	err := IniParseContents(&iep, filename, contents)
 	iep.closeSection()
 	return &ret, err
+}
+
+func NewIniEdit(filename string, contents []byte) (*IniEdit, error) {
+	return NewIniEditFilter(filename, contents, nil)
 }
