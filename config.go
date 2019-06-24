@@ -10,12 +10,11 @@ import (
 )
 
 var defaultDefaultConfigContents = []byte(
-`# This file specifies the default configuration for the stc library
-# and command-line tool.  You can delete this file and it will be
-# re-created and reset to defaults.  The contents of the file comes
-# from /etc/stc.conf if that file exists, otherwise from
-# ../share/stc.conf relative to the executable if that exists,
-# otherwise from a simple default hard-coded into the library.
+`# This file specifies the default network configurations for the stc
+# library and command-line tool.
+
+[global]
+default-net = main
 
 [net "main"]
 network-id = "Public Global Stellar Network ; September 2015"

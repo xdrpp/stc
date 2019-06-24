@@ -1,6 +1,7 @@
 package stcdetail
 
 import "bytes"
+import "container/list"
 import "fmt"
 import "io"
 import "io/ioutil"
@@ -81,8 +82,30 @@ func (s *IniSection) Eq(s2 *IniSection) bool {
 	return *s.Subsection == *s2.Subsection
 }
 
+// Separate section, subsection, and key with dots, in the same format
+// understood by the git-config command.
+func IniMapKey(s *IniSection, key string) string {
+	if !s.Valid() {
+		panic(fmt.Sprintf("illegal INI section %s", s.String()))
+	} else if !ValidIniKey(key) {
+		panic(fmt.Sprintf("illegal INI key %q", key))
+	} else if s == nil {
+		return key
+	} else if s.Subsection == nil {
+		return s.Section + "." + key
+	}
+	return s.Section + "." + *s.Subsection + "." + key
+}
+
 type IniRange struct {
-	StartIndex, EndIndex int
+	// The text of a key, value pair or section header lies between
+	// StartIndex and EndIndex.  If PrevEndIndex != StartIndex, then
+	// the bytes between PrevEndIndex and StartIndex constitute a
+	// comment or blank lines.
+	StartIndex, EndIndex, PrevEndIndex int
+
+	// The entire input file
+	Input []byte
 }
 
 type IniItem struct {
@@ -100,7 +123,14 @@ func (ii *IniItem) Val() string {
 	return *ii.Value
 }
 
-// Type that receives and processes the parsed INI file.
+func (ii *IniItem) MapKey() string {
+	return IniMapKey(ii.IniSection, ii.Key)
+}
+
+// Type that receives and processes the parsed INI file.  Note that if
+// there is also Section(IniSecStart)error method, this is called at
+// the start of sections, and if there is a Done(IniRange) method it
+// is called at the end of the file.
 type IniSink interface {
 	Item(IniItem) error
 }
@@ -177,6 +207,8 @@ type iniParse struct {
 	input   []byte
 	file    string
 	sec     *IniSection
+	prevEnd int
+	done    func(IniRange)
 	Value   func(IniItem) error
 	Section func(sec IniSecStart) error
 }
@@ -447,6 +479,17 @@ func (l *iniParse) getValue() string {
 	}
 }
 
+func (l *iniParse) getRange(startIdx int) IniRange {
+	prev := l.prevEnd
+	l.prevEnd = l.index
+	return IniRange{
+		StartIndex: startIdx,
+		EndIndex: l.index,
+		PrevEndIndex: prev,
+		Input: l.input,
+	}
+}
+
 func (l *iniParse) do1() (err *ParseError) {
 	defer func() {
 		if i := recover(); i != nil {
@@ -467,10 +510,7 @@ func (l *iniParse) do1() (err *ParseError) {
 		l.sec = sec
 		if err := l.Section(IniSecStart{
 			IniSection: *sec,
-			IniRange: IniRange{
-				StartIndex: startindex,
-				EndIndex:   l.index,
-			},
+			IniRange: l.getRange(startindex),
 		}); err != nil {
 			l.throwAt(keypos, err.Error())
 		}
@@ -498,10 +538,8 @@ func (l *iniParse) do1() (err *ParseError) {
 			IniSection: l.sec,
 			Key:        k,
 			Value:      v,
-			IniRange: IniRange{
-				StartIndex: startindex,
-				EndIndex:   l.index,
-			}}); err != nil {
+			IniRange:   l.getRange(startindex),
+			}); err != nil {
 			if ke, ok := err.(BadKey); ok {
 				l.throwAt(keypos, string(ke))
 			} else {
@@ -524,6 +562,7 @@ func (l *iniParse) do() error {
 			err = append(err, *e)
 		}
 	}
+	l.done(l.getRange(l.index))
 	if err == nil {
 		return nil
 	}
@@ -539,6 +578,11 @@ func newParser(sink IniSink, path string, input []byte) *iniParse {
 		ret.Section = iss.Section
 	} else {
 		ret.Section = func(IniSecStart) error { return nil }
+	}
+	if done, ok := sink.(interface{ Done(IniRange) }); ok {
+		ret.done = done.Done
+	} else {
+		ret.done = func(IniRange){}
 	}
 	return &ret
 }
@@ -564,17 +608,17 @@ func IniParse(sink IniSink, filename string) error {
 	}
 }
 
-
-type IniEdit struct {
-	Fragments [][]byte
-	SecEnd    map[string]int
-	Values    map[string][]int
+type IniEditor struct {
+	fragments list.List
+	SecEnd    map[string]*list.Element
+	Values    map[string][]*list.Element
+	lastSec   *IniSection
 }
 
-func (ie *IniEdit) WriteTo(w io.Writer) (int64, error) {
+func (ie *IniEditor) WriteTo(w io.Writer) (int64, error) {
 	var ret int64
-	for i := range ie.Fragments {
-		n, err := w.Write(ie.Fragments[i])
+	for e := ie.fragments.Front(); e != nil; e = e.Next() {
+		n, err := w.Write(e.Value.([]byte))
 		ret += int64(n)
 		if err != nil {
 			return ret, err
@@ -583,112 +627,115 @@ func (ie *IniEdit) WriteTo(w io.Writer) (int64, error) {
 	return ret, nil
 }
 
-func (ie IniEdit) String() string {
+func (ie IniEditor) String() string {
 	ret := strings.Builder{}
 	ie.WriteTo(&ret)
 	return ret.String()
 }
 
-func (ie *IniEdit) newItem(is *IniSection, key, value string) {
-	k := is.String()
-	i, ok := ie.SecEnd[k]
+// Delete all instances of a key from the file.
+func (ie *IniEditor) Del(is *IniSection, key string) {
+	k := IniMapKey(is, key)
+	for _, e := range ie.Values[k] {
+		ie.fragments.Remove(e)
+	}
+	delete(ie.Values, k)
+}
+
+func iniLine(key, value string) []byte {
+	return []byte(fmt.Sprintf("\t%s = %s\n", key, EscapeIniValue(value)))
+}
+
+func (ie *IniEditor) newItem(is *IniSection, key, value string) *list.Element {
+	ss := is.String()
+	e, ok := ie.SecEnd[ss]
 	if !ok {
-		if is == nil {
-			panic("IniEdit bug: forgot to close empty section")
+		e = ie.fragments.Back()
+		if ssb := []byte(ss+"\n"); e != nil && len(e.Value.([]byte)) == 0 {
+			e.Value = ssb
+		} else {
+			e = ie.fragments.PushBack(ssb)
 		}
-		i = len(ie.Fragments)
-		ie.SecEnd[k] = i
-		ie.Fragments = append(ie.Fragments, []byte(k + "\n"))
+		e = ie.fragments.InsertAfter([]byte{}, e)
+		ie.SecEnd[ss] = e
 	}
-	ie.Fragments[i] = append(ie.Fragments[i],
-		fmt.Sprintf("\t%s = %s\n", key, EscapeIniValue(value))...)
+	e = ie.fragments.InsertBefore(iniLine(key, value), e)
+	k := IniMapKey(is, key)
+	ie.Values[k] = append(ie.Values[k], e)
+	return e
 }
 
-// Delete an entry that was already in the Ini file.  (Does not delete
-// new keys that were just added with Add.)
-func (ie *IniEdit) Del(is *IniSection, key string) {
-	k := is.String() + key
-	for _, i := range ie.Values[k] {
-		ie.Fragments[i] = nil
-	}
-}
-
-func (ie *IniEdit) Set(is *IniSection, key, value string) {
-	ie.Del(is, key)
-	ie.Add(is, key, value)
-}
-
-func (ie *IniEdit) Add(is *IniSection, key, value string) {
-	k := is.String()
-	vs, _ := ie.Values[k+key]
+// Replace all instances of key with a single one equal to value.
+func (ie *IniEditor) Set(is *IniSection, key, value string) {
+	k := IniMapKey(is, key)
+	vs := ie.Values[k]
 	if len(vs) > 0 {
-		n := vs[len(vs)-1]
-		ie.Fragments[n] = append(ie.Fragments[n],
-			fmt.Sprintf("\t%s = %s\n", key, EscapeIniValue(value))...)
+		ie.Values[k] = []*list.Element{
+			ie.fragments.InsertAfter(iniLine(key, value), vs[len(vs)-1]),
+		}
+		for _, e := range vs {
+			ie.fragments.Remove(e)
+		}
 	} else {
 		ie.newItem(is, key, value)
 	}
 }
 
-
-type iniEditParser struct {
-	*IniEdit
-	input   []byte
-	lastIdx int
-	cursec *IniSection
-	filter func(IniItem)bool
-}
-
-func (iep *iniEditParser) fill(ir IniRange) int {
-	if ir.StartIndex > iep.lastIdx {
-		iep.Fragments = append(iep.Fragments,
-			iep.input[iep.lastIdx:ir.StartIndex])
-	}
-	iep.Fragments = append(iep.Fragments, iep.input[ir.StartIndex:ir.EndIndex])
-	iep.lastIdx = ir.EndIndex
-	return len(iep.Fragments) - 1
-}
-
-func (iep *iniEditParser) closeSection() {
-	iep.SecEnd[iep.cursec.String()] = len(iep.Fragments)
-	iep.Fragments = append(iep.Fragments, nil)
-}
-
-func (iep *iniEditParser) Section(ss IniSecStart) error {
-	if !ss.Eq(iep.cursec) {
-		iep.closeSection()
-		iep.cursec = &ss.IniSection
-	}
-	iep.fill(ss.IniRange)
-	return nil
-}
-
-func (iep *iniEditParser) Item(ii IniItem) error {
-	k, n := ii.IniSection.String() + ii.Key, iep.fill(ii.IniRange)
-	if iep.filter == nil || iep.filter(ii) {
-		iep.Values[k] = append(iep.Values[k], n)
+// Add a new instance of key to the file without deleting any previous
+// instance of the key.
+func (ie *IniEditor) Add(is *IniSection, key, value string) {
+	k := IniMapKey(is, key)
+	vs := ie.Values[k]
+	if len(vs) > 0 {
+		e := ie.fragments.InsertAfter(iniLine(key, value), vs[len(vs)-1])
+		ie.Values[k] = append(vs, e)
 	} else {
-		iep.Fragments = iep.Fragments[:n]
+		ie.newItem(is, key, value)
 	}
+}
+
+func (ie *IniEditor) appendItem(r *IniRange) (e1, e2 *list.Element) {
+	if r.StartIndex > r.PrevEndIndex {
+		e1 = ie.fragments.PushBack(r.Input[r.PrevEndIndex:r.StartIndex])
+	}
+	if r.EndIndex > r.StartIndex {
+		e2 = ie.fragments.PushBack(r.Input[r.StartIndex:r.EndIndex])
+	}
+	if e1 == nil {
+		e1 = e2
+	}
+	return
+}
+
+func (ie *IniEditor) Section(ss IniSecStart) error {
+	// git-config associates comments with following section
+	e, _ := ie.appendItem(&ss.IniRange)
+	ie.SecEnd[ie.lastSec.String()] = e
+	ie.lastSec = &ss.IniSection
 	return nil
 }
 
-func NewIniEditFilter(filename string, contents []byte,
-	filter func(IniItem)bool) (*IniEdit, error) {
-	ret := IniEdit{
-		SecEnd: make(map[string]int),
-		Values: make(map[string][]int),
-	}
-	iep := iniEditParser{
-		IniEdit: &ret,
-		input: contents,
-		filter: filter,
-	}
-	err := IniParseContents(&iep, filename, contents)
-	iep.closeSection()
-	return &ret, err
+func (ie *IniEditor) Item(ii IniItem) error {
+	k := IniMapKey(ii.IniSection, ii.Key)
+	_, e := ie.appendItem(&ii.IniRange)
+	ie.Values[k] = append(ie.Values[k], e)
+	return nil
 }
 
-func NewIniEdit(filename string, contents []byte) (*IniEdit, error) {
-	return NewIniEditFilter(filename, contents, nil)
+func (ie *IniEditor) Done(r IniRange) {
+	e, _ := ie.appendItem(&r)
+	if e == nil {
+		e = ie.fragments.PushBack([]byte{})
+	}
+	ie.SecEnd[ie.lastSec.String()] = e
+	ie.lastSec = nil
+}
+
+func NewIniEdit(filename string, contents []byte) (*IniEditor, error) {
+	ret := IniEditor{
+		SecEnd: make(map[string]*list.Element),
+		Values: make(map[string][]*list.Element),
+	}
+	err := IniParseContents(&ret, filename, contents)
+	return &ret, err
 }

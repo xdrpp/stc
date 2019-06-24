@@ -42,7 +42,7 @@ func getSecKey(arg string) (sec *stcdetail.IniSection, key string) {
 	return nil, ""
 }
 
-func doupdates(target string, actions []func(*stcdetail.IniEdit)) int {
+func doupdates(target string, actions []func(*stcdetail.IniEditor)) int {
 	lf, err := stcdetail.LockFile(target, 0666)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -80,7 +80,7 @@ func main() {
 		progname = path.Base(av[0])
 		av = av[1:]
 	}
-	var actions []func(*stcdetail.IniEdit)
+	var actions []func(*stcdetail.IniEditor)
 	if len(av) == 0 {
 		usage(1)
 	}
@@ -106,7 +106,7 @@ func main() {
 			if len(av) < 2 {
 				usage(1)
 			}
-			actions = append(actions, func(ie *stcdetail.IniEdit) {
+			actions = append(actions, func(ie *stcdetail.IniEditor) {
 				ie.Del(sec, key)
 			})
 			av = av[2:]
@@ -115,7 +115,7 @@ func main() {
 				usage(1)
 			}
 			val := av[2]
-			actions = append(actions, func(ie *stcdetail.IniEdit) {
+			actions = append(actions, func(ie *stcdetail.IniEditor) {
 				ie.Set(sec, key, val)
 			})
 			av = av[3:]
@@ -124,7 +124,7 @@ func main() {
 				usage(1)
 			}
 			val := av[2]
-			actions = append(actions, func(ie *stcdetail.IniEdit) {
+			actions = append(actions, func(ie *stcdetail.IniEditor) {
 				ie.Add(sec, key, val)
 			})
 			av = av[3:]
