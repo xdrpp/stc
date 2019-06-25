@@ -11,6 +11,12 @@ import "strings"
 const tabwidth = 8
 const eofRune rune = -1
 
+var ErrInvalidNumArgs = fmt.Errorf("invalid number of arguments")
+var ErrInvalidSection = fmt.Errorf("syntactically invalid section")
+
+// Test if a string is a valid INI file section name.  Section names
+// cannot be the empty string and must consist only of alphanumeric
+// characters and '-'.
 func ValidIniSection(s string) bool {
 	return len(s) > 0 && -1 == strings.IndexFunc(s, func(r rune)bool {
 		return !isKeyChar(r)
@@ -29,12 +35,17 @@ func ValidIniSubsection(s string) bool {
 	return true
 }
 
-// Section of an INI file.
+// Section of an INI file.  A nil *IniSection corresponds to the
+// "section-free" part of the file before the first section, which the
+// git-config man page says is not valid, but the git-config tool
+// halfway supports.
 type IniSection struct {
 	Section    string
 	Subsection *string
 }
 
+// Returns false if either the section or subsection is illegal.
+// Returns true for a nil *IniSection.
 func (s *IniSection) Valid() bool {
 	if s == nil {
 		return true
@@ -44,6 +55,9 @@ func (s *IniSection) Valid() bool {
 	return s.Subsection == nil || ValidIniSubsection(*s.Subsection)
 }
 
+// Renders as [section] or [section "subsection"].  The nil
+// *IniSection renders as an empty string.  Panics if the subsection
+// includes the illegal characters '\n' or '\000'.
 func (s *IniSection) String() string {
 	if s == nil {
 		return ""
@@ -67,6 +81,7 @@ func (s *IniSection) String() string {
 	return fmt.Sprintf("[%s]", s.Section)
 }
 
+// True if two *IniSection have the same contents.
 func (s *IniSection) Eq(s2 *IniSection) bool {
 	if s == nil && s2 == nil {
 		return true
@@ -82,9 +97,10 @@ func (s *IniSection) Eq(s2 *IniSection) bool {
 	return *s.Subsection == *s2.Subsection
 }
 
-// Separate section, subsection, and key with dots, in the same format
-// understood by the git-config command.
-func IniMapKey(s *IniSection, key string) string {
+// Produce a fully "qualified" key consisting of the section, optional
+// subsection, and key separated by dots, as understood by the
+// git-config command.
+func IniQKey(s *IniSection, key string) string {
 	if !s.Valid() {
 		panic(fmt.Sprintf("illegal INI section %s", s.String()))
 	} else if !ValidIniKey(key) {
@@ -123,8 +139,9 @@ func (ii *IniItem) Val() string {
 	return *ii.Value
 }
 
-func (ii *IniItem) MapKey() string {
-	return IniMapKey(ii.IniSection, ii.Key)
+// Returns the Key qualified by the section (see IniQKey).
+func (ii *IniItem) QKey() string {
+	return IniQKey(ii.IniSection, ii.Key)
 }
 
 // Type that receives and processes the parsed INI file.  Note that if
@@ -132,22 +149,18 @@ func (ii *IniItem) MapKey() string {
 // the start of sections, and if there is a Done(IniRange) method it
 // is called at the end of the file.
 type IniSink interface {
+	// optional:
+	// Section(IniSecStart) error
+	//
+	// optional:
+	// Done()
+	//
 	Item(IniItem) error
 }
 
 type IniSecStart struct {
 	IniSection
 	IniRange
-}
-
-// If an IniSink also implements IniSecSink, then it will receive a
-// callback for each new section of the file.  This allows the cost of
-// looking up a section to be amortized over multiple key=value pairs.
-// (The Item method of an IniSecSink can reasonably ignore its sec
-// argument.)
-type IniSecSink interface {
-	IniSink
-	Section(sec IniSecStart) error
 }
 
 // Error that an IniSink's Value method should return when there is a
@@ -574,7 +587,7 @@ func newParser(sink IniSink, path string, input []byte) *iniParse {
 	ret.file = path
 	ret.input = input
 	ret.Value = sink.Item
-	if iss, ok := sink.(IniSecSink); ok {
+	if iss, ok := sink.(interface{Section(IniSecStart)error}); ok {
 		ret.Section = iss.Section
 	} else {
 		ret.Section = func(IniSecStart) error { return nil }
@@ -608,6 +621,9 @@ func IniParse(sink IniSink, filename string) error {
 	}
 }
 
+// You can parse an INI file into an IniEditor, Set, Del, or Add
+// key-value pairs, then write out the result using WriteTo.
+// Preserves most comments and file ordering.
 type IniEditor struct {
 	fragments list.List
 	secEnd    map[string]*list.Element
@@ -635,7 +651,7 @@ func (ie IniEditor) String() string {
 
 // Delete all instances of a key from the file.
 func (ie *IniEditor) Del(is *IniSection, key string) {
-	k := IniMapKey(is, key)
+	k := IniQKey(is, key)
 	for _, e := range ie.values[k] {
 		ie.fragments.Remove(e)
 	}
@@ -660,14 +676,14 @@ func (ie *IniEditor) newItem(is *IniSection, key, value string) *list.Element {
 		ie.secEnd[ss] = e
 	}
 	e = ie.fragments.InsertBefore(iniLine(key, value), e)
-	k := IniMapKey(is, key)
+	k := IniQKey(is, key)
 	ie.values[k] = append(ie.values[k], e)
 	return e
 }
 
 // Replace all instances of key with a single one equal to value.
 func (ie *IniEditor) Set(is *IniSection, key, value string) {
-	k := IniMapKey(is, key)
+	k := IniQKey(is, key)
 	vs := ie.values[k]
 	if len(vs) > 0 {
 		ie.values[k] = []*list.Element{
@@ -684,7 +700,7 @@ func (ie *IniEditor) Set(is *IniSection, key, value string) {
 // Add a new instance of key to the file without deleting any previous
 // instance of the key.
 func (ie *IniEditor) Add(is *IniSection, key, value string) {
-	k := IniMapKey(is, key)
+	k := IniQKey(is, key)
 	vs := ie.values[k]
 	if len(vs) > 0 {
 		e := ie.fragments.InsertAfter(iniLine(key, value), vs[len(vs)-1])
@@ -716,7 +732,7 @@ func (ie *IniEditor) Section(ss IniSecStart) error {
 }
 
 func (ie *IniEditor) Item(ii IniItem) error {
-	k := IniMapKey(ii.IniSection, ii.Key)
+	k := ii.QKey()
 	_, e := ie.appendItem(&ii.IniRange)
 	ie.values[k] = append(ie.values[k], e)
 	return nil
@@ -738,4 +754,78 @@ func NewIniEdit(filename string, contents []byte) (*IniEditor, error) {
 	}
 	err := IniParseContents(&ret, filename, contents)
 	return &ret, err
+}
+
+// A bunch of edits to be applied to an INI file.
+type IniEdits []func(*IniEditor)
+
+// Delete a key.  Invoke as Del(sec, subsec, key) or Del(sec, key).
+func (ie *IniEdits) Del(sec string, args...string) error {
+	s, k := &IniSection{Section:sec}, ""
+	switch len(args) {
+	case 1:
+		k = args[0]
+	case 2:
+		s.Subsection = &args[0]
+		k = args[1]
+	default:
+		return ErrInvalidNumArgs
+	}
+	if !s.Valid() {
+		return ErrInvalidSection
+	}
+	*ie = append(*ie, func(ie *IniEditor){ie.Del(s, k)})
+	return nil
+}
+
+// Add a key, value pair.  Invoke as Add(sec, subsec, key, value) or
+// Add(sec, key, value).
+func (ie *IniEdits) Add(sec string, args...string) error {
+	s, k, v := &IniSection{Section:sec}, "", ""
+	switch len(args) {
+	case 2:
+		k = args[0]
+		v = args[1]
+	case 3:
+		s.Subsection = &args[0]
+		k = args[1]
+		v = args[2]
+	default:
+		return ErrInvalidNumArgs
+	}
+	if !s.Valid() {
+		return ErrInvalidSection
+	}
+	*ie = append(*ie, func(ie *IniEditor){ie.Add(s, k, v)})
+	return nil
+}
+
+// Add a key, value pair.  Invoke as Set(sec, subsec, key, value) or
+// Set(sec, key, value).
+func (ie *IniEdits) Set(sec string, args...string) error {
+	s, k, v := &IniSection{Section:sec}, "", ""
+	switch len(args) {
+	case 2:
+		k = args[0]
+		v = args[1]
+	case 3:
+		s.Subsection = &args[0]
+		k = args[1]
+		v = args[2]
+	default:
+		return ErrInvalidNumArgs
+	}
+	if !s.Valid() {
+		return ErrInvalidSection
+	}
+	*ie = append(*ie, func(ie *IniEditor){ie.Set(s, k, v)})
+	return nil
+}
+
+// Apply edits.
+func (ie *IniEdits) Apply(target *IniEditor) {
+	for _, f := range *ie {
+		f(target)
+	}
+	*ie = nil
 }
