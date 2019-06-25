@@ -610,8 +610,8 @@ func IniParse(sink IniSink, filename string) error {
 
 type IniEditor struct {
 	fragments list.List
-	SecEnd    map[string]*list.Element
-	Values    map[string][]*list.Element
+	secEnd    map[string]*list.Element
+	values    map[string][]*list.Element
 	lastSec   *IniSection
 }
 
@@ -636,10 +636,10 @@ func (ie IniEditor) String() string {
 // Delete all instances of a key from the file.
 func (ie *IniEditor) Del(is *IniSection, key string) {
 	k := IniMapKey(is, key)
-	for _, e := range ie.Values[k] {
+	for _, e := range ie.values[k] {
 		ie.fragments.Remove(e)
 	}
-	delete(ie.Values, k)
+	delete(ie.values, k)
 }
 
 func iniLine(key, value string) []byte {
@@ -648,7 +648,7 @@ func iniLine(key, value string) []byte {
 
 func (ie *IniEditor) newItem(is *IniSection, key, value string) *list.Element {
 	ss := is.String()
-	e, ok := ie.SecEnd[ss]
+	e, ok := ie.secEnd[ss]
 	if !ok {
 		e = ie.fragments.Back()
 		if ssb := []byte(ss+"\n"); e != nil && len(e.Value.([]byte)) == 0 {
@@ -657,20 +657,20 @@ func (ie *IniEditor) newItem(is *IniSection, key, value string) *list.Element {
 			e = ie.fragments.PushBack(ssb)
 		}
 		e = ie.fragments.InsertAfter([]byte{}, e)
-		ie.SecEnd[ss] = e
+		ie.secEnd[ss] = e
 	}
 	e = ie.fragments.InsertBefore(iniLine(key, value), e)
 	k := IniMapKey(is, key)
-	ie.Values[k] = append(ie.Values[k], e)
+	ie.values[k] = append(ie.values[k], e)
 	return e
 }
 
 // Replace all instances of key with a single one equal to value.
 func (ie *IniEditor) Set(is *IniSection, key, value string) {
 	k := IniMapKey(is, key)
-	vs := ie.Values[k]
+	vs := ie.values[k]
 	if len(vs) > 0 {
-		ie.Values[k] = []*list.Element{
+		ie.values[k] = []*list.Element{
 			ie.fragments.InsertAfter(iniLine(key, value), vs[len(vs)-1]),
 		}
 		for _, e := range vs {
@@ -685,10 +685,10 @@ func (ie *IniEditor) Set(is *IniSection, key, value string) {
 // instance of the key.
 func (ie *IniEditor) Add(is *IniSection, key, value string) {
 	k := IniMapKey(is, key)
-	vs := ie.Values[k]
+	vs := ie.values[k]
 	if len(vs) > 0 {
 		e := ie.fragments.InsertAfter(iniLine(key, value), vs[len(vs)-1])
-		ie.Values[k] = append(vs, e)
+		ie.values[k] = append(vs, e)
 	} else {
 		ie.newItem(is, key, value)
 	}
@@ -710,7 +710,7 @@ func (ie *IniEditor) appendItem(r *IniRange) (e1, e2 *list.Element) {
 func (ie *IniEditor) Section(ss IniSecStart) error {
 	// git-config associates comments with following section
 	e, _ := ie.appendItem(&ss.IniRange)
-	ie.SecEnd[ie.lastSec.String()] = e
+	ie.secEnd[ie.lastSec.String()] = e
 	ie.lastSec = &ss.IniSection
 	return nil
 }
@@ -718,7 +718,7 @@ func (ie *IniEditor) Section(ss IniSecStart) error {
 func (ie *IniEditor) Item(ii IniItem) error {
 	k := IniMapKey(ii.IniSection, ii.Key)
 	_, e := ie.appendItem(&ii.IniRange)
-	ie.Values[k] = append(ie.Values[k], e)
+	ie.values[k] = append(ie.values[k], e)
 	return nil
 }
 
@@ -727,14 +727,14 @@ func (ie *IniEditor) Done(r IniRange) {
 	if e == nil {
 		e = ie.fragments.PushBack([]byte{})
 	}
-	ie.SecEnd[ie.lastSec.String()] = e
+	ie.secEnd[ie.lastSec.String()] = e
 	ie.lastSec = nil
 }
 
 func NewIniEdit(filename string, contents []byte) (*IniEditor, error) {
 	ret := IniEditor{
-		SecEnd: make(map[string]*list.Element),
-		Values: make(map[string][]*list.Element),
+		secEnd: make(map[string]*list.Element),
+		values: make(map[string][]*list.Element),
 	}
 	err := IniParseContents(&ret, filename, contents)
 	return &ret, err
