@@ -420,7 +420,7 @@ func main() {
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
 	opt_key := flag.String("key", "", "Use secret signing key in `FILE`")
 	opt_netname := flag.String("net", "",
-		"Use Network `NET` (e.g., test); default: $STCNET, otherwise main")
+		"Use Network `NET` (e.g., test); default: $STCNET or \"default\"")
 	opt_update := flag.Bool("u", false,
 		"Query network to update fee and sequence number")
 	opt_learn := flag.Bool("l", false, "Learn new signers")
@@ -450,7 +450,7 @@ func main() {
 		"Convert data to Unix time (for use in TimeBounds)")
 	opt_verbose := flag.Bool("v", false,
 		"Be more verbose for some operations")
-	opt_print_default_config := flag.Bool("print-default-config", false,
+	opt_print_default_config := flag.Bool("-builtin-config", false,
 		"Print the built-in stc.conf file used when none is found")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]

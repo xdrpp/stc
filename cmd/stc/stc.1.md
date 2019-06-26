@@ -24,7 +24,7 @@ stc -import-key _name_ \
 stc -export-key _name_ \
 stc -list-keys \
 stc -date YYYY-MM-DDThh:mm:ss[Z] \
-stc -print-default-config
+stc -builtin-config
 
 # DESCRIPTION
 
@@ -199,7 +199,7 @@ The time can have one of several formats:
 
 If no `stc.conf` configuration file exists, stc will use a built-in
 one.  To see the contents of the built-in file, you can print it with
-`-print-default-config`.
+`-builtin-config`.
 
 # OPTIONS
 
@@ -262,7 +262,8 @@ account.  Only available in default mode.
 :	Specify which network to use for hashing, signing, and posting
 transactions, as well as for querying signers with the `-l` option.
 Two pre-defined names are "main" and "test", but you can configure
-other networks as discussed in the FILES section.
+other networks in `stc.conf` or by creating per-network configuration
+files as discussed in the FILES section below.
 
 `-nopass`
 :	Never prompt for a passphrase, so assume an empty passphrase
@@ -283,8 +284,8 @@ ID as well as the transaction.
 `-pub`
 :	Print the public key corresponding to a particular private key.
 
-`-print-default-config`
-:	Print the built-in global config file that is used if no
+`-builtin-config`
+:	Print the built-in system configuration file that is used if no
 `stc.conf` file is found.
 
 `-qa`
@@ -346,48 +347,71 @@ STCDIR
 
 STCNET
 :	Name of network to use by default if not overridden by `-net`
-argument (default: `main`)
+argument (default: `default`)
 
 # FILES
 
-All configuration files reside in the user's stc configuration
-directory.  The configuration directory is `$STCDIR` if that
-environment variable exists, `$XDG_CONFIG_HOME/stc` if that
-environment variable exists, and otherwise `$HOME/.config/stc`.
+Configuration files use the INI file format specified in the
+git-config(1) manual page.  This also means you can use a command such
+as `git config -f ~/.config/stc/stc.conf net.main.horizon https://...`
+to edit the configuration files.  An example of this syntax is:
 
-There are two configuration files consulted.  `stc.conf` is the global
-configuration file.  It specifies the default Stellar network to use
-if none is specified, as well as the default parameters to use for
-each network.  This file is taken from the first location that exists
-of `stc.conf` in the user's home directory, `/etc/stc.conf`,
-`../share/stc.conf` relative to the `stc` executable, and the built-in
-version reported by `-print-default-config`.  The format of the global
-configuration file is the an INI file in the same format used by
-git-config (allowing `stc.conf` to be edited by `git config -f
-stc.conf`).  The global configuration format supports the following
-sections and keys (using the syntax section.key or
-section.subsection.key to describe an entry in an INI file):
+    [net]
+    name = main
+    network-id = "Public Global Stellar Network ; September 2015"
+    horizon = https://horizon.stellar.org/
+    native-asset = XLM
 
-`global.default-net`
-:	The default network name to use when none is specified
+When using a network _NetName_, as specified by `$STCNET` or the
+`-net` command-line argument, three configuration files are parsed in
+order:
 
-`net.`_netname_`.`_key_
-:	Specifies the default value of `net.`_key_ for network _netname_.
-The values of _key_ are discussed below for per-network configuration
-files.
+1. $STCDIR/_NetName_.net (or the default value of $STCDIR specified in
+   the ENVIRONMENT section if $STCDIR is unset)
 
-Per-network configuration files have the following configuration
-options:
+1. `$STCDIR/global.conf`
+
+1. The system configuration, which comes from the first to exist of
+   the following files:  `$STCDIR/stc.conf`, `/etc/stc.conf`, or
+   `../share/stc.conf` relative to the executable.  If none of these
+   files exist, stc uses the built-in version returned by the
+   `-builtin-config` option.
+
+A key is set to the first value encountered.  This means definitions
+in the $STCDIR/_NetName_.net file take precedence over ones in the
+`global.conf` file, which in turn has precedence over the global
+configuration file.  However, it is possible to undefine a key by
+including it without an equals sign, in which case it can be
+redefined.  For example, the following would override any previously
+set network-id:
+
+    [net "main"]
+    network-id
+    network-id = "Public Global Stellar Network ; September 2015"
+
+Subsections are only considered when the subsection string matches the
+network name.  Hence, the section `[signers]` applies to all networks,
+while `[signers "main"]` only applies to network main.  Generally the
+$STCDIR/_NetName_.net file will include a `[net]` section, since it is
+for only one network, while the global and system defaults will
+include sections `[net "main"]` and `[net "test"]` for per-network
+defaults.
+
+The recognized keys are as follows:
 
 `net.name`
-:	Specifies the name of the network--means keys unspecified in the
-per-network configuration file will be retrieved from `net.`_netname_
-in the global configuration file.
+:	Specifies the name of the network, which affects which subsections
+will be parsed as described above.  This parameter can only be set in
+a `[net]` section in the $STCDIR/_NetName_.net file, as it does not
+make sense to set this globally.  Note that the value only changes
+subsequently parsed sections; if the network name is changed,
+previously parsed sections with the new name have already been ignored
+and will not be reconsidered.
 
 `net.network-id`
 :	The network ID that permutes signatures and pre-signed-transaction
 hashes (which prevents signatures from being valid on more than one
-instantiation of the Stellar network).  If not specified,
+instantiation of the Stellar network).  If this is not specified, stc
 automatically fetches and stores the network ID the first time it is
 used.
 
@@ -398,33 +422,19 @@ running one, or else that of an exchange that you trust.  Note that
 the URL _must_ end with a `/` (slash) character.
 
 `net.native-asset`
-: Shows how to render the native asset--e.g., `XLM` for the stellar
+:	Shows how to render the native asset---e.g., `XLM` for the stellar
 main network, and `TestXLM` for the stellar test network.  If not
 specified, it defaults to the string `NATIVE`.  Note that this only
 controls how the asset is rendered not parsed.  When parsing, any
 string not ending ":IssuerAccountID" is considered the native asset.
 
-Each file in `keys` contains a signing key, which is either a single
-line of text representing a Stellar signing key in strkey format
-(starting with the letter "S"), or such a line of text symmetrically
-encrypted and ASCII armored by gpg.  These are the key names supplied
-to options such as `-key` and `-export-key`.
+accounts._AccountID_
+:	Specifies a human-readable comment for _AccountID_ (which must be in
+strkey format)
 
-XXX
-
-* `accounts` assigns comments to accounts, so that you don't have to
-  remember account names when proofreading transactions.  The file is
-  not created by default.  The format is simply a bunch of lines each
-  of the form `AccountID comment`.
-
-* `signers` remembers public signing keys and optionally assigns
-  comments to them, so that stc can check the signatures in
-  transactions it is processing.  This file can be populated by
-  default by running the `-l` flag on a transaction (which queries
-  horizon for additional signers beyond the master key).  You can also
-  edit this file by hand to add comments to individual signers, which
-  is particularly useful in the case of a multi-sig wallet where you
-  want to see who has signed a transaction already.
+signers._SignerKey_
+:	Specifies a human-readable comment for _SigherKey_ (in strkey
+format)
 
 # SEE ALSO
 

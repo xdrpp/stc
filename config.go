@@ -115,7 +115,7 @@ func (snp *stellarNetParser) doNet(ii stcdetail.IniItem) error {
 	var target *string
 	switch ii.Key {
 	case "name":
-		if snp.setName && ValidNetName(ii.Val()) {
+		if snp.setName && ii.Subsection == nil && ValidNetName(ii.Val()) {
 			snp.Name = ii.Val()
 			snp.setName = false
 		}
