@@ -6,6 +6,7 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"path/filepath"
 	"flag"
 	"fmt"
 	"io"
@@ -55,6 +56,38 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 			net.AddSigner(signer.Key.String(), comment)
 		}
 	}
+}
+
+func FileExists(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	} else if os.IsNotExist(err) {
+		return false
+	} else {
+		panic(err)
+	}
+}
+
+func AdjustKeyName(key string) string {
+	if key == "" {
+		fmt.Fprintln(os.Stderr, "missing private key name")
+		os.Exit(1)
+	}
+	if dir, _ := filepath.Split(key); dir != "" {
+		return key
+	}
+	os.MkdirAll(ConfigPath("keys"), 0700)
+	return ConfigPath("keys", key)
+}
+
+func GetKeyNames() []string {
+	d, err := os.Open(ConfigPath("keys"))
+	if err != nil {
+		return nil
+	}
+	names, _ := d.Readdirnames(-1)
+	return names
 }
 
 func doKeyGen(outfile string) {
@@ -417,6 +450,8 @@ func main() {
 		"Convert data to Unix time (for use in TimeBounds)")
 	opt_verbose := flag.Bool("v", false,
 		"Be more verbose for some operations")
+	opt_print_default_config := flag.Bool("print-default-config", false,
+		"Print the built-in stc.conf file used when none is found")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
 	} else {
@@ -440,6 +475,7 @@ func main() {
        %[1]s -export-key NAME
        %[1]s -list-keys
        %[1]s -date YYYY-MM-DD[Thh:mm:ss[Z]]
+       %[1]s -print-default-config
 `, progname)
 		flag.PrintDefaults()
 	}
@@ -449,14 +485,19 @@ func main() {
 		flag.Usage()
 		return
 	}
+	if *opt_print_default_config {
+		os.Stdout.Write(DefaultGlobalConfigContents)
+		return
+	}
 
 	if n := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit, *opt_keygen,
 		*opt_date, *opt_sec2pub, *opt_import_key, *opt_export_key,
 		*opt_acctinfo, *opt_txinfo, *opt_txacct, *opt_friendbot,
-		*opt_list_keys, *opt_fee_stats); n > 1 || len(flag.Args()) > 1 ||
+		*opt_list_keys, *opt_fee_stats,
+		*opt_print_default_config); n > 1 || len(flag.Args()) > 1 ||
 		(len(flag.Args()) == 0 &&
 			!(*opt_keygen || *opt_sec2pub || *opt_list_keys ||
-			*opt_fee_stats || *opt_friendbot)) {
+			*opt_fee_stats || *opt_friendbot || *opt_print_default_config)) {
 		flag.Usage()
 		os.Exit(2)
 	} else if n == 1 {
@@ -544,13 +585,7 @@ func main() {
 		return
 	}
 
-	if *opt_netname == "" {
-		*opt_netname = os.Getenv("STCNET")
-	}
-	if *opt_netname == "" {
-		*opt_netname = "default"
-	}
-	net := GetStellarNet(*opt_netname)
+	net := DefaultStellarNet(*opt_netname)
 	if net == nil {
 		fmt.Fprintf(os.Stderr, "unknown network %q\n", *opt_netname)
 		os.Exit(1)
@@ -678,7 +713,7 @@ func main() {
 			}
 		}
 		if *opt_learn {
-			SaveSigners(net)
+			net.Save()
 		}
 		if *opt_inplace {
 			*opt_output = arg

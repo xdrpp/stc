@@ -11,7 +11,6 @@ import (
 )
 
 const configFileName = "stc.conf"
-const keyDir = "keys"
 
 // When a user does not have an stc.conf configuration file, the
 // library searches for one in $STCDIR/stc.conf, then /etc/stc.conf,
@@ -60,13 +59,7 @@ func getGlobalConfigContents() []byte {
 
 var stcDir string
 
-// Return the user's configuration directory based on environment
-// variables.  From highest to lowest precedence tries $STCDIR,
-// $XDG_CONFIG_HOME/.stc, $HOME/.config/stc, or ./.stc and uses the
-// first one with for which the environment variable works.  If the
-// directory doesn't exist, it gets created and populated with a
-// default stc.conf file.
-func GetConfigDir() string {
+func getConfigDir() string {
 	if stcDir != "" {
 		return stcDir
 	} else if d, ok := os.LookupEnv("STCDIR"); ok {
@@ -86,9 +79,19 @@ func GetConfigDir() string {
 	defaultIni := path.Join(stcDir, configFileName)
 	if _, err := os.Stat(defaultIni); os.IsNotExist(err) {
 		os.MkdirAll(stcDir, 0777)
-		os.MkdirAll(path.Join(stcDir, keyDir), 0700)
 	}
 	return stcDir
+}
+
+// Return the path to a file under the user's configuration directory.
+// The configuration directory is found based on environment
+// variables.  From highest to lowest precedence tries $STCDIR,
+// $XDG_CONFIG_HOME/.stc, $HOME/.config/stc, or ./.stc, using the
+// first one with for which the environment variable exists.  If the
+// configuration directory doesn't exist, it gets created, but the
+// underlying path requested will not be created.
+func ConfigPath(components...string) string {
+	return path.Join(append([]string{getConfigDir()}, components...)...)
 }
 
 type GlobalConfig struct {
@@ -106,7 +109,9 @@ func GetGlobalConfig() *GlobalConfig {
 }
 
 func ValidNetName(name string) bool {
-	return len(name) > 0 && name[0] != '.' && strings.IndexByte(name, '/') == -1
+	return len(name) > 0 && name[0] != '.' &&
+		stcdetail.ValidIniSubsection(name) &&
+		strings.IndexByte(name, '/') == -1
 }
 
 func (gc *GlobalConfig) Init() {
@@ -226,6 +231,8 @@ func (snp *stellarNetParser) Section(iss stcdetail.IniSecStart) error {
 func LoadStellarNet(path, name string) *StellarNet {
 	ret := StellarNet{
 		SavePath: path,
+		Signers: make(SignerCache),
+		Accounts: make(AccountHints),
 	}
 	snp := stellarNetParser{
 		StellarNet: &ret,
@@ -261,6 +268,24 @@ func LoadStellarNet(path, name string) *StellarNet {
 	}
 	ret.Save()
 	return &ret
+}
+
+// Load a network from under the ConfigPath() directory.  If name is
+// "", then it will look at the $STCNET environment variable and if
+// that is unset load a default network.  Returns nil if the network
+// name does not exist.
+//
+// Two pre-defined names are "main" and "test", with "main" being the
+// default.  Other networks can be created under ConfigPath(), or can
+// be pre-specified (and created on demand) in stc.conf.
+func DefaultStellarNet(name string) *StellarNet {
+	if !ValidNetName(name) {
+		name = os.Getenv("STCNET")
+		if !ValidNetName(name) {
+			name = GetGlobalConfig().DefaultNet
+		}
+	}
+	return LoadStellarNet(ConfigPath(name) + ".net", name)
 }
 
 func (net *StellarNet) Save() error {

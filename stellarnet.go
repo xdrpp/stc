@@ -1,7 +1,6 @@
 package stc
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
@@ -35,28 +34,11 @@ type StellarNet struct {
 
 	// File status at the time the configuration file was parsed (so
 	// you can tell if it's been changed since it was parsed).
+	// XXX - not implemented yet
 	Status os.FileInfo
 
-	// Any changes that might need to be saved
+	// Changes to be applied by Save().
 	Edits stcdetail.IniEdits
-}
-
-// Default parameters for the Stellar main net (including the address
-// of a Horizon instance hosted by SDF).
-var StellarMainNet = StellarNet{
-	Name:        "main",
-	NetworkId:   "Public Global Stellar Network ; September 2015",
-	NativeAsset: "XLM",
-	Horizon:     "https://horizon.stellar.org/",
-}
-
-// Default parameters for the Stellar test network (including the
-// address of a Horizon instance hosted by SDF).
-var StellarTestNet = StellarNet{
-	Name:        "test",
-	NetworkId:   "",
-	NativeAsset: "TestXLM",
-	Horizon:     "https://horizon-testnet.stellar.org/",
 }
 
 func (net *StellarNet) AddHint(acct, hint string) {
@@ -150,42 +132,6 @@ func (c SignerCache) String() string {
 	return out.String()
 }
 
-// Reads a SignerCache from a file, discarding the previous contents
-// of the cache.
-func (c *SignerCache) Load(filename string) error {
-	*c = make(SignerCache)
-	f, err := os.Open(filename)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	defer func() { f.Close() }()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Split(bufio.ScanLines)
-	for lineno := 1; scanner.Scan(); lineno++ {
-		var ski SignerKeyInfo
-		_, e := fmt.Sscanf(scanner.Text(), "%v", &ski)
-		if e == nil {
-			c.Add(ski.Key.String(), ski.Comment)
-		} else if _, ok := e.(stx.StrKeyError); ok {
-			fmt.Fprintf(os.Stderr, "%s:%d: invalid signer key\n",
-				filename, lineno)
-		} else {
-			fmt.Fprintf(os.Stderr, "%s:%d: %s\n", filename, lineno, e.Error())
-			err = e
-		}
-	}
-	return err
-}
-
-// Saves a SignerCache to a file.
-func (c SignerCache) Save(filename string) error {
-	return stcdetail.SafeWriteFile(filename, c.String(), 0666)
-}
-
 // Finds the signer in a SignerCache that corresponds to a particular
 // signature on a transaction.
 func (c SignerCache) Lookup(networkID string, e *stx.TransactionEnvelope,
@@ -267,39 +213,4 @@ func (h AccountHints) String() string {
 		fmt.Fprintf(out, "%s %s\n", k, v)
 	}
 	return out.String()
-}
-
-// Loads a set of account hints from a file, discarding any current
-// hints.
-func (h *AccountHints) Load(filename string) error {
-	*h = make(AccountHints)
-	f, err := os.Open(filename)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Split(bufio.ScanLines)
-	for lineno := 1; scanner.Scan(); lineno++ {
-		v := strings.SplitN(scanner.Text(), " ", 2)
-		if len(v) == 0 || len(v[0]) == 0 {
-			continue
-		}
-		var ac stx.AccountID
-		if _, err := fmt.Sscan(v[0], &ac); err != nil {
-			fmt.Fprintf(os.Stderr, "%s:%d: %s\n", filename, lineno, err.Error())
-			continue
-		}
-		(*h)[ac.String()] = strings.Trim(v[1], " ")
-	}
-	return nil
-}
-
-// Saves the set of account hints from a file.
-func (h *AccountHints) Save(filename string) error {
-	return stcdetail.SafeWriteFile(filename, h.String(), 0666)
 }
