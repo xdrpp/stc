@@ -36,6 +36,9 @@ type StellarNet struct {
 	// File status at the time the configuration file was parsed (so
 	// you can tell if it's been changed since it was parsed).
 	Status os.FileInfo
+
+	// Any changes that might need to be saved
+	Edits stcdetail.IniEdits
 }
 
 // Default parameters for the Stellar main net (including the address
@@ -54,6 +57,16 @@ var StellarTestNet = StellarNet{
 	NetworkId:   "",
 	NativeAsset: "TestXLM",
 	Horizon:     "https://horizon-testnet.stellar.org/",
+}
+
+func (net *StellarNet) AddHint(acct, hint string) {
+	net.Accounts[acct] = hint
+	net.Edits.Set("accounts", acct, hint)
+}
+
+func (net *StellarNet) AddSigner(signer, comment string) {
+	net.Signers.Add(signer, comment)
+	net.Edits.Set("signers", signer, comment)
 }
 
 func (net *StellarNet) GetNativeAsset() string {

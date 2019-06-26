@@ -151,8 +151,7 @@ func (ii *IniItem) QKey() string {
 type IniSink interface {
 	// optional:
 	// Section(IniSecStart) error
-	//
-	// optional:
+	// Init()
 	// Done()
 	//
 	Item(IniItem) error
@@ -596,6 +595,9 @@ func newParser(sink IniSink, path string, input []byte) *iniParse {
 		ret.done = done.Done
 	} else {
 		ret.done = func(IniRange){}
+	}
+	if init, ok := sink.(interface{ Init() }); ok {
+		init.Init()
 	}
 	return &ret
 }

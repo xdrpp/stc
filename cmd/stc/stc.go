@@ -52,7 +52,7 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 			if acs != signer.Key {
 				comment = fmt.Sprintf("signer for account %s", ac)
 			}
-			net.Signers.Add(signer.Key.String(), comment)
+			net.AddSigner(signer.Key.String(), comment)
 		}
 	}
 }
@@ -218,7 +218,7 @@ func signTx(net *StellarNet, key string, e *TransactionEnvelope) error {
 	if err != nil {
 		return err
 	}
-	net.Signers.Add(sk.Public().String(), "")
+	net.AddSigner(sk.Public().String(), "")
 	if err = net.SignTx(sk, e); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return err

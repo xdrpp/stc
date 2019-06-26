@@ -7,9 +7,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
-var defaultDefaultConfigContents = []byte(
+const ConfigFileName = "stc.conf"
+
+var DefaultDefaultConfigContents = []byte(
 `# This file specifies the default network configurations for the stc
 # library and command-line tool.
 
@@ -32,7 +35,7 @@ func getDefaultConfigContents() []byte {
 	if DefaultConfigContents != nil {
 		return DefaultConfigContents
 	}
-	confs := []string{ "/etc/stc.conf" }
+	confs := []string{ filepath.FromSlash("/etc/stc.conf") }
 	if exe, err := os.Executable(); err == nil {
 		confs = append(confs,
 			path.Join(path.Dir(path.Dir(exe)), "share", "stc.conf"))
@@ -44,72 +47,132 @@ func getDefaultConfigContents() []byte {
 		}
 	}
 	if DefaultConfigContents == nil {
-		DefaultConfigContents = defaultDefaultConfigContents
+		DefaultConfigContents = DefaultDefaultConfigContents
 	}
 	return DefaultConfigContents
 }
 
-const defaultConf = "default.conf"
 const keyDir = "keys"
 
-var STCdir string
+var StcDir string
 
 func GetConfigDir() string {
-	if STCdir != "" {
-		return STCdir
+	if StcDir != "" {
+		return StcDir
 	} else if d, ok := os.LookupEnv("STCDIR"); ok {
-		STCdir = d
+		StcDir = d
 	} else if d, ok = os.LookupEnv("XDG_CONFIG_HOME"); ok {
-		STCdir = filepath.Join(d, "stc")
+		StcDir = filepath.Join(d, "stc")
 	} else if d, ok = os.LookupEnv("HOME"); ok {
-		STCdir = filepath.Join(d, ".config", "stc")
+		StcDir = filepath.Join(d, ".config", "stc")
 	} else {
-		STCdir = ".stc"
+		StcDir = ".stc"
 	}
-	if len(STCdir) > 0 && STCdir[0] != '/' {
-		if d, err := filepath.Abs(STCdir); err == nil {
-			STCdir = d
+	if len(StcDir) > 0 && StcDir[0] != '/' {
+		if d, err := filepath.Abs(StcDir); err == nil {
+			StcDir = d
 		}
 	}
-	defaultIni := path.Join(STCdir, defaultConf)
+	defaultIni := path.Join(StcDir, ConfigFileName)
 	if _, err := os.Stat(defaultIni); os.IsNotExist(err) {
-		os.MkdirAll(STCdir, 0777)
-		stcdetail.SafeWriteFile(defaultIni,
+		os.MkdirAll(StcDir, 0777)
+		stcdetail.SafeCreateFile(defaultIni,
 			string(getDefaultConfigContents()),
 			0666)
 	}
-	return STCdir
+	return StcDir
 }
 
-func DefaultConfigFile() string {
-	return path.Join(GetConfigDir(), "stc.conf")
+type GlobalConfig struct {
+	DefaultNet string
+	Nets map[string]*StellarNet
 }
 
-type StellarNetParser struct {
+var globalConfig *GlobalConfig
+
+func GetGlobalConfig() *GlobalConfig {
+	if globalConfig == nil {
+		globalConfig = &GlobalConfig{}
+		stcdetail.IniParseContents(globalConfig, "", getDefaultConfigContents())
+	}
+	return globalConfig
+}
+
+func ValidNetName(name string) bool {
+	return len(name) > 0 && name[0] != '.' && strings.IndexByte(name, '/') == -1
+}
+
+func (gc *GlobalConfig) Init() {
+	if !ValidNetName(gc.DefaultNet) {
+		gc.DefaultNet = "default"
+	}
+	if gc.Nets == nil {
+		gc.Nets = make(map[string]*StellarNet)
+	}
+}
+
+func loadNetItem(net *StellarNet, ii stcdetail.IniItem, nameOK bool) {
+	switch ii.Key {
+	case "name":
+		if nameOK && ValidNetName(ii.Val()) {
+			net.Name = ii.Val()
+		}
+	case "horizon":
+		net.Horizon = ii.Val()
+	case "native-asset":
+		net.NativeAsset = ii.Val()
+	case "network-id":
+		net.NetworkId = ii.Val()
+	}
+}
+
+func (gc *GlobalConfig) Item(ii stcdetail.IniItem) error {
+	if ii.IniSection == nil {
+		return nil
+	} else if ii.IniSection.Section == "global" &&
+		ii.IniSection.Subsection == nil {
+		switch ii.Key {
+		case "default-net":
+			if name := ii.Val(); ValidNetName(name) {
+				gc.DefaultNet = name
+			}
+		}
+	} else if ii.IniSection.Section == "net" &&
+		ii.IniSection.Subsection != nil &&
+		ValidNetName(*ii.IniSection.Subsection) {
+		name := *ii.IniSection.Subsection
+		net, ok := gc.Nets[name]
+		if !ok {
+			net = &StellarNet{
+				Name: name,
+			}
+			gc.Nets[name] = net
+		}
+		loadNetItem(net, ii, false)
+	}
+	return nil
+}
+
+type stellarNetParser struct {
 	*StellarNet
 	ItemCB func(stcdetail.IniItem)error
+	NameOK bool
 }
 
-func (snp *StellarNetParser) Item(ii stcdetail.IniItem) error {
-	if snp.ItemCB != nil {
-		return snp.ItemCB(ii)
-	}
+func (snp *stellarNetParser) Init() {
+	snp.ItemCB = func(stcdetail.IniItem) error { return nil }
+}
+
+func (snp *stellarNetParser) Item(ii stcdetail.IniItem) error {
+	return snp.ItemCB(ii)
+}
+
+func (snp *stellarNetParser) doNet(ii stcdetail.IniItem) error {
+	loadNetItem(snp.StellarNet, ii, snp.NameOK)
 	return nil
 }
 
-func (snp *StellarNetParser) doNet(ii stcdetail.IniItem) error {
-	switch ii.Key {
-	case "horizon":
-		snp.Horizon = ii.Val()
-	case "native-asset":
-		snp.NativeAsset = ii.Val()
-	case "network-id":
-		snp.NetworkId = ii.Val()
-	}
-	return nil
-}
-
-func (snp *StellarNetParser) doAccounts(ii stcdetail.IniItem) error {
+func (snp *stellarNetParser) doAccounts(ii stcdetail.IniItem) error {
 	var acct AccountID
 	if _, err := fmt.Sscan(ii.Key, &acct); err != nil {
 		return stcdetail.BadKey(err.Error())
@@ -122,7 +185,7 @@ func (snp *StellarNetParser) doAccounts(ii stcdetail.IniItem) error {
 	return nil
 }
 
-func (snp *StellarNetParser) doSigners(ii stcdetail.IniItem) error {
+func (snp *stellarNetParser) doSigners(ii stcdetail.IniItem) error {
 	var signer SignerKey
 	if _, err := fmt.Sscan(ii.Key, &signer); err != nil {
 		return stcdetail.BadKey(err.Error())
@@ -135,62 +198,68 @@ func (snp *StellarNetParser) doSigners(ii stcdetail.IniItem) error {
 	return nil
 }
 
-func (snp *StellarNetParser) Section(iss stcdetail.IniSecStart) error {
+func (snp *stellarNetParser) Section(iss stcdetail.IniSecStart) error {
 	snp.ItemCB = nil
-	switch iss.Section {
-	case "net":
-		if iss.Subsection != nil {
-			if *iss.Subsection == snp.Name {
-				snp.ItemCB = snp.doNet
-			}
-			return nil
-		}
-	case "accounts":
-		if iss.Subsection != nil {
-			if *iss.Subsection == snp.Name {
-				snp.ItemCB = snp.doAccounts
-			}
-			return nil
-		}
-	case "signers":
-		if iss.Subsection == nil {
+	if iss.Subsection == nil {
+		switch iss.Section {
+		case "net":
+			snp.ItemCB = snp.doNet
+		case "accounts":
+			snp.ItemCB = snp.doAccounts
+		case "signers":
 			snp.ItemCB = snp.doSigners
-			return nil
 		}
 	}
 	return nil
 }
 
-func LoadStellarNet(name, configPath string) *StellarNet {
-	if configPath == "" {
-		configPath = DefaultConfigFile()
-	}
+// Load a Stellar network from an INI file in path.  If the network
+// does not exist, it will be named name and default parameters based
+// on name will be looked up in the stc.conf configuration file.
+func LoadStellarNet(path, name string) *StellarNet {
 	ret := StellarNet{
-		Name: name,
-		SavePath: configPath,
+		SavePath: path,
 	}
-	snp := StellarNetParser{
+	snp := stellarNetParser{
 		StellarNet: &ret,
+		NameOK: true,
 	}
-	if err := stcdetail.IniParse(&snp,
-		path.Join(GetConfigDir(), defaultConf)); err != nil {
+	if err := stcdetail.IniParse(&snp, path); err != nil &&
+		!os.IsNotExist(err) {
 		fmt.Fprintln(os.Stderr, err)
 	}
-
-	if contents, fi, err := stcdetail.ReadFile(configPath); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-	} else {
-		ret.Status = fi
-		err = stcdetail.IniParseContents(&snp, configPath, contents)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+	if ret.Name == "" && name != "" {
+		ret.Name = name
+		ret.Edits.Set("net", "name", ret.Name)
+	}
+	if proto, ok := GetGlobalConfig().Nets[ret.Name]; ok {
+		if ret.NetworkId == "" && proto.NetworkId != "" {
+			ret.NetworkId = proto.NetworkId
+			ret.Edits.Set("net", "network-id", ret.NetworkId)
 		}
-
+		if ret.NativeAsset == "" && proto.NativeAsset != "" {
+			ret.NativeAsset = proto.NativeAsset
+			ret.Edits.Set("net", "native-asset", ret.NativeAsset)
+		}
+		if ret.Horizon == "" && proto.Horizon != "" {
+			ret.Horizon = proto.Horizon
+			ret.Edits.Set("net", "horizon", ret.Horizon)
+		}
 	}
+	if ret.NetworkId == "" && ret.GetNetworkId() != "" {
+		ret.Edits.Set("net", "network-id", ret.NetworkId)
+	}
+	if ret.NetworkId == "" {
+		return nil
+	}
+	ret.Save()
 	return &ret
 }
 
 func (net *StellarNet) Save() error {
+	if len(net.Edits) == 0 {
+		return nil
+	}
 	lf, err := stcdetail.LockFileIfUnchanged(net.SavePath, net.Status)
 	if err != nil {
 		return err
@@ -203,31 +272,7 @@ func (net *StellarNet) Save() error {
 	}
 
 	ie, _ := stcdetail.NewIniEdit(net.SavePath, contents)
-
-	// XXX below isn't great because it blows away comments on keys
-	// that haven't changed.
-
-	sec := stcdetail.IniSection{
-		Section: "net",
-		Subsection: &net.Name,
-	}
-	ie.Set(&sec, "horizon", net.Horizon)
-	ie.Set(&sec, "native-asset", net.NativeAsset)
-	ie.Set(&sec, "network-id", net.GetNetworkId())
-
-	sec.Section = "accounts"
-	for k, v := range net.Accounts {
-		ie.Set(&sec, k, v)
-	}
-
-	sec.Section = "signers"
-	sec.Subsection = nil
-	for _, ski := range net.Signers {
-		for i := range ski {
-			ie.Set(&sec, ski[i].Key.String(), ski[i].Comment)
-		}
-	}
-
+	net.Edits.Apply(ie)
 	ie.WriteTo(lf)
 	return lf.Commit()
 }
