@@ -10,9 +10,15 @@ import (
 	"strings"
 )
 
-const ConfigFileName = "stc.conf"
+const configFileName = "stc.conf"
+const keyDir = "keys"
 
-var DefaultDefaultConfigContents = []byte(
+// When a user does not have an stc.conf configuration file, the
+// library searches for one in $STCDIR/stc.conf, then /etc/stc.conf,
+// then ../share/stc.conf (relative to the executable path).  If none
+// of those paths exists, then it uses the built-in contents specified
+// by this variable.
+var DefaultGlobalConfigContents = []byte(
 `# This file specifies the default network configurations for the stc
 # library and command-line tool.
 
@@ -29,58 +35,60 @@ horizon = https://horizon-testnet.stellar.org/
 native-asset = TestXLM
 `)
 
-var DefaultConfigContents []byte
+var globalConfigContents []byte
 
-func getDefaultConfigContents() []byte {
-	if DefaultConfigContents != nil {
-		return DefaultConfigContents
+func getGlobalConfigContents() []byte {
+	if globalConfigContents != nil {
+		return globalConfigContents
 	}
-	confs := []string{ filepath.FromSlash("/etc/stc.conf") }
+	confs := []string{ filepath.FromSlash("/etc/" + configFileName) }
 	if exe, err := os.Executable(); err == nil {
 		confs = append(confs,
-			path.Join(path.Dir(path.Dir(exe)), "share", "stc.conf"))
+			path.Join(path.Dir(path.Dir(exe)), "share", configFileName))
 	}
 	for _, conf := range confs {
 		if contents, err := ioutil.ReadFile(conf); err == nil {
-			DefaultConfigContents = contents
+			globalConfigContents = contents
 			break
 		}
 	}
-	if DefaultConfigContents == nil {
-		DefaultConfigContents = DefaultDefaultConfigContents
+	if globalConfigContents == nil {
+		globalConfigContents = DefaultGlobalConfigContents
 	}
-	return DefaultConfigContents
+	return globalConfigContents
 }
 
-const keyDir = "keys"
+var stcDir string
 
-var StcDir string
-
+// Return the user's configuration directory based on environment
+// variables.  From highest to lowest precedence tries $STCDIR,
+// $XDG_CONFIG_HOME/.stc, $HOME/.config/stc, or ./.stc and uses the
+// first one with for which the environment variable works.  If the
+// directory doesn't exist, it gets created and populated with a
+// default stc.conf file.
 func GetConfigDir() string {
-	if StcDir != "" {
-		return StcDir
+	if stcDir != "" {
+		return stcDir
 	} else if d, ok := os.LookupEnv("STCDIR"); ok {
-		StcDir = d
+		stcDir = d
 	} else if d, ok = os.LookupEnv("XDG_CONFIG_HOME"); ok {
-		StcDir = filepath.Join(d, "stc")
+		stcDir = filepath.Join(d, "stc")
 	} else if d, ok = os.LookupEnv("HOME"); ok {
-		StcDir = filepath.Join(d, ".config", "stc")
+		stcDir = filepath.Join(d, ".config", "stc")
 	} else {
-		StcDir = ".stc"
+		stcDir = ".stc"
 	}
-	if len(StcDir) > 0 && StcDir[0] != '/' {
-		if d, err := filepath.Abs(StcDir); err == nil {
-			StcDir = d
+	if len(stcDir) > 0 && stcDir[0] != '/' {
+		if d, err := filepath.Abs(stcDir); err == nil {
+			stcDir = d
 		}
 	}
-	defaultIni := path.Join(StcDir, ConfigFileName)
+	defaultIni := path.Join(stcDir, configFileName)
 	if _, err := os.Stat(defaultIni); os.IsNotExist(err) {
-		os.MkdirAll(StcDir, 0777)
-		stcdetail.SafeCreateFile(defaultIni,
-			string(getDefaultConfigContents()),
-			0666)
+		os.MkdirAll(stcDir, 0777)
+		os.MkdirAll(path.Join(stcDir, keyDir), 0700)
 	}
-	return StcDir
+	return stcDir
 }
 
 type GlobalConfig struct {
@@ -89,11 +97,10 @@ type GlobalConfig struct {
 }
 
 var globalConfig *GlobalConfig
-
 func GetGlobalConfig() *GlobalConfig {
 	if globalConfig == nil {
 		globalConfig = &GlobalConfig{}
-		stcdetail.IniParseContents(globalConfig, "", getDefaultConfigContents())
+		stcdetail.IniParseContents(globalConfig, "", getGlobalConfigContents())
 	}
 	return globalConfig
 }
