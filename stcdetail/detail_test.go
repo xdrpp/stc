@@ -82,7 +82,7 @@ func ExampleXdrToJson() {
 	// ... Can keep appending operations with txe.Append
 
 	// Sign the transaction
-	stc.StellarTestNet.SignTx(&mykey, txe)
+	stc.DefaultStellarNet("test").SignTx(&mykey, txe)
 
 	// Print the transaction in JSON
 	j, _ := XdrToJson(txe)
@@ -158,8 +158,9 @@ func TestJsonToXdr(t *testing.T) {
 		Signer:        stc.NewSignerKey(yourkey, 1),
 	})
 
+	net := stc.DefaultStellarNet("test")
 	// Sign the transaction
-	stc.StellarTestNet.SignTx(&mykey, txe)
+	net.SignTx(&mykey, txe)
 
 	// Print the transaction in JSON
 	j, err := XdrToJson(txe)
@@ -176,8 +177,7 @@ func TestJsonToXdr(t *testing.T) {
 
 	if stc.TxToBase64(txe) != stc.TxToBase64(txe2) {
 		t.Errorf("Round-trip error\nWant:\n%sHave:\n%sJson:\n%s",
-			stc.StellarTestNet.TxToRep(txe), stc.StellarTestNet.TxToRep(txe2),
-			string(j))
+			net.TxToRep(txe), net.TxToRep(txe2), string(j))
 	}
 }
 

@@ -74,7 +74,7 @@ func TestSetOverflowVector(t *testing.T) {
 }
 
 func TestInvalidDefault(t *testing.T) {
-	net := StellarTestNet
+	net := DefaultStellarNet("test")
 	rep := net.TxToRep(NewTransactionEnvelope())
 	rep += "tx.operations.len: 1\n"
 	rep += "tx.operations[0].type: ALLOW_TRUST\n"
@@ -144,7 +144,7 @@ func TestParseTxrep(t *testing.T) {
 		return false
 	})
 
-	rep := StellarTestNet.TxToRep(txe)
+	rep := DefaultStellarNet("test").TxToRep(txe)
 	txe2, err := TxFromRep(rep)
 	if err != nil {
 		t.Errorf("parsing txrep failed: %s", err)
@@ -221,10 +221,10 @@ func Example_txrep() {
 	// ... Can keep appending operations with txe.Append
 
 	// Sign the transaction
-	StellarTestNet.SignTx(&mykey, txe)
+	DefaultStellarNet("test").SignTx(&mykey, txe)
 
 	// Print the transaction in multi-line human-readable "txrep" form
-	fmt.Print(StellarTestNet.TxToRep(txe))
+	fmt.Print(DefaultStellarNet("test").TxToRep(txe))
 
 	// Output:
 	// tx.sourceAccount: GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G
@@ -255,7 +255,8 @@ func Example_postTransaction() {
 		&yourkey)
 
 	// Fetch account entry to get sequence number
-	myacct, err := StellarTestNet.GetAccountEntry(mykey.Public().String())
+	myacct, err := DefaultStellarNet("test").GetAccountEntry(
+		mykey.Public().String())
 	if err != nil {
 		panic(err)
 	}
@@ -273,16 +274,18 @@ func Example_postTransaction() {
 		Signer:        NewSignerKey(yourkey, 1),
 	})
 
+	net := DefaultStellarNet("test")
+
 	// Pay the median per-operation fee of recent ledgers
-	fees, err := StellarTestNet.GetFeeStats()
+	fees, err := net.GetFeeStats()
 	if err != nil {
 		panic(err)
 	}
 	txe.Tx.Fee = uint32(len(txe.Tx.Operations)) * fees.Percentile(50)
 
 	// Sign and post the transaction
-	StellarTestNet.SignTx(&mykey, txe)
-	result, err := StellarTestNet.Post(txe)
+	net.SignTx(&mykey, txe)
+	result, err := net.Post(txe)
 	if err != nil {
 		panic(err)
 	}

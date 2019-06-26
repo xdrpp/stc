@@ -222,6 +222,8 @@ func LoadStellarNet(name string, paths...string) *StellarNet {
 	return &ret
 }
 
+var netCache map[string]*StellarNet
+
 // Load a network from under the ConfigPath() ($STCDIR) directory.  If
 // name is "", then it will look at the $STCNET environment variable
 // and if that is unset load a default network.  Returns nil if the
@@ -238,8 +240,17 @@ func DefaultStellarNet(name string) *StellarNet {
 			name = "default"
 		}
 	}
-	return LoadStellarNet(name, ConfigPath(name + ".net"),
+	if netCache == nil {
+		netCache = make(map[string]*StellarNet)
+	} else if net, ok := netCache[name]; ok {
+		return net
+	}
+	ret := LoadStellarNet(name, ConfigPath(name + ".net"),
 		ConfigPath("global.conf"))
+	if ret != nil {
+		netCache[name] = ret
+	}
+	return ret
 }
 
 func (net *StellarNet) Save() error {
