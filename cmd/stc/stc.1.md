@@ -365,25 +365,39 @@ version reported by `-print-default-config`.  The format of the global
 configuration file is the an INI file in the same format used by
 git-config (allowing `stc.conf` to be edited by `git config -f
 stc.conf`).  The global configuration format supports the following
-sections and keys:
+sections and keys (using the syntax section.key or
+section.subsection.key to describe an entry in an INI file):
 
 `global.default-net`
 :	The default network name to use when none is specified
 
-`net.`_netname_`.network-id`
+`net.`_netname_`.`_key_
+:	Specifies the default value of `net.`_key_ for network _netname_.
+The values of _key_ are discussed below for per-network configuration
+files.
+
+Per-network configuration files have the following configuration
+options:
+
+`net.name`
+:	Specifies the name of the network--means keys unspecified in the
+per-network configuration file will be retrieved from `net.`_netname_
+in the global configuration file.
+
+`net.network-id`
 :	The network ID that permutes signatures and pre-signed-transaction
 hashes (which prevents signatures from being valid on more than one
 instantiation of the Stellar network).  If not specified,
 automatically fetches and stores the network ID the first time it is
 used.
 
-`net.`_netname_`.horizon`
+`net.horizon`
 :	The base URL of the horizon instance to use for this network.  You
 may wish to change this URL to use your own local validator if you are
 running one, or else that of an exchange that you trust.  Note that
 the URL _must_ end with a `/` (slash) character.
 
-`net.`_netname_`.native-asset`
+`net.native-asset`
 : Shows how to render the native asset--e.g., `XLM` for the stellar
 main network, and `TestXLM` for the stellar test network.  If not
 specified, it defaults to the string `NATIVE`.  Note that this only

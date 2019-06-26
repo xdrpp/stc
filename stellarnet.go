@@ -169,9 +169,7 @@ func (c SignerCache) Add(strkey, comment string) error {
 	return nil
 }
 
-// Adds a signer to a SignerCache if the signer is not already in the
-// cache.  If the signer is already in the cache, the comment is left
-// unchanged.
+// Deletes a signer from the cache.
 func (c SignerCache) Del(strkey string) error {
 	var signer stx.SignerKey
 	_, err := fmt.Sscan(strkey, &signer)

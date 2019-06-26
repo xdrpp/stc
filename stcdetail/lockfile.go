@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 )
@@ -184,6 +185,9 @@ type LockedFile interface {
 
 func doLockFile(path string, perm os.FileMode,
 	readfi os.FileInfo) (LockedFile, error) {
+	if phys, err := filepath.EvalSymlinks(path); err == nil {
+		path = phys
+	}
 	lf := lockedFile{
 		path:     path,
 		lockpath: path + ".lock",
