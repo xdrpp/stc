@@ -104,6 +104,15 @@ type stellarNetParser struct {
 	setName bool
 }
 
+func (snp *stellarNetParser) Init() {
+	if snp.Signers == nil {
+		snp.Signers = make(SignerCache)
+	}
+	if snp.Accounts == nil {
+		snp.Accounts = make(AccountHints)
+	}
+}
+
 func (snp *stellarNetParser) Item(ii stcdetail.IniItem) error {
 	if snp.itemCB != nil {
 		return snp.itemCB(ii)
@@ -115,7 +124,8 @@ func (snp *stellarNetParser) doNet(ii stcdetail.IniItem) error {
 	var target *string
 	switch ii.Key {
 	case "name":
-		if snp.setName && ii.Subsection == nil && ValidNetName(ii.Val()) {
+		if (snp.Name == "" || snp.setName) &&
+			ii.Subsection == nil && ValidNetName(ii.Val()) {
 			snp.Name = ii.Val()
 			snp.setName = false
 		}
@@ -187,8 +197,6 @@ func (snp *stellarNetParser) Section(iss stcdetail.IniSecStart) error {
 func LoadStellarNet(name string, paths...string) *StellarNet {
 	ret := StellarNet{
 		Name: name,
-		Signers: make(SignerCache),
-		Accounts: make(AccountHints),
 	}
 	if len(paths) > 0 {
 		ret.SavePath = paths[0]
