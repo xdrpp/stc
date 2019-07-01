@@ -75,6 +75,9 @@ func TestSetOverflowVector(t *testing.T) {
 
 func TestInvalidDefault(t *testing.T) {
 	net := DefaultStellarNet("test")
+	if net == nil {
+		t.Fatal("could not load test net")
+	}
 	rep := net.TxToRep(NewTransactionEnvelope())
 	rep += "tx.operations.len: 1\n"
 	rep += "tx.operations[0].type: ALLOW_TRUST\n"

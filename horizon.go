@@ -333,8 +333,10 @@ func (net *StellarNet) GetAccountEntry(acct string) (
 func (net *StellarNet) GetNetworkId() string {
 	if net.NetworkId == "" {
 		var np struct{ Network_passphrase string }
-		if err := net.GetJSON("/", &np); err == nil {
+		if err := net.GetJSON("/", &np); err == nil &&
+			np.Network_passphrase != "" {
 			net.NetworkId = np.Network_passphrase
+			net.Edits.Set("net", "network-id", net.NetworkId)
 		}
 	}
 	return net.NetworkId

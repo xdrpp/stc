@@ -159,6 +159,9 @@ func TestJsonToXdr(t *testing.T) {
 	})
 
 	net := stc.DefaultStellarNet("test")
+	if net == nil {
+		t.Fatal("could not load test net")
+	}
 	// Sign the transaction
 	net.SignTx(&mykey, txe)
 

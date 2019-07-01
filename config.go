@@ -74,9 +74,11 @@ func getConfigDir() string {
 		}
 	}
 	if _, err := os.Stat(stcDir); os.IsNotExist(err) &&
-		os.MkdirAll(stcDir, 0777) == nil &&
-		LoadStellarNet("main", path.Join(stcDir, "main.net")) != nil {
-		os.Symlink("main.net", path.Join(stcDir, "default.net"))
+		os.MkdirAll(stcDir, 0777) == nil {
+		if _, err = LoadStellarNet("main",
+			path.Join(stcDir, "main.net")); err == nil {
+				os.Symlink("main.net", path.Join(stcDir, "default.net"))
+			}
 	}
 	return stcDir
 }
@@ -194,7 +196,7 @@ func (snp *stellarNetParser) Section(iss stcdetail.IniSecStart) error {
 // files in paths are parsed, the global stc.conf file will be parsed.
 // After that, there must be a valid NetworkId or the function will
 // return nil.
-func LoadStellarNet(name string, paths...string) *StellarNet {
+func LoadStellarNet(name string, paths...string) (*StellarNet, error) {
 	ret := StellarNet{
 		Name: name,
 	}
@@ -210,9 +212,9 @@ func LoadStellarNet(name string, paths...string) *StellarNet {
 		if err := stcdetail.IniParse(&snp, path); err != nil &&
 			!os.IsNotExist(err) {
 			fmt.Fprintln(os.Stderr, err)
-			return nil
+			return nil, err
 		} else if !ValidNetName(ret.Name) {
-			return nil
+			return nil, fmt.Errorf("%s: invalid or missing net.name", path)
 		} else if snp.setName {
 			ret.Edits.Set("net", "name", ret.Name)
 			snp.setName = false
@@ -221,13 +223,15 @@ func LoadStellarNet(name string, paths...string) *StellarNet {
 
 	// Finish with global configuration
 	stcdetail.IniParseContents(&snp, "", getGlobalConfigContents())
-	if ret.NetworkId == "" && ret.GetNetworkId() != "" {
-		ret.Edits.Set("net", "network-id", ret.NetworkId)
+	if ret.GetNetworkId() == "" {
+		return nil, fmt.Errorf("could not determine network-id for %s",
+			ret.Name)
+	} else if ret.SavePath != "" {
+		if err := ret.Save(); err != nil {
+			return nil, err
+		}
 	}
-	if ret.NetworkId == "" || (ret.SavePath != "" && ret.Save() != nil) {
-		return nil
-	}
-	return &ret
+	return &ret, nil
 }
 
 var netCache map[string]*StellarNet
@@ -253,9 +257,11 @@ func DefaultStellarNet(name string) *StellarNet {
 	} else if net, ok := netCache[name]; ok {
 		return net
 	}
-	ret := LoadStellarNet(name, ConfigPath(name + ".net"),
+	ret, err := LoadStellarNet(name, ConfigPath(name + ".net"),
 		ConfigPath("global.conf"))
-	if ret != nil {
+	if ret == nil {
+		fmt.Fprintln(os.Stderr, err)
+	} else {
 		netCache[name] = ret
 	}
 	return ret
