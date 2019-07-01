@@ -223,11 +223,12 @@ func Example_txrep() {
 	})
 	// ... Can keep appending operations with txe.Append
 
+	net := DefaultStellarNet("main")
 	// Sign the transaction
-	DefaultStellarNet("test").SignTx(&mykey, txe)
+	net.SignTx(&mykey, txe)
 
 	// Print the transaction in multi-line human-readable "txrep" form
-	fmt.Print(DefaultStellarNet("test").TxToRep(txe))
+	fmt.Print(net.TxToRep(txe))
 
 	// Output:
 	// tx.sourceAccount: GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G
@@ -240,12 +241,12 @@ func Example_txrep() {
 	// tx.operations[0].sourceAccount._present: false
 	// tx.operations[0].body.type: PAYMENT
 	// tx.operations[0].body.paymentOp.destination: GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L
-	// tx.operations[0].body.paymentOp.asset: TestXLM
+	// tx.operations[0].body.paymentOp.asset: XLM
 	// tx.operations[0].body.paymentOp.amount: 20000000 (2e7)
 	// tx.ext.v: 0
 	// signatures.len: 1
-	// signatures[0].hint: e1374741 (bad signature/unknown key/test is wrong network)
-	// signatures[0].signature: 5cfdc4be4c35956876fe0688058d17e34dd481c475237a001def46236877461075f233c87b63b92ddfb5cde09c27f8361c325b72825bc3137e4b2b38130fd801
+	// signatures[0].hint: e1374741 (bad signature/unknown key/main is wrong network)
+	// signatures[0].signature: 3bf96c29ab95730775612b5a9a0ec630d779846ab31b2e07de8d24de927961f8667604091a3942e756e0dc14dd94465e2b6132880481e403055ec33905429502
 }
 
 func Example_postTransaction() {

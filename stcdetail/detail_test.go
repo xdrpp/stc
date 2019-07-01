@@ -82,7 +82,7 @@ func ExampleXdrToJson() {
 	// ... Can keep appending operations with txe.Append
 
 	// Sign the transaction
-	stc.DefaultStellarNet("test").SignTx(&mykey, txe)
+	stc.DefaultStellarNet("main").SignTx(&mykey, txe)
 
 	// Print the transaction in JSON
 	j, _ := XdrToJson(txe)
@@ -119,7 +119,7 @@ func ExampleXdrToJson() {
 	//     "signatures": [
 	//         {
 	//             "hint": "4TdHQQ==",
-	//             "signature": "XP3Evkw1lWh2/gaIBY0X403UgcR1I3oAHe9GI2h3RhB18jPIe2O5Ld+1zeCcJ/g2HDJbcoJbwxN+Sys4Ew/YAQ=="
+	//             "signature": "O/lsKauVcwd1YStamg7GMNd5hGqzGy4H3o0k3pJ5YfhmdgQJGjlC51bg3BTdlEZeK2EyiASB5AMFXsM5BUKVAg=="
 	//         }
 	//     ]
 	// }
@@ -160,7 +160,7 @@ func TestJsonToXdr(t *testing.T) {
 
 	net := stc.DefaultStellarNet("test")
 	if net == nil {
-		t.Fatal("could not load test net")
+		t.Fatal("could not load main net")
 	}
 	// Sign the transaction
 	net.SignTx(&mykey, txe)
