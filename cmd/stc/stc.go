@@ -470,7 +470,7 @@ func main() {
        %[1]s -qta [-net=ID] ACCT
        %[1]s -create [-net=ID] ACCT
        %[1]s -keygen [NAME]
-       %[1]s -sec2pub [NAME]
+       %[1]s -pub [NAME]
        %[1]s -import-key NAME
        %[1]s -export-key NAME
        %[1]s -list-keys
