@@ -992,7 +992,7 @@ func (%[1]s) ProgName() string { return %[7]q }
 func (%[1]s) VersName() string { return %[8]q }
 func (%[1]s) ProcName() string { return %[9]q }
 `, pm, args, p.res, r.val, r.vers[i].val, p.val,
-			r.id, r.vers[i].id, p.id)
+				r.id.getx(), name.getx(), p.id.getx())
 			fmt.Fprintf(out,
 `func (p *%[1]s) GetArg() XdrType {
 	if p.Arg == nil {
@@ -1013,7 +1013,7 @@ type %[1]s struct {
 	%[2]s
 	Srv %[3]s
 }
-`, "xdrProcSrv_" + p.id.String(), pm, r.vers[i].id)
+`, "xdrSrvProc_" + p.id.String(), pm, name)
 
 			var av string
 			if len(p.arg) == 1 {
@@ -1036,46 +1036,37 @@ type %[1]s struct {
 `func (p *%[1]s) Do() {
 	%[4]sp.Srv.%[2]s(%[3]s)
 }
-var _ XdrProcSrv = &%[1]s{} // XXX
-`, "xdrProcSrv_" + p.id.String(), p.id, av, reseq)
+var _ XdrSrvProc = &%[1]s{} // XXX
+`, "xdrSrvProc_" + p.id.String(), p.id, av, reseq)
 			e.xappend(out)
 		}
 
-/*
-		meta := fmt.Sprintf("%s_Meta", name)
-		fmt.Fprintf(out, `
-type %[1]s struct {}
-func (%[1]s) Prog() uint32 { return %[2]d }
-func (%[1]s) Vers() uint32 { return %[3]d }
-func (%[1]s) Dispatch(procno uint32, xi %[4]s) *XdrServerMeta {
-	switch procno {
-`, meta, r.val, r.vers[i].val, name)
+		srv := fmt.Sprintf("%s_Server", name)
+		e.xprintf(`
+type %[1]s struct {
+	Srv %[2]s
+}
+func (%[1]s) Prog() uint32 { return %[3]d }
+func (%[1]s) Vers() uint32 { return %[4]d }
+func (%[1]s) ProgName() string { return %[5]q }
+func (%[1]s) VersName() string { return %[6]q }
+func (s %[1]s) GetProc(p uint32) XdrSrvProc {
+	switch p {
+`, srv, name, r.val, r.vers[i].val, r.id.getx(), r.vers[i].id.getx())
 
 		for _, p := range r.vers[i].procs {
-			reseq, reseqClose := "", ""
-			if p.res.getx() != "void" {
-				reseq, reseqClose = fmt.Sprintf("ret.Res = XDR_%s(", p.res), ")"
-			}
-			atp, mk, c := xgetArgs(&p)
-			fmt.Fprintf(out,
-`	case %[1]d:  // %[8]s
-		ret := &XdrServerMeta {
-			Arg: XDR_%[3]s(new(%[3]s)),
+			e.xprintf(
+`	case %[1]d:  // %[2]s
+		return &%[3]s{ Srv: s.Srv }
+`, p.val, p.id.getx(), "xdrSrvProc_" + p.id.String())
 		}
-		ret.Dispatch = func() {
-%[9]s			%[5]sxi.%[2]s(%[6]s)%[7]s
-		}
-		return ret
-`, p.val, p.id, atp, p.res, reseq, c, reseqClose, p.id.getx(), mk)
-		}
-
-		fmt.Fprintf(out,
+		e.xprintf(
 `	default:
 		return nil
 	}
 }
-`)
-*/
+var _ XdrSrv = %s{} // XXX
+`, srv)
 	}
 }
 

@@ -652,20 +652,20 @@ type XdrProc interface {
 
 // A call structure on the server side dispatches the call to an
 // instance of the version interface.
-type XdrProcSrv interface {
+type XdrSrvProc interface {
 	XdrProc
 	Do()
 }
 
-type XdrDispatch = func(XdrProc) error
-
-type XdrVersMeta interface {
+type XdrSrv interface {
 	Prog() uint32
 	Vers() uint32
 	ProgName() string
 	VersName() string
-	GetProc(uint32) XdrProcSrv
+	GetProc(uint32) XdrSrvProc
 }
+
+type XdrDispatch = func(XdrProc) error
 
 //
 // end boilerplate
