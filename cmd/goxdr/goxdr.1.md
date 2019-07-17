@@ -33,7 +33,10 @@ underlying type has a corresponding type implementing the interface
 `XdrType`.  For type T, this type is returned by the function
 `XDR_T(*T)`.  With structs, unions, and enums, `XDR_T` is just the
 identity function, because *T already implements `XdrType`.  For other
-types, the compiler generates an auxiliary type.
+types, the compiler generates an auxiliary type.  The auxiliary type
+allows array and string limits to be conveyed, and also implements
+the methods of `XdrType` (since built-in types such as `bool` and
+`int32` cannot have methods).
 
 ## Type representations
 
@@ -179,8 +182,8 @@ type XDR interface {
 `Sprintf` is expected to be a copy of `fmt.Sprintf`.  However, XDR
 back-ends that do not make use of the `name` argument (notably
 marshaling to RFC4506 binary format) can save some overhead by
-returning an empty string.  Hence, the following are the two sensible
-implementations of `Sprintf`:
+returning an empty string.  Hence, the two sensible implementations of
+`Sprintf` are:
 
 ~~~~{.go}
 func (xp *MyXDR1) Sprintf(f string, args ...interface{}) string {
@@ -361,6 +364,98 @@ type XdrPrint struct {
 }
 ~~~~
 
+## Program and version declarations
+
+Each version declaration inside a program declaration gets compiled
+down to an interface with the same name as the version.  For example
+this declaration
+
+~~~~{.c}
+program my_prog {
+  version my_vers {
+    void null(void) = 1;
+    int Increment(int) = 2;
+    void MultiArg(int, int) = 3;
+  } = 1;
+} = 0x20000000;
+~~~~
+
+yields the following interface:
+
+~~~~{.go}
+type My_vers interface {
+        Null()
+        Increment(*int32) *int32
+        MultiArg(*int32, *int32)
+}
+~~~~
+
+In addition, goxdr creates a type that implements the `My_vers`
+interface (for use in clients):
+
+~~~~{.go}
+type My_vers_Client struct {
+        XdrSend func(XdrProc) error
+}
+func (c My_vers_Client) Null() {...}
+func (c My_vers_Client) Increment(a1 *int32) *int32 {...}
+func (c My_vers_Client) MultiArg(a1 *int32, a2 *int32) {...}
+~~~~
+
+The methods all bundle their argument and result types into a type
+implementing `XdrProc`, and pass it to a function `XdrSend`.  An
+`XdrProc` instance contains all the information necessary to marshal a
+remote procedure call and its result, namely the program, version, and
+procedure numbers as well as both the arguments and results ready to
+be marshaled in `XdrType` format.  `GetArg()` returns the arguments
+supplied by the user, while `GetRes()` returns a result type expected
+to be overwritten by the result of the RPC.
+
+~~~~{.go}
+type XdrProc interface {
+	Prog() uint32
+	Vers() uint32
+	Proc() uint32
+	ProgName() string
+	VersName() string
+	ProcName() string
+	GetArg() XdrType
+	GetRes() XdrType
+}
+~~~~
+
+For the server side, goxdr generates a type `My_vers_Server` that
+takes an instance of `My_vers` and allows lookup of argument and
+result types by procedure number.  Specifically, `My_vers_Server` just
+requires an instance of `My_vers`, and then generically exposes it
+through the `XdrSrv` interface.
+
+~~~~{.go}
+type My_vers_Server struct {
+        Srv My_vers
+}
+func (s My_vers_Server) GetProc(p uint32) XdrSrvProc {...}
+var _ XdrSrv = My_vers_Server{}    // implements XdrSrv interface
+~~~~
+
+`XdrSrv` provides everything an RFC5531 RPC library needs to marshal
+and unmarshal arguments:
+
+~~~~{.go}
+type XdrSrvProc interface {
+	XdrProc
+	Do()
+}
+
+type XdrSrv interface {
+	Prog() uint32
+	Vers() uint32
+	ProgName() string
+	VersName() string
+	GetProc(uint32) XdrSrvProc
+}
+~~~~
+
 # OPTIONS
 
 goxdr supports the following options:
@@ -494,10 +589,6 @@ rpcgen(1), xdrc(1)
 <https://tools.ietf.org/html/rfc4506>
 
 # BUGS
-
-goxdr ignores program and version declarations, and should instead
-compile them to something that can be used to implement RFC5531 RPC
-interfaces.
 
 goxdr is not hygienic.  Because it capitalizes symbols, it could
 produce a name clash if two symbols differ only in the capitalization

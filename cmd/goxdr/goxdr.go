@@ -925,7 +925,7 @@ func (v %[1]s) XdrValue() interface{} { return v }
 func (v *%[1]s) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
 func (v *%[1]s) XdrRecurse(x XDR, name string) {
 	if name != "" {
-		name = x.Sprintf("%s.", name)
+		name = x.Sprintf("%%s.", name)
 	}
 `, args)
 	for i := range p.arg {
@@ -942,7 +942,7 @@ func XDR_%[1]s(v *%[1]s) *%[1]s { return v }
 }
 
 func (e *emitter) doClientProc(cli string, p *rpc_proc) {
-	args, setargs := "", ""
+	var args, setargs string
 	for i := range p.arg {
 		if i != 0 {
 			args += ", "
@@ -952,6 +952,7 @@ func (e *emitter) doClientProc(cli string, p *rpc_proc) {
 	if len(p.arg) == 1 {
 		setargs = "\tproc.Arg = a1\n"
 	} else if len(p.arg) > 1 {
+		setargs = "\tproc.GetArg()\n"
 		for i := range p.arg {
 			setargs += fmt.Sprintf("\tproc.Arg.a%[1]d = *a%[1]d\n", i+1)
 		}

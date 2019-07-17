@@ -1,10 +1,9 @@
 # Go XDR compiler (goxdr)
 
 goxdr compiles the [RFC4506] eXternal Data Representation IDL down to
-go data structures.  It does not support [RPC][RFC5531], but simply
-ignores RPC program declarations.  goxdr has several features that
-together make it an attractive alternative to other go XDR compilers
-for many situations:
+go data structures.  goxdr has several features that together make it
+an attractive alternative to other go XDR compilers for many
+situations:
 
 * Fully [RFC4506] compliant, including nested structure and union
   declarations.

@@ -134,7 +134,7 @@ enum_tag: newid '=' value
 	}
 | newid
 	{
-		yylex.(*Lexer).Warn("RFC4506 requires a value for each enum tag");
+		yylex.(*Lexer).Warn("RFC4506 requires a value for each enum tag")
 		$$ = rpc_const{$1, lid("iota"), $1.comment}
 	};
 
@@ -426,10 +426,13 @@ newid: T_ID
 		yylex.(*Lexer).Checkdup($1.Value)
 		$$ = gid($1.Value)
 		$$.comment = nonEmpty($1.BlockComment, $1.LineComment)
+		if $$.xid != "" && $$.xid[0] == '_' {
+			yylex.(*Lexer).Warn(
+				"RFC4506 disallows '_' as first character of identifier")
+		}
 	};
 
-qid: id;	// might make sense for qid to allow package-qualified
-id: T_ID
+qid: T_ID		// might make sense for qid to allow package-qualified
 	{
 		$$ = gid($1.Value)
 		$$.comment = nonEmpty($1.BlockComment, $1.LineComment)
@@ -438,6 +441,15 @@ id: T_ID
 			$$.goid = "true"
 		case "FALSE":
 			$$.goid = "false"
+		}
+	};
+id: T_ID
+	{
+		$$ = gid($1.Value)
+		$$.comment = nonEmpty($1.BlockComment, $1.LineComment)
+		if $$.xid != "" && $$.xid[0] == '_' {
+			yylex.(*Lexer).Warn(
+				"RFC4506 disallows '_' as first character of identifier")
 		}
 	};
 
