@@ -258,7 +258,11 @@ func XdrSymChar(r rune) bool {
 		(r >= '0' && r <= '9') || r == '_'
 }
 
-type XdrVoid = struct{}
+type XdrVoid struct{}
+func (XdrVoid) XdrValue() interface{} { return nil }
+func (XdrVoid) XdrPointer() interface{} { return nil }
+func (XdrVoid) XdrMarshal(XDR, string) {}
+func XDR_XdrVoid(v *XdrVoid) *XdrVoid { return v }
 
 type XdrBool bool
 func (v XdrBool) String() string { return fmt.Sprintf("%v", v.XdrValue()) }
@@ -631,6 +635,36 @@ func (xi *XdrIn) Marshal(name string, i XdrType) {
 	case XdrAggregate:
 		v.XdrRecurse(xi, name)
 	}
+}
+
+// Interface for a data structure containing the argument and result
+// types of a call.
+type XdrProc interface {
+	Prog() uint32
+	Vers() uint32
+	Proc() uint32
+	ProgName() string
+	VersName() string
+	ProcName() string
+	GetArg() XdrType
+	GetRes() XdrType
+}
+
+// A call structure on the server side dispatches the call to an
+// instance of the version interface.
+type XdrProcSrv interface {
+	XdrProc
+	Do()
+}
+
+type XdrDispatch = func(XdrProc) error
+
+type XdrVersMeta interface {
+	Prog() uint32
+	Vers() uint32
+	ProgName() string
+	VersName() string
+	GetProc(uint32) XdrProcSrv
 }
 
 //

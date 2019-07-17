@@ -905,8 +905,178 @@ func (u *%[1]s) XdrRecurse(x XDR, name string) {
 	e.xappend(out)
 }
 
+/*
+func xgetArgs(p *rpc_proc) (xdrtype, mkarg, call string) {
+	if len(p.arg) == 0 {
+		return "XdrVoid", "", ""
+	}
+	tp := p.arg[0].String()
+	return tp, fmt.Sprintf(
+`			arg := ret.Arg.XdrPointer().(*%s)
+`, tp), "arg"
+}
+*/
+
+func (e *emitter) getArgType(p *rpc_proc) string {
+	if len(p.arg) == 0 {
+		return "XdrVoid"
+	} else if len(p.arg) == 1 {
+		return p.arg[0].String()
+	}
+
+	args := "xdrProcArg_" + p.id.String()
+
+	e.xprintf("\ntype %s struct {\n", args)
+	for a := range p.arg {
+		e.xprintf("\ta%d %s\n", a+1, p.arg[a])
+	}
+	e.xprintf("}\n")
+	e.xprintf(
+`func (v *%[1]s) XdrPointer() interface{} { return v }
+func (v %[1]s) XdrValue() interface{} { return v }
+func (v *%[1]s) XdrMarshal(x XDR, name string) { x.Marshal(name, v) }
+func (v *%[1]s) XdrRecurse(x XDR, name string) {
+	if name != "" {
+		name = x.Sprintf("%s.", name)
+	}
+`, args)
+	for i := range p.arg {
+		e.xprintf(
+`	XDR_%[2]s(&v.a%[1]d).XdrMarshal(x, x.Sprintf("%%sa%[1]d", name))
+`, i+1, p.arg[i])
+	}
+	e.xprintf(`}
+func XDR_%[1]s(v *%[1]s) *%[1]s { return v }
+`, args)
+	// e.xprintf("var _ XdrType = &%[1]s{}\n", args) // XXX
+	e.xprintf("\n")
+	return args
+}
+
 func (r *rpc_program) emit(e *emitter) {
-	// Do something?
+	for i := range r.vers {
+		if i != 0 {
+			e.printf("\n")
+		}
+		name := r.vers[i].id
+		e.printf("type %s interface {\n", name)
+		for _, p := range r.vers[i].procs {
+			e.printf("\t%s(", p.id)
+			for j := range p.arg {
+				if j != 0 {
+					e.printf(", ")
+				}
+				e.printf("*%s", p.arg[j])
+			}
+			e.printf(")")
+			if p.res.getx() != "void" {
+				e.printf(" *%s", p.res)
+			}
+			e.printf("\n")
+		}
+		e.printf("}\n")
+
+		for _, p := range r.vers[i].procs {
+			out := &strings.Builder{}
+			args := e.getArgType(&p)
+			pm := "xdrProc_" + p.id.String()
+			fmt.Fprintf(out, `
+type %[1]s struct {
+	Arg *%[2]s
+	Res *%[3]s
+}
+func (%[1]s) Prog() uint32 { return %[4]d }
+func (%[1]s) Vers() uint32 { return %[5]d }
+func (%[1]s) Proc() uint32 { return %[6]d }
+func (%[1]s) ProgName() string { return %[7]q }
+func (%[1]s) VersName() string { return %[8]q }
+func (%[1]s) ProcName() string { return %[9]q }
+`, pm, args, p.res, r.val, r.vers[i].val, p.val,
+			r.id, r.vers[i].id, p.id)
+			fmt.Fprintf(out,
+`func (p *%[1]s) GetArg() XdrType {
+	if p.Arg == nil {
+		p.Arg = new(%[2]s)
+	}
+	return XDR_%[2]s(p.Arg)
+}
+func (p *%[1]s) GetRes() XdrType {
+	if p.Res == nil {
+		p.Res = new(%[3]s)
+	}
+	return XDR_%[3]s(p.Res)
+}
+var _ XdrProc = &%[1]s{} // XXX
+`, pm, args, p.res)
+			fmt.Fprintf(out, `
+type %[1]s struct {
+	%[2]s
+	Srv %[3]s
+}
+`, "xdrProcSrv_" + p.id.String(), pm, r.vers[i].id)
+
+			var av string
+			if len(p.arg) == 1 {
+				av = "p.Arg"
+			} else if len(p.arg) > 1 {
+				for a := range p.arg {
+					if a > 0 {
+						av += ", "
+					}
+					av += fmt.Sprintf("&p.Arg.a%d", a+1)
+				}
+			}
+
+			var reseq string
+			if p.res.getx() != "void" {
+				reseq = "p.Res = "
+			}
+
+			fmt.Fprintf(out,
+`func (p *%[1]s) Do() {
+	%[4]sp.Srv.%[2]s(%[3]s)
+}
+var _ XdrProcSrv = &%[1]s{} // XXX
+`, "xdrProcSrv_" + p.id.String(), p.id, av, reseq)
+			e.xappend(out)
+		}
+
+/*
+		meta := fmt.Sprintf("%s_Meta", name)
+		fmt.Fprintf(out, `
+type %[1]s struct {}
+func (%[1]s) Prog() uint32 { return %[2]d }
+func (%[1]s) Vers() uint32 { return %[3]d }
+func (%[1]s) Dispatch(procno uint32, xi %[4]s) *XdrServerMeta {
+	switch procno {
+`, meta, r.val, r.vers[i].val, name)
+
+		for _, p := range r.vers[i].procs {
+			reseq, reseqClose := "", ""
+			if p.res.getx() != "void" {
+				reseq, reseqClose = fmt.Sprintf("ret.Res = XDR_%s(", p.res), ")"
+			}
+			atp, mk, c := xgetArgs(&p)
+			fmt.Fprintf(out,
+`	case %[1]d:  // %[8]s
+		ret := &XdrServerMeta {
+			Arg: XDR_%[3]s(new(%[3]s)),
+		}
+		ret.Dispatch = func() {
+%[9]s			%[5]sxi.%[2]s(%[6]s)%[7]s
+		}
+		return ret
+`, p.val, p.id, atp, p.res, reseq, c, reseqClose, p.id.getx(), mk)
+		}
+
+		fmt.Fprintf(out,
+`	default:
+		return nil
+	}
+}
+`)
+*/
+	}
 }
 
 func emitAll(syms *rpc_syms, comments bool, lax bool) string {

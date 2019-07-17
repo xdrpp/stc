@@ -365,7 +365,12 @@ proc_decl: type_or_void newid '(' void_or_arg_list ')' '=' number ';'
 		$$.val = $7
 	};
 
-type_or_void: type | T_VOID { $$.setglobal("XdrVoid") };
+type_or_void: type
+| T_VOID
+	{
+		$$.setglobal("XdrVoid")
+		$$.xid = "void"
+	};
 
 void_or_arg_list: T_VOID { $$ = rpc_proc{} } | arg_list;
 
