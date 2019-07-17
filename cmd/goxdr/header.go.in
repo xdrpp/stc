@@ -12,15 +12,6 @@ package main
 // begin boilerplate
 //
 
-import (
-	"bytes"
-	"encoding/binary"
-	"fmt"
-	"io"
-	"math"
-	"strings"
-)
-
 // Types passed to the XDR Marshal method implementing the XdrType
 // interface.  Pointers to some generated types T already implement
 // the interface.  However, since built-in types such as string and

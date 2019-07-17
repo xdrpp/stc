@@ -916,7 +916,7 @@ func (e *emitter) getArgType(p *rpc_proc) string {
 
 	e.xprintf("\ntype %s struct {\n", args)
 	for a := range p.arg {
-		e.xprintf("\ta%d %s\n", a+1, p.arg[a])
+		e.xprintf("\ta%d *%s\n", a+1, p.arg[a])
 	}
 	e.xprintf("}\n")
 	e.xprintf(
@@ -930,7 +930,8 @@ func (v *%[1]s) XdrRecurse(x XDR, name string) {
 `, args)
 	for i := range p.arg {
 		e.xprintf(
-`	XDR_%[2]s(&v.a%[1]d).XdrMarshal(x, x.Sprintf("%%sa%[1]d", name))
+`	if v.a%[1]d == nil { v.a%[1]d = new(%[2]s) }
+	XDR_%[2]s(v.a%[1]d).XdrMarshal(x, x.Sprintf("%%sa%[1]d", name))
 `, i+1, p.arg[i])
 	}
 	e.xprintf(`}
@@ -954,7 +955,7 @@ func (e *emitter) doClientProc(cli string, p *rpc_proc) {
 	} else if len(p.arg) > 1 {
 		setargs = "\tproc.GetArg()\n"
 		for i := range p.arg {
-			setargs += fmt.Sprintf("\tproc.Arg.a%[1]d = *a%[1]d\n", i+1)
+			setargs += fmt.Sprintf("\tproc.Arg.a%[1]d = a%[1]d\n", i+1)
 		}
 	}
 	if p.res.getx() == "void" {
@@ -1026,14 +1027,16 @@ func (%[1]s) ProcName() string { return %[9]q }
 	}
 	return XDR_%[2]s(p.Arg)
 }
-func (p *%[1]s) GetRes() XdrType {
+`, pm, args)
+			fmt.Fprintf(out,
+`func (p *%[1]s) GetRes() XdrType {
 	if p.Res == nil {
-		p.Res = new(%[3]s)
+		p.Res = new(%[2]s)
 	}
-	return XDR_%[3]s(p.Res)
+	return XDR_%[2]s(p.Res)
 }
 var _ XdrProc = &%[1]s{} // XXX
-`, pm, args, p.res)
+`, pm, p.res)
 			fmt.Fprintf(out, `
 type %[1]s struct {
 	%[2]s
@@ -1049,7 +1052,7 @@ type %[1]s struct {
 					if a > 0 {
 						av += ", "
 					}
-					av += fmt.Sprintf("&p.Arg.a%d", a+1)
+					av += fmt.Sprintf("p.Arg.a%d", a+1)
 				}
 			}
 
@@ -1213,8 +1216,20 @@ func main() {
 	if *opt_nobp {
 		fmt.Fprint(out, "import \"fmt\"\n\nvar _ = fmt.Sprintf\n")
 	} else {
-		io.WriteString(out, header)
+		fmt.Fprintf(out, `import(
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"io"
+	"math"
+	"strings"
+)
+`)
 	}
 
 	io.WriteString(out, code)
+
+	if !*opt_nobp {
+		io.WriteString(out, header)
+	}
 }
