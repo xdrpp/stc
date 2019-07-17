@@ -439,7 +439,11 @@ var _ XdrSrv = My_vers_Server{}    // implements XdrSrv interface
 ~~~~
 
 `XdrSrv` provides everything an RFC5531 RPC library needs to marshal
-and unmarshal arguments:
+and unmarshal arguments.  The `Do()` method of an `XdrSrvProc` calls
+the underlying method on `My_vers_Server`.  Hence, program independent
+RPC code can call `proc := GetProc()` to get the `XdrSrvProc`, then
+unmarshal `proc.GetArg()`, then call `proc.Do()` to handle the call,
+and finally marshal the result from `proc.GetRes()`.
 
 ~~~~{.go}
 type XdrSrvProc interface {
