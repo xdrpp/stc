@@ -650,13 +650,19 @@ type XdrProc interface {
 	GetRes() XdrType
 }
 
-// A call structure on the server side dispatches the call to an
-// instance of the version interface.
+// Interface for a data structure containing argument and results of a
+// procedure plus a way to invoke the procedure on an instance of the
+// RPC version.  In other words, Do() actuall performs the work of an
+// RPC on the server side.
 type XdrSrvProc interface {
 	XdrProc
 	Do()
 }
 
+// Interface for an RPC version interface bound to a server
+// implementation.  The result of GetProc() can be used to marshal the
+// arguments and results as well as actually invoke the function
+// (though Do()).
 type XdrSrv interface {
 	Prog() uint32
 	Vers() uint32
@@ -664,8 +670,6 @@ type XdrSrv interface {
 	VersName() string
 	GetProc(uint32) XdrSrvProc
 }
-
-type XdrDispatch = func(XdrProc) error
 
 //
 // end boilerplate

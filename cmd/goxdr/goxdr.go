@@ -905,18 +905,6 @@ func (u *%[1]s) XdrRecurse(x XDR, name string) {
 	e.xappend(out)
 }
 
-/*
-func xgetArgs(p *rpc_proc) (xdrtype, mkarg, call string) {
-	if len(p.arg) == 0 {
-		return "XdrVoid", "", ""
-	}
-	tp := p.arg[0].String()
-	return tp, fmt.Sprintf(
-`			arg := ret.Arg.XdrPointer().(*%s)
-`, tp), "arg"
-}
-*/
-
 func (e *emitter) getArgType(p *rpc_proc) string {
 	if len(p.arg) == 0 {
 		return "XdrVoid"
@@ -951,6 +939,43 @@ func XDR_%[1]s(v *%[1]s) *%[1]s { return v }
 	// e.xprintf("var _ XdrType = &%[1]s{}\n", args) // XXX
 	e.xprintf("\n")
 	return args
+}
+
+func (e *emitter) doClientProc(cli string, p *rpc_proc) {
+	args, setargs := "", ""
+	for i := range p.arg {
+		if i != 0 {
+			args += ", "
+		}
+		args += fmt.Sprintf("a%d *%s", i+1, p.arg[i])
+	}
+	if len(p.arg) == 1 {
+		setargs = "\tproc.Arg = a1\n"
+	} else if len(p.arg) > 1 {
+		for i := range p.arg {
+			setargs += fmt.Sprintf("\tproc.Arg.a%[1]d = *a%[1]d\n", i+1)
+		}
+	}
+	if p.res.getx() == "void" {
+		e.xprintf(
+`func (c %[1]s) %[2]s(%[3]s) {
+	var proc xdrProc_%[2]s
+%[4]s	if err := c.XdrSend(&proc); err != nil {
+		panic(err)
+	}
+}
+`, cli, p.id, args, setargs)
+	} else {
+		e.xprintf(
+`func (c %[1]s) %[2]s(%[3]s) *%[5]s {
+	var proc xdrProc_%[2]s
+%[4]s	if err := c.XdrSend(&proc); err != nil {
+		panic(err)
+	}
+	return proc.Res
+}
+`, cli, p.id, args, setargs, p.res)
+	}
 }
 
 func (r *rpc_program) emit(e *emitter) {
@@ -1067,6 +1092,17 @@ func (s %[1]s) GetProc(p uint32) XdrSrvProc {
 }
 var _ XdrSrv = %s{} // XXX
 `, srv)
+
+		cli := fmt.Sprintf("%s_Client", name)
+		e.xprintf(`
+type %[1]s struct {
+	XdrSend func(XdrProc) error
+}
+var _ %[2]s = %[1]s{} // XXX
+`, cli, name)
+		for _, p := range r.vers[i].procs {
+			e.doClientProc(cli, &p)
+		}
 	}
 }
 
