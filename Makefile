@@ -1,95 +1,80 @@
-DESTDIR =
-PREFIX = /usr/local
-MANDIR = $(PREFIX)/share/man
-
+CMDS = stc
+CLEANFILES = .*~ *~ */*~ goxdr
 BUILT_SOURCES = stx/xdr_generated.go uhelper.go stcdetail/stcxdr.go
 XDRS = xdr/Stellar-SCP.x xdr/Stellar-ledger-entries.x			\
 xdr/Stellar-ledger.x xdr/Stellar-overlay.x xdr/Stellar-transaction.x	\
 xdr/Stellar-types.x
 
-GO_DEPENDS = golang.org/x/crypto/... golang.org/x/tools/cmd/goyacc	\
-golang.org/x/tools/cmd/stringer
+all: build man
 
-all: cmd/stc/stc
+build: $(BUILT_SOURCES) always
+	go build
 
-man:
-	cd cmd/stc && $(MAKE) stc.1
-	cd cmd/goxdr && $(MAKE) goxdr.1
+stx/xdr_generated.go: goxdr $(XDRS)
+	./goxdr -B -p stx -enum-comments -o $@~ $(XDRS)
+	cmp $@~ $@ 2> /dev/null || mv -f $@~ $@
 
-always:
-	@:
-
-install uninstall:
-	cd cmd/stc && $(MAKE) $@
-
-build-depend:
-	go get $(GO_DEPENDS)
-
-update-depend:
-	go get -u $(GO_DEPENDS)
-
-xdr:
-	git fetch --depth=1 https://github.com/stellar/stellar-core.git master
-	git archive --prefix=xdr/ FETCH_HEAD:src/xdr | tar xf -
-
-$(XDRS): xdr
-
-cmd/goxdr/goxdr:
-	cd cmd/goxdr && GOARCH=$$(go env GOHOSTARCH) $(MAKE)
-
-cmd/stc/stc: $(BUILT_SOURCES) always
-	cd cmd/stc && $(MAKE)
-
-stx/xdr_generated.go: cmd/goxdr/goxdr $(XDRS)
-	cmd/goxdr/goxdr -p stx -enum-comments -o $@~ $(XDRS)
-	@if cmp $@ $@~ > /dev/null 2>/dev/null; then \
-		rm -f $@~; \
-	else \
-		echo mv -f $@~ $@; \
-		mv -f $@~ $@; \
-	fi
-
-stcdetail/stcxdr.go: cmd/goxdr/goxdr stcdetail/stcxdr.x
-	cmd/goxdr/goxdr -b -i github.com/xdrpp/stc/stx -p stcdetail \
-		-o $@~ stcdetail/stcxdr.x
-	@if cmp $@ $@~ > /dev/null 2>/dev/null; then \
-		rm -f $@~; \
-	else \
-		echo mv -f $@~ $@; \
-		mv -f $@~ $@; \
-	fi
+stcdetail/stcxdr.go: goxdr stcdetail/stcxdr.x
+	./goxdr -b -i github.com/xdrpp/stc/stx -p stcdetail -o $@~ \
+		stcdetail/stcxdr.x
+	cmp $@~ $@ 2> /dev/null || mv -f $@~ $@
 
 uhelper.go: stx/xdr_generated.go uniontool/uniontool.go
 	go run uniontool/uniontool.go > $@~
 	mv -f $@~ $@
 
-test: $(BUILT_SOURCES)
+$(XDRS): xdr
+
+xdr:
+	git fetch --depth=1 https://github.com/stellar/stellar-core.git master
+	git archive --prefix=xdr/ FETCH_HEAD:src/xdr | tar xf -
+
+goxdr: always
+	@set -e; if test -d cmd/goxdr; then \
+	    (cd cmd/goxdr && $(MAKE)); \
+	    goxdr=cmd/goxdr/goxdr; \
+	else \
+	    goxdr=$$(PATH="$$PATH:$$(go env GOPATH)/bin" command -v goxdr); \
+	fi; \
+	cmp "$$goxdr" $@ 2> /dev/null || set -x; cp "$$goxdr" $@
+
+RECURSE = @set -e; for dir in $(CMDS); do \
+	if test -d cmd/$$dir; then (set -x; cd cmd/$$dir && $(MAKE) $@); fi; \
+	done
+
+test: always
 	go test -v . ./stcdetail
-	cd cmd/goxdr && $(MAKE) test
+	$(RECURSE)
 
-clean:
-	for dir in cmd/goxdr cmd/stc cmd/ini; do \
-		(cd $$dir && $(MAKE) $@); \
-	done
-	go clean
-	rm -f *~ .*~ */*~
+clean: always
+	rm -f $(CLEANFILES)
 	rm -rf goroot gh-pages
+	$(RECURSE)
 
-maintainer-clean: clean
-	for dir in cmd/goxdr cmd/stc; do \
-		(cd $$dir && $(MAKE) $@); \
+maintainer-clean: always
+	rm -f $(CLEANFILES) $(BUILT_SOURCES) go.sum
+	rm -rf goroot gh-pages
+	$(RECURSE)
+
+install uninstall man: always
+	$(RECURSE)
+
+built_sources: $(BUILT_SOURCES)
+	rm -f $@
+	for file in $(BUILT_SOURCES); do \
+		echo $$file >> $@; \
 	done
-	go clean
-	rm -f *~ .*~ */*~ go.sum $(BUILT_SOURCES)
-	# Git clean avoids removing xdr if it's a git repository
-	git clean -fxd xdr
+	$(RECURSE)
 
-go1:
+depend: always
+	go get -u
+
+go1: always
 	./make-go1
 
-gh-pages:
+gh-pages: always
 	./make-gh-pages
 
-.PHONY: all man test install clean maintainer-clean go1 gh-pages
-.PHONY: build-depend update-depend always
-.PHONY: cmd/goxdr/goxdr cmd/goxdr/stc
+always:
+	@:
+.PHONY: always

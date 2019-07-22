@@ -1,5 +1,8 @@
 *~
-go.sum
-uhelper.go
-xdr
-xdr_generated.go
+/cmd/goxdr
+/go.sum
+/goxdr
+/stcdetail/stcxdr.go
+/stx/xdr_generated.go
+/uhelper.go
+/xdr

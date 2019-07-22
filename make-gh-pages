@@ -1,7 +1,7 @@
 #!/bin/sh -xe
 
 PKG="github.com/xdrpp/stc"
-MANS="stc goxdr"
+MANS="stc"
 
 rm -rf goroot gh-pages
 make go1

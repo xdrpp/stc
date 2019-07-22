@@ -2,28 +2,58 @@ DESTDIR =
 PREFIX = /usr/local
 MANDIR = $(PREFIX)/share/man
 
-all:
+TARGET = stc
+GENERATE_INPUTS =
+BUILT_SOURCES =
+EXTRA_CLEAN =
+
+all: $(TARGET)
+
+$(TARGET): $(BUILT_SOURCES) always
 	go build
 
-install: stc stc.1
+$(BUILT_SOURCES): generate-stamp
+
+generate-stamp: $(GENERATE_INPUTS)
+	PATH="$$PATH:$$(go env GOPATH)/bin" go generate
+	sed -e 's|^[ 	]*//line|//line|' parse.go > parse.go~ \
+		&& mv -f parse.go~ parse.go
+	touch $@
+
+test: all
+	go test -v
+
+man: $(TARGET).1
+
+$(TARGET).1: $(TARGET).1.md
+	pandoc -s -w man $@.md -o $@ || \
+	    git show --output=$@ \
+	    $$(git for-each-ref --count 1 --format '%(refname)' 'refs/remotes/*/go1'):./$@
+
+install: $(TARGET) $(TARGET).1 always
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
-	cp stc $(DESTDIR)$(PREFIX)/bin/stc
+	cp $(TARGET) $(DESTDIR)$(PREFIX)/bin/$(TARGET)
 	mkdir -p $(DESTDIR)$(MANDIR)/man1
-	cp stc.1 $(DESTDIR)$(MANDIR)/man1/stc.1
+	cp $(TARGET).1 $(DESTDIR)$(MANDIR)/man1/$(TARGET).1
 
-uninstall:
-	rm -f $(DESTDIR)$(PREFIX)/bin/stc $(DESTDIR)$(MANDIR)/man1/stc.1
+uninstall: always
+	rm -f $(DESTDIR)$(PREFIX)/bin/$(TARGET) \
+		$(DESTDIR)$(MANDIR)/man1/$(TARGET).1
 
-clean:
+clean: always
 	go clean
-	rm -f *~ .*~ debug
+	rm -f *~ .*~ debug testdata/*~ $(EXTRA_CLEAN)
 
 maintainer-clean: clean
-	rm -f stc.1
+	rm -f $(BUILT_SOURCES) $(TARGET).1 generate-stamp
 
-stc.1: stc.1.md
-	pandoc -s -w man stc.1.md -o stc.1 || \
-		git show $$(git for-each-ref --count 1 --format '%(refname)' 'refs/remotes/*/go1'):./$@ > $@
+built_sources: $(BUILT_SOURCES) $(TARGET).1 always
+	for file in $(BUILT_SOURCES) $(TARGET).1; do \
+		echo cmd/$$(basename $$PWD)/$$file >> ../../built_sources; \
+	done
 
-.PHONY: all install uninstall clean maintainer-clean
+always:
+	@:
+
+.PHONY: always
 .NOTPARALLEL:

@@ -1,28 +1,24 @@
-DESTDIR =
-PREFIX = /usr/local
-MANDIR = $(PREFIX)/share/man
 
-BUILT_SOURCES =
+TARGET = ini
 EXTRA_CLEAN =
 
-all: $(BUILT_SOURCES)
+all: $(TARGET)
+
+$(TARGET): always
 	go build -tags ini
 
-install: goxdr goxdr.1
-	mkdir -p $(DESTDIR)$(PREFIX)/bin
-	cp ini $(DESTDIR)$(PREFIX)/bin/ini
+test man install uninstall built_sources:
+	@:
 
-uninstall:
-	rm -f $(DESTDIR)$(PREFIX)/bin/ini
-
-test: all
-	go test -v .
-
-clean:
+clean: always
 	go clean
-	rm -f *~ .*~ debug
+	rm -f *~ .*~ debug testdata/*~ $(EXTRA_CLEAN)
 
 maintainer-clean: clean
+	rm -f $(BUILT_SOURCES)
 
-.PHONY: all install uninstall clean maintainer-clean test
+always:
+	@:
+
+.PHONY: always
 .NOTPARALLEL:
