@@ -31,10 +31,10 @@ xdr:
 
 goxdr: always
 	@set -e; if test -d cmd/goxdr; then \
-	    (cd cmd/goxdr && $(MAKE)); \
+	    (set -x; cd cmd/goxdr && $(MAKE)); \
 	    goxdr=cmd/goxdr/goxdr; \
 	else \
-	    goxdr=$$(PATH="$$PATH:$$(go env GOPATH)/bin" command -v goxdr); \
+	    goxdr=$$(set -x; PATH="$$PATH:$$(go env GOPATH)/bin" command -v goxdr); \
 	fi; \
 	cmp "$$goxdr" $@ 2> /dev/null || set -x; cp "$$goxdr" $@
 
