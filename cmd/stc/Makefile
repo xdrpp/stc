@@ -27,7 +27,7 @@ man: $(TARGET).1
 
 $(TARGET).1: $(TARGET).1.md
 	pandoc -s -w man $@.md -o $@ || \
-	    git show --output=$@ \
+	    git -P show --output=$@ \
 	    $$(git for-each-ref --count 1 --format '%(refname)' 'refs/remotes/*/go1'):./$@
 
 install: $(TARGET) $(TARGET).1 always
