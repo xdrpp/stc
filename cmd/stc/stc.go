@@ -450,7 +450,7 @@ func main() {
 		"Convert data to Unix time (for use in TimeBounds)")
 	opt_verbose := flag.Bool("v", false,
 		"Be more verbose for some operations")
-	opt_print_default_config := flag.Bool("-builtin-config", false,
+	opt_print_default_config := flag.Bool("builtin-config", false,
 		"Print the built-in stc.conf file used when none is found")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
@@ -475,7 +475,7 @@ func main() {
        %[1]s -export-key NAME
        %[1]s -list-keys
        %[1]s -date YYYY-MM-DD[Thh:mm:ss[Z]]
-       %[1]s -print-default-config
+       %[1]s -builtin-config
 `, progname)
 		flag.PrintDefaults()
 	}
