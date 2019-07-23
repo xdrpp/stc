@@ -4,7 +4,7 @@ import "bytes"
 import "encoding/base64"
 import "encoding/json"
 import "fmt"
-import "github.com/xdrpp/stc/stx"
+import "github.com/xdrpp/goxdr/xdr"
 
 type jsonIn struct {
 	obj interface{}
@@ -13,18 +13,18 @@ type jsonIn struct {
 func mustString(i interface{}) string {
 	switch i.(type) {
 	case map[string]interface{}, []interface{}:
-		stx.XdrPanic("JsonToXdr: Expected scalar got %T", i)
+		xdr.XdrPanic("JsonToXdr: Expected scalar got %T", i)
 	}
 	return fmt.Sprint(i)
 }
 
 func (j *jsonIn) get(name string) interface{} {
 	if len(name) == 0 {
-		stx.XdrPanic("JsonToXdr: empty field name")
+		xdr.XdrPanic("JsonToXdr: empty field name")
 	} else if name[0] == '[' {
 		a := j.obj.([]interface{})
 		if len(a) == 0 {
-			stx.XdrPanic("JsonToXdr: insufficient elements in array")
+			xdr.XdrPanic("JsonToXdr: insufficient elements in array")
 		}
 		j.obj = a[1:]
 		return a[0]
@@ -37,40 +37,40 @@ func (j *jsonIn) get(name string) interface{} {
 func (_ *jsonIn) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
-func (j *jsonIn) Marshal(name string, xval stx.XdrType) {
+func (j *jsonIn) Marshal(name string, xval xdr.XdrType) {
 	jval := j.get(name)
 	if jval == nil {
 		return
 	}
 	switch v := xval.(type) {
-	case stx.XdrString:
+	case xdr.XdrString:
 		v.SetString(mustString(jval))
-	case stx.XdrVecOpaque:
+	case xdr.XdrVecOpaque:
 		bs, err := base64.StdEncoding.DecodeString(mustString(jval))
 		if err != nil {
 			panic(err)
 		}
 		v.SetByteSlice(bs)
-	case stx.XdrArrayOpaque:
+	case xdr.XdrArrayOpaque:
 		dst := v.GetByteSlice()
 		bs, err := base64.StdEncoding.DecodeString(mustString(jval))
 		if err != nil {
 			panic(err)
 		} else if len(bs) != len(dst) {
-			stx.XdrPanic("JsonToXdr: %s decodes to %d bytes, want %d bytes",
+			xdr.XdrPanic("JsonToXdr: %s decodes to %d bytes, want %d bytes",
 				name, len(bs), len(dst))
 		}
 		copy(dst, bs)
 	case fmt.Scanner:
 		if _, err := fmt.Sscan(mustString(jval), v); err != nil {
-			stx.XdrPanic("JsonToXdr: %s: %s", name, err.Error())
+			xdr.XdrPanic("JsonToXdr: %s: %s", name, err.Error())
 		}
-	case stx.XdrPtr:
+	case xdr.XdrPtr:
 		v.SetPresent(true)
 		v.XdrMarshalValue(j, name)
-	case stx.XdrVec:
+	case xdr.XdrVec:
 		v.XdrMarshalN(&jsonIn{jval}, "", uint32(len(jval.([]interface{}))))
-	case stx.XdrAggregate:
+	case xdr.XdrAggregate:
 		v.XdrRecurse(&jsonIn{jval}, "")
 	}
 }
@@ -79,7 +79,7 @@ func (j *jsonIn) Marshal(name string, xval stx.XdrType) {
 // is in a pristine state--for example, it won't reset pointers to nil
 // if the corresponding JSON is null.  Moreover, it is somewhat strict
 // in expecting the JSON to conform to the XDR.
-func JsonToXdr(dst stx.XdrAggregate, src []byte) (err error) {
+func JsonToXdr(dst xdr.XdrAggregate, src []byte) (err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			err = i.(error)
@@ -111,7 +111,7 @@ func (j *jsonOut) printField(name string, f string, args ...interface{}) {
 	fmt.Fprintf(j.out, f, args...)
 }
 
-func (j *jsonOut) aggregate(val stx.XdrAggregate) {
+func (j *jsonOut) aggregate(val xdr.XdrAggregate) {
 	oldIndent := j.indent
 	defer func() {
 		j.needComma = true
@@ -120,15 +120,15 @@ func (j *jsonOut) aggregate(val stx.XdrAggregate) {
 	j.indent = j.indent + "    "
 	j.needComma = false
 	switch v := val.(type) {
-	case stx.XdrVec:
+	case xdr.XdrVec:
 		j.out.WriteString("[")
 		v.XdrMarshalN(j, "", v.GetVecLen())
 		j.out.WriteString("\n" + oldIndent + "]")
-	case stx.XdrArray:
+	case xdr.XdrArray:
 		j.out.WriteString("[")
 		v.XdrRecurse(j, "")
 		j.out.WriteString("\n" + oldIndent + "]")
-	case stx.XdrAggregate:
+	case xdr.XdrAggregate:
 		j.out.WriteString("{")
 		v.XdrRecurse(j, "")
 		j.out.WriteString("\n" + oldIndent + "}")
@@ -138,19 +138,19 @@ func (j *jsonOut) aggregate(val stx.XdrAggregate) {
 func (_ *jsonOut) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
-func (j *jsonOut) Marshal(name string, val stx.XdrType) {
+func (j *jsonOut) Marshal(name string, val xdr.XdrType) {
 	switch v := val.(type) {
-	case *stx.XdrBool:
+	case *xdr.XdrBool:
 		j.printField(name, "%v", *v)
-	case stx.XdrEnum:
+	case xdr.XdrEnum:
 		j.printField(name, "%q", v.String())
-	case stx.XdrNum32:
+	case xdr.XdrNum32:
 		j.printField(name, "%s", v.String())
 		// Intentionally don't do the same for 64-bit, which gets
 		// passed as strings to avoid any loss of precision.
-	case stx.XdrString:
+	case xdr.XdrString:
 		j.printField(name, "%s", v.String())
-	case stx.XdrBytes:
+	case xdr.XdrBytes:
 		j.printField(name, "\"")
 		enc := base64.NewEncoder(base64.StdEncoding, j.out)
 		enc.Write(v.GetByteSlice())
@@ -158,22 +158,22 @@ func (j *jsonOut) Marshal(name string, val stx.XdrType) {
 		j.out.WriteByte('"')
 	case fmt.Stringer:
 		j.printField(name, "%q", v.String())
-	case stx.XdrPtr:
+	case xdr.XdrPtr:
 		if !v.GetPresent() {
 			j.printField(name, "null")
 		} else {
 			v.XdrMarshalValue(j, name)
 		}
-	case stx.XdrAggregate:
+	case xdr.XdrAggregate:
 		j.printField(name, "")
 		j.aggregate(v)
 	default:
-		stx.XdrPanic("XdrToJson can't handle type %T", val)
+		xdr.XdrPanic("XdrToJson can't handle type %T", val)
 	}
 }
 
 // Format an XDR structure as JSON.
-func XdrToJson(src stx.XdrAggregate) (json []byte, err error) {
+func XdrToJson(src xdr.XdrAggregate) (json []byte, err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			json = nil

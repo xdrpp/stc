@@ -7,21 +7,26 @@ xdr/Stellar-types.x
 
 all: build man
 
-build: $(BUILT_SOURCES) always
+build: $(BUILT_SOURCES) always go.mod
 	go build
 
 stx/xdr_generated.go: goxdr $(XDRS)
-	./goxdr -B -p stx -enum-comments -o $@~ $(XDRS)
+	./goxdr -p stx -enum-comments -o $@~ $(XDRS)
 	cmp $@~ $@ 2> /dev/null || mv -f $@~ $@
 
 stcdetail/stcxdr.go: goxdr stcdetail/stcxdr.x
-	./goxdr -b -i github.com/xdrpp/stc/stx -p stcdetail -o $@~ \
+	./goxdr -i github.com/xdrpp/stc/stx -p stcdetail -o $@~ \
 		stcdetail/stcxdr.x
 	cmp $@~ $@ 2> /dev/null || mv -f $@~ $@
 
 uhelper.go: stx/xdr_generated.go uniontool/uniontool.go
 	go run uniontool/uniontool.go > $@~
 	mv -f $@~ $@
+
+go.mod: $(MAKEFILE_LIST)
+	echo 'module github.com/xdrpp/stc' > go.mod
+	test ! -d cmd/goxdr || \
+		echo 'replace github.com/xdrpp/goxdr => ./cmd/goxdr' >> go.mod
 
 $(XDRS): xdr
 
@@ -52,7 +57,7 @@ clean: always
 	$(RECURSE)
 
 maintainer-clean: always
-	rm -f $(CLEANFILES) $(BUILT_SOURCES) go.sum
+	rm -f $(CLEANFILES) $(BUILT_SOURCES) go.sum go.mod
 	rm -rf goroot gh-pages
 	$(RECURSE)
 
@@ -70,7 +75,11 @@ depend: always
 	go get -u
 
 go1: always
+	echo 'module github.com/xdrpp/stc' > go.mod
+	echo 'require github.com/xdrpp/goxdr go1' >> go.mod
+	$(MAKE) build
 	./make-go1
+	rm -f go.mod
 
 gh-pages: always
 	./make-gh-pages

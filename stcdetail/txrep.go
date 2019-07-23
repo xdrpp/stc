@@ -6,6 +6,7 @@ package stcdetail
 
 import (
 	"fmt"
+	"github.com/xdrpp/goxdr/xdr"
 	"github.com/xdrpp/stc/stx"
 	"io"
 	"strings"
@@ -45,10 +46,10 @@ type trackTypes struct {
 func (x *trackTypes) present() string {
 	return "." + strings.Repeat("_inner", x.ptrDepth-1) + ps_present
 }
-func (x *trackTypes) track(i stx.XdrType) (cleanup func()) {
+func (x *trackTypes) track(i xdr.XdrType) (cleanup func()) {
 	oldx := *x
 	switch v := i.(type) {
-	case stx.XdrPtr:
+	case xdr.XdrPtr:
 		x.ptrDepth++
 	case *stx.TransactionEnvelope:
 		// In case some XDR structure wraps TransactionEnvelope
@@ -145,13 +146,13 @@ func PrintVecOpaque(bs []byte) string {
 	return fmt.Sprintf("%x", bs)
 }
 
-func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
+func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
 	defer xp.track(i)()
 	defer func() {
 		switch v := recover().(type) {
 		case nil:
 			return
-		case stx.XdrError:
+		case xdr.XdrError:
 			xp.err = append(xp.err, struct {
 				Field string
 				Msg   string
@@ -191,17 +192,17 @@ func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 		} else {
 			fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
 		}
-	case *stx.XdrInt64:
+	case *xdr.XdrInt64:
 		fmt.Fprintf(xp.out, "%s: %s (%s)\n", name, v.String(),
 			ScaleFmt(int64(*v), 7))
-	case stx.XdrVecOpaque:
+	case xdr.XdrVecOpaque:
 		fmt.Fprintf(xp.out, "%s: %s\n", name, PrintVecOpaque(v.GetByteSlice()))
 	case fmt.Stringer:
 		fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
-	case stx.XdrPtr:
+	case xdr.XdrPtr:
 		fmt.Fprintf(xp.out, "%s%s: %v\n", name, xp.present(), v.GetPresent())
 		v.XdrMarshalValue(xp, name)
-	case stx.XdrVec:
+	case xdr.XdrVec:
 		fmt.Fprintf(xp.out, "%s.%s: %d\n", name, ps_len, v.GetVecLen())
 		v.XdrMarshalN(xp, name, v.GetVecLen())
 	case *stx.DecoratedSignature:
@@ -213,7 +214,7 @@ func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 		}
 		fmt.Fprintf(xp.out, "%[1]s.hint: %[2]s\n%[1]s.signature: %[3]s\n",
 			name, hint, PrintVecOpaque(v.Signature))
-	case stx.XdrAggregate:
+	case xdr.XdrAggregate:
 		v.XdrRecurse(xp, name)
 	default:
 		fmt.Fprintf(xp.out, "%s: %v\n", name, i)
@@ -232,7 +233,7 @@ func (xp *txStringCtx) Marshal(name string, i stx.XdrType) {
 //
 // Help comment for field fieldname:
 //   GetHelp(fieldname string) bool
-func XdrToTxrep(out io.Writer, name string, t stx.XdrType) XdrBadValue {
+func XdrToTxrep(out io.Writer, name string, t xdr.XdrType) XdrBadValue {
 	ctx := txStringCtx{
 		accountIDNote: func(*stx.AccountID) string { return "" },
 		signerNote: func(*stx.TransactionEnvelope,
@@ -325,7 +326,7 @@ func (xs *xdrScan) report(line int, fmtstr string, args ...interface{}) {
 	}{line, msg})
 }
 
-func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
+func (xs *xdrScan) Marshal(name string, i xdr.XdrType) {
 	defer xs.track(i)()
 	lv, ok := xs.kvs[name]
 	val := lv.val
@@ -333,7 +334,7 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 		init.XdrInitialize()
 	}
 	switch v := i.(type) {
-	case stx.XdrArrayOpaque:
+	case xdr.XdrArrayOpaque:
 		if !ok {
 			return
 		}
@@ -342,7 +343,7 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 			xs.setHelp(name)
 			xs.report(lv.line, "%s", err.Error())
 		}
-	case stx.XdrVecOpaque:
+	case xdr.XdrVecOpaque:
 		if !ok {
 			return
 		}
@@ -358,7 +359,7 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 		} else if len(val) > 0 && val[len(val)-1] == '?' {
 			xs.setHelp(name)
 		}
-	case *stx.XdrSize:
+	case *xdr.XdrSize:
 		var size uint32
 		lv = xs.kvs[name+"."+ps_len]
 		fmt.Sscan(lv.val, &size)
@@ -381,7 +382,7 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 		if len(val) > 0 && val[len(val)-1] == '?' {
 			xs.setHelp(name)
 		}
-	case stx.XdrPtr:
+	case xdr.XdrPtr:
 		val = "false"
 		field := name + xs.present()
 		if _, err := fmt.Sscanf(xs.kvs[field].val, "%s", &val); err != nil {
@@ -409,7 +410,7 @@ func (xs *xdrScan) Marshal(name string, i stx.XdrType) {
 				"%s (%s) must be true or false", field, val)
 		}
 		v.XdrMarshalValue(xs, name)
-	case stx.XdrAggregate:
+	case xdr.XdrAggregate:
 		v.XdrRecurse(xs, name)
 	default:
 		if !ok {
@@ -471,7 +472,7 @@ func (xs *xdrScan) readKvs(in io.Reader) {
 // Parse input in Txrep format into an XdrType type.  If the XdrType
 // has a method named SetHelp(string), then it is called for field
 // names when the value ends with '?'.
-func XdrFromTxrep(in io.Reader, name string, t stx.XdrType) TxrepError {
+func XdrFromTxrep(in io.Reader, name string, t xdr.XdrType) TxrepError {
 	xs := &xdrScan{}
 	if sh, ok := t.(interface{ SetHelp(string) }); ok {
 		xs.setHelp = sh.SetHelp

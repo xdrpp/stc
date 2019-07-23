@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/xdrpp/goxdr/xdr"
 	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
 	"io/ioutil"
@@ -375,16 +376,16 @@ func (net *StellarNet) AccountDelta(
 		if mds[i].Old != nil && mds[i].New != nil {
 			fmt.Fprintf(out, "%supdated %s\n%s", prefix, ks,
 				stcdetail.RepDiff(pprefix,
-				net.ToRep(mds[i].Old.Data.XdrUnionBody().(stx.XdrType)),
-				net.ToRep(mds[i].New.Data.XdrUnionBody().(stx.XdrType))))
+				net.ToRep(mds[i].Old.Data.XdrUnionBody().(xdr.XdrType)),
+				net.ToRep(mds[i].New.Data.XdrUnionBody().(xdr.XdrType))))
 		} else if mds[i].New != nil {
 			fmt.Fprintf(out, "%screated %s\n%s", prefix, ks, stcdetail.RepDiff(
 				pprefix, "",
-				net.ToRep(mds[i].New.Data.XdrUnionBody().(stx.XdrType))))
+				net.ToRep(mds[i].New.Data.XdrUnionBody().(xdr.XdrType))))
 		} else {
 			fmt.Fprintf(out, "%sdeleted %s\n%s", prefix, ks,
 				stcdetail.RepDiff(pprefix,
-				net.ToRep(mds[i].Old.Data.XdrUnionBody().(stx.XdrType)),
+				net.ToRep(mds[i].Old.Data.XdrUnionBody().(xdr.XdrType)),
 				""))
 		}
 	}
@@ -425,7 +426,7 @@ func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 		Ledger uint32
 		Created_at string
 	}
-	hash := stx.XdrArrayOpaque(r.Txhash[:])
+	hash := xdr.XdrArrayOpaque(r.Txhash[:])
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	} else if err = stcdetail.XdrFromBase64(&r.Env,
@@ -643,7 +644,7 @@ type enumComments interface {
 	XdrEnumComments() map[int32]string
 }
 
-func enumDesc(e stx.XdrEnum) string {
+func enumDesc(e xdr.XdrEnum) string {
 	if ec, ok := e.(enumComments); ok {
 		if c, ok := ec.XdrEnumComments()[int32(e.GetU32())]; ok {
 			return c

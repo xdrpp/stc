@@ -2,6 +2,7 @@ package stcdetail
 
 import (
 	"fmt"
+	"github.com/xdrpp/goxdr/xdr"
 	"github.com/xdrpp/stc/stx"
 	"strings"
 )
@@ -51,7 +52,7 @@ func GetLedgerEntryKey(e *stx.LedgerEntry) stx.LedgerKey {
 
 // Return the first AccountID found when traversing a data structure
 // (or nil if none).
-func GetAccountID(a stx.XdrAggregate) (ret *stx.AccountID) {
+func GetAccountID(a xdr.XdrAggregate) (ret *stx.AccountID) {
 	XdrExtract(a, &ret)
 	return
 }
@@ -78,7 +79,7 @@ func (md MetaDelta) AccountID() *stx.AccountID {
 	return GetAccountID(&md.Key)
 }
 
-func GetMetaDeltas(m stx.XdrAggregate) (ret []MetaDelta) {
+func GetMetaDeltas(m xdr.XdrAggregate) (ret []MetaDelta) {
 	kmap := make(map[string]int)
 	ForEachXdrType(m, func(c *stx.LedgerEntryChange) {
 		k, e := changeInfo(c)

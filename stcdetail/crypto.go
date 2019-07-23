@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
+	"github.com/xdrpp/goxdr/xdr"
 	"github.com/xdrpp/stc/stx"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh/terminal"
@@ -15,9 +16,9 @@ import (
 )
 
 // Computes the SHA-256 hash of an arbitrary XDR data structure.
-func xdrSHA256(t stx.XdrType) (ret stx.Hash) {
+func xdrSHA256(t xdr.XdrType) (ret stx.Hash) {
 	sha := sha256.New()
-	t.XdrMarshal(&stx.XdrOut{sha}, "")
+	t.XdrMarshal(&xdr.XdrOut{sha}, "")
 	copy(ret[:], sha.Sum(nil))
 	return
 }

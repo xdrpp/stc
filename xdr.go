@@ -9,6 +9,7 @@ package stc
 
 import (
 	"fmt"
+	"github.com/xdrpp/goxdr/xdr"
 	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
 	"reflect"
@@ -43,7 +44,7 @@ func MkAsset(acc AccountID, code string) stx.Asset {
 		copy(ret.AlphaNum12().AssetCode[:], code)
 		ret.AlphaNum4().Issuer = acc
 	} else {
-		stx.XdrPanic("MkAsset: %q exceeds 12 characters", code)
+		xdr.XdrPanic("MkAsset: %q exceeds 12 characters", code)
 	}
 	return ret
 }
@@ -57,7 +58,7 @@ func MkAllowTrustAsset(code string) stx.AllowTrustAsset {
 		ret.Type = stx.ASSET_TYPE_CREDIT_ALPHANUM12
 		copy(ret.AssetCode12()[:], code)
 	} else {
-		stx.XdrPanic("MkAllowTrustAsset: %q exceeds 12 characters", code)
+		xdr.XdrPanic("MkAllowTrustAsset: %q exceeds 12 characters", code)
 	}
 	return ret
 }
@@ -165,10 +166,10 @@ func (txe *TransactionEnvelope) Append(
 	sourceAccount *stx.AccountID,
 	body OperationBody) {
 	if len(txe.Tx.Operations) >= stx.MAX_OPS_PER_TX {
-		stx.XdrPanic("TransactionEnvelope.Op: attempt to exceed %d operations",
+		xdr.XdrPanic("TransactionEnvelope.Op: attempt to exceed %d operations",
 			stx.MAX_OPS_PER_TX)
 	} else if len(txe.Signatures) > 0 {
-		stx.XdrPanic("TransactionEnvelope.Op: transaction already signed")
+		xdr.XdrPanic("TransactionEnvelope.Op: transaction already signed")
 	}
 	txe.Tx.Operations = append(txe.Tx.Operations, stx.Operation{
 		SourceAccount: sourceAccount,
@@ -206,11 +207,11 @@ func (net *StellarNet) AccountIDNote(acct *stx.AccountID) string {
 
 // Convert an arbitrary XDR data structure to human-readable Txrep
 // format.
-func (net *StellarNet) ToRep(txe stx.XdrType) string {
+func (net *StellarNet) ToRep(txe xdr.XdrType) string {
 	var out strings.Builder
 
 	type helper interface {
-		stx.XdrType
+		xdr.XdrType
 		GetHelp(string) bool
 	}
 	if e, ok := txe.(helper); ok {
@@ -221,7 +222,7 @@ func (net *StellarNet) ToRep(txe stx.XdrType) string {
 		stcdetail.XdrToTxrep(&out, "", ntxe)
 	} else {
 		ntxe := struct {
-			stx.XdrType
+			xdr.XdrType
 			*StellarNet
 		}{txe, (*StellarNet)(net)}
 		stcdetail.XdrToTxrep(&out, "", ntxe)
@@ -264,18 +265,18 @@ type assignXdr struct {
 	fields []interface{}
 }
 
-func copyOpaqueArray(to stx.XdrArrayOpaque, from interface{}, name string) {
+func copyOpaqueArray(to xdr.XdrArrayOpaque, from interface{}, name string) {
 	switch f := from.(type) {
 	case []byte:
 		if len(f) > len(to) {
-			stx.XdrPanic("Set: length %d exceeded for %s",
+			xdr.XdrPanic("Set: length %d exceeded for %s",
 				len(to), name)
 		}
 		n := copy(to, f)
 		copy(to[n:], make([]byte, len(to)-n))
 	case string:
 		if len(f) > len(to) {
-			stx.XdrPanic("Set: length %d exceeded for %s",
+			xdr.XdrPanic("Set: length %d exceeded for %s",
 				len(to), name)
 		}
 		n := copy(to, f)
@@ -285,16 +286,16 @@ func copyOpaqueArray(to stx.XdrArrayOpaque, from interface{}, name string) {
 		if vf.Kind() != reflect.Array ||
 			vf.Elem().Kind() != reflect.Uint8 ||
 			vf.Len() != len(to) {
-			stx.XdrPanic("Set: cannot assign %T to %s (type opaque[%d])",
+			xdr.XdrPanic("Set: cannot assign %T to %s (type opaque[%d])",
 				from, name, len(to))
 		}
 		reflect.Copy(reflect.ValueOf(to), vf)
 	}
 }
 
-func (ax *assignXdr) Marshal(name string, val stx.XdrType) {
+func (ax *assignXdr) Marshal(name string, val xdr.XdrType) {
 	if len(ax.fields) == 0 {
-		stx.XdrPanic("Set: too few arguments at %s", name)
+		xdr.XdrPanic("Set: too few arguments at %s", name)
 	}
 	if v := reflect.ValueOf(val.XdrPointer()); v.Kind() == reflect.Ptr &&
 		reflect.TypeOf(ax.fields[0]).AssignableTo(v.Type().Elem()) {
@@ -302,7 +303,7 @@ func (ax *assignXdr) Marshal(name string, val stx.XdrType) {
 		if b, ok := val.(interface{ XdrBound() uint32 }); ok &&
 			(f.Kind() == reflect.Slice || f.Kind() == reflect.String) &&
 			uint(f.Len()) > uint(b.XdrBound()) {
-			stx.XdrPanic("Set: length %d exceeded for %s",
+			xdr.XdrPanic("Set: length %d exceeded for %s",
 				b.XdrBound(), name)
 		}
 		v.Elem().Set(f)
@@ -322,21 +323,21 @@ func (ax *assignXdr) Marshal(name string, val stx.XdrType) {
 		}
 	}
 	switch t := val.(type) {
-	case stx.XdrPtr:
+	case xdr.XdrPtr:
 		// Don't recurse, val should have been a pointer
 		break
-	case stx.XdrVec:
+	case xdr.XdrVec:
 		// Don't recurse, val should have been a slice
 		break
-	case stx.XdrArrayOpaque:
+	case xdr.XdrArrayOpaque:
 		copyOpaqueArray(t, ax.fields[0], name)
 		ax.fields = ax.fields[1:]
 		return
-	case stx.XdrAggregate:
+	case xdr.XdrAggregate:
 		t.XdrRecurse(ax, name)
 		return
 	}
-	stx.XdrPanic("Set: cannot assign %T to %s (type %T)",
+	xdr.XdrPanic("Set: cannot assign %T to %s (type %T)",
 		ax.fields[0], name, val.XdrValue())
 }
 
@@ -391,6 +392,6 @@ current aggregate.  For example, it is valid to say:
 	Set(&asset, ASSET_TYPE_CREDIT_ALPHANUM12, otherAsset.AlphaNum12)
 
 */
-func Set(t stx.XdrType, fieldValues ...interface{}) {
+func Set(t xdr.XdrType, fieldValues ...interface{}) {
 	t.XdrMarshal(&assignXdr{fieldValues}, "")
 }
