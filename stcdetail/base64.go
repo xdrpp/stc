@@ -10,10 +10,12 @@ import (
 // panic() with an XdrError if any field contains illegal values
 // (e.g., if a slice exceeds its bounds or a union discriminant has an
 // invalid value).
-func XdrToBase64(e stx.XdrType) string {
+func XdrToBase64(es ...stx.XdrType) string {
 	out := &strings.Builder{}
 	b64o := base64.NewEncoder(base64.StdEncoding, out)
-	e.XdrMarshal(&stx.XdrOut{b64o}, "")
+	for i := range es {
+		es[i].XdrMarshal(&stx.XdrOut{b64o}, "")
+	}
 	b64o.Close()
 	return out.String()
 }
