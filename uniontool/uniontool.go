@@ -10,9 +10,10 @@ import "sort"
 import "strings"
 import "unicode"
 import "github.com/xdrpp/stc/stx"
+import "github.com/xdrpp/goxdr/xdr"
 
 type union interface {
-	stx.XdrType
+	xdr.XdrType
 	XdrUnionTag() interface{}
 	XdrUnionTagName() string
 	XdrUnionBody() interface{}
@@ -55,7 +56,7 @@ func genTypes(prefix string, u union, useArmName bool,
 	} else {
 		method = "To" + typ
 	}
-	tag := u.XdrUnionTag().(stx.XdrEnum)
+	tag := u.XdrUnionTag().(xdr.XdrEnum)
 	var evs enumVals
 	for k, v := range tag.XdrEnumNames() {
 		evs = append(evs, enumVal{k, v})
@@ -110,7 +111,7 @@ func (arg %[1]s) %[8]s() (ret %[3]s) {
 func genFuncs(prefix string, u union, useArmName bool,
 	comfn func([]interface{})) {
 	typ := reflect.TypeOf(u.XdrValue()).Name()
-	tag := u.XdrUnionTag().(stx.XdrEnum)
+	tag := u.XdrUnionTag().(xdr.XdrEnum)
 	var evs enumVals
 	for k, v := range tag.XdrEnumNames() {
 		evs = append(evs, enumVal{k, v})

@@ -25,8 +25,11 @@ uhelper.go: stx/xdr_generated.go uniontool/uniontool.go
 
 go.mod: $(MAKEFILE_LIST)
 	echo 'module github.com/xdrpp/stc' > go.mod
-	test ! -d cmd/goxdr || \
-		echo 'replace github.com/xdrpp/goxdr => ./cmd/goxdr' >> go.mod
+	if test -d cmd/goxdr; then \
+	    echo 'replace github.com/xdrpp/goxdr => ./cmd/goxdr' >> go.mod; \
+	else \
+	    go get github.com/xdrpp/goxdr/cmd/goxdr@go1; \
+	fi
 
 $(XDRS): xdr
 
@@ -72,7 +75,8 @@ built_sources: $(BUILT_SOURCES)
 	$(RECURSE)
 
 depend: always
-	go get -u
+	rm -f go.mod
+	$(MAKE) go.mod
 
 go1: always
 	echo 'module github.com/xdrpp/stc' > go.mod
