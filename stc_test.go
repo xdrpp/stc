@@ -2,6 +2,7 @@ package stc
 
 import (
 	"fmt"
+	"github.com/xdrpp/goxdr/xdr"
 	"github.com/xdrpp/stc/stcdetail"
 	"reflect"
 	"strings"
@@ -129,19 +130,19 @@ func TestParseTxrep(t *testing.T) {
 		op.Body.Type = stx.OperationType(i)
 		txe.Tx.Operations = append(txe.Tx.Operations, op)
 	}
-	stcdetail.ForEachXdr(txe, func(i stx.XdrType) bool {
+	stcdetail.ForEachXdr(txe, func(i xdr.XdrType) bool {
 		switch v := i.(type) {
 		case interface{ XdrInitialize() }:
 			v.XdrInitialize()
-		case stx.XdrPtr:
+		case xdr.XdrPtr:
 			v.SetPresent(true)
 		case *stx.AccountID:
 			*v = yourkey
-		case stx.XdrNum64:
+		case xdr.XdrNum64:
 			v.SetU64(1)
-		case stx.XdrVarBytes:
+		case xdr.XdrVarBytes:
 			v.SetByteSlice([]byte("X"))
-		case stx.XdrBytes:
+		case xdr.XdrBytes:
 			v.GetByteSlice()[0] = 'Y'
 		}
 		return false
@@ -170,19 +171,19 @@ func TestXdr(t *testing.T) {
 		op.Body.Type = stx.OperationType(i)
 		txe.Tx.Operations = append(txe.Tx.Operations, op)
 	}
-	stcdetail.ForEachXdr(txe, func(i stx.XdrType) bool {
+	stcdetail.ForEachXdr(txe, func(i xdr.XdrType) bool {
 		switch v := i.(type) {
 		case interface{ XdrInitialize() }:
 			v.XdrInitialize()
-		case stx.XdrPtr:
+		case xdr.XdrPtr:
 			v.SetPresent(true)
 		case *stx.AccountID:
 			*v = yourkey
-		case stx.XdrNum64:
+		case xdr.XdrNum64:
 			v.SetU64(1)
-		case stx.XdrVarBytes:
+		case xdr.XdrVarBytes:
 			v.SetByteSlice([]byte("X"))
-		case stx.XdrBytes:
+		case xdr.XdrBytes:
 			v.GetByteSlice()[0] = 'Y'
 		}
 		return false

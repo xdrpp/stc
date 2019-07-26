@@ -19,6 +19,7 @@ import (
 	. "github.com/xdrpp/stc"
 	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
+	"github.com/xdrpp/goxdr/xdr"
 )
 
 func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
@@ -608,7 +609,7 @@ func main() {
 
 	if *opt_txinfo {
 		var txid stx.Hash
-		slice := stx.XdrArrayOpaque(txid[:])
+		slice := xdr.XdrArrayOpaque(txid[:])
 		if _, err := fmt.Sscanf(arg, "%x", &slice); err != nil {
 			fmt.Fprintln(os.Stderr, "syntactically invalid txid")
 			os.Exit(1)
@@ -691,7 +692,7 @@ func main() {
 	case *opt_post:
 		res, err := net.Post(e)
 		if err == nil {
-			fmt.Print(stx.XdrToString(res))
+			fmt.Print(xdr.XdrToString(res))
 		} else {
 			fmt.Fprintf(os.Stderr, "Post transaction failed: %s\n", err)
 			os.Exit(1)
