@@ -61,6 +61,7 @@ clean: always
 
 maintainer-clean: always
 	rm -f $(CLEANFILES) $(BUILT_SOURCES) go.sum go.mod
+	git clean -fx xdr
 	rm -rf goroot gh-pages
 	$(RECURSE)
 
