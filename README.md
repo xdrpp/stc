@@ -59,7 +59,10 @@ Furthermore, to build `stc` from the master branch, you also need to
 have the [`goxdr`](https://github.com/xdrpp/goxdr) compiler.  Because
 `stc` is codeveloped with goxdr, you may want to use a development
 version of `goxdr`, which you can do by placing a the `goxdr` source
-tree (or a symbolic link to it) in `cmd/goxdr`.
+tree (or a symbolic link to it) in `cmd/goxdr`.  If you don't want to
+do this, but are okay just using a snapshot of `goxdr`, you can run:
+
+    make depend
 
 Once you have `goxdr`, you can build `stc` by running:
 

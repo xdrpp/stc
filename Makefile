@@ -19,7 +19,7 @@ stcdetail/stcxdr.go: goxdr stcdetail/stcxdr.x
 		stcdetail/stcxdr.x
 	cmp $@~ $@ 2> /dev/null || mv -f $@~ $@
 
-uhelper.go: stx/xdr_generated.go uniontool/uniontool.go
+uhelper.go: stx/xdr_generated.go uniontool/uniontool.go go.mod
 	go run uniontool/uniontool.go > $@~
 	mv -f $@~ $@
 
