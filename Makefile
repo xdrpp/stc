@@ -9,6 +9,7 @@ all: build man
 
 build: $(BUILT_SOURCES) always go.mod
 	go build
+	cd cmd/stc && $(MAKE)
 
 stx/xdr_generated.go: goxdr $(XDRS)
 	./goxdr -p stx -enum-comments -o $@~ $(XDRS)
