@@ -77,9 +77,10 @@ Two field types have specially formatted values:
   signers start with "X".  (Private keys start with "S" in strkey
   format, but never appear in transactions.)
 
-* Asset codes are formatted as printable ASCII bytes and two-byte hex
-  escapes (e.g., `\x1f`), with no surrounding quotes.  Backslash must
-  be escaped with itself (e.g., `\\`).
+* Assets are formatted as _code_:_issuer_, where codes are formatted
+  as printable ASCII bytes and two-byte hex escapes (e.g., `\x1f`),
+  with no surrounding quotes.  A literal backslash or colon in an
+  asset code must be escaped (e.g., `\\`).
 
 Note that txrep is more likely to change than the base-64 XDR encoding
 of transactions.  Hence, if you want to preserve transactions that you
@@ -168,7 +169,7 @@ assume you do not encrypt your private keys.
 ## Network query mode
 
 stc runs in network query mode when one of the `-post`, `-fee-stats`,
-`-qa`, `-qt`, `-qta`, or `-create` option is provided.
+`-qa`, `-qt`, `-qta`, or `-create` options is provided.
 
 Post-mode, selected by `-post`, submits a transaction to the Stellar
 network.  This is how you actually execute a transaction you have
@@ -203,9 +204,14 @@ one.  To see the contents of the built-in file, you can print it with
 
 # OPTIONS
 
+`-builtin-config`
+:	Print the built-in system configuration file that is used if no
+`stc.conf` file is found.
+
 `-c`
 :	Compile the output to base64 XDR binary.  Otherwise, the default
-is to output in text mode.  Only available in default mode.
+is to preserve the format (with `-i` and `-edit`) or output in text
+mode to standard output or new files.  Only available in default mode.
 
 `-create`
 :	Create and fund an account on a network with a "friendbot" that
@@ -229,7 +235,8 @@ available by querying the `/friendbot?addr=ACCOUNT` path on horizon.
 
 `-i`
 :	Edit in place---overwrite the input file with the stc's output.
-Only available in default mode.
+The original file is saved with a `~` appended to the name.  Only
+available in default mode.
 
 `-import-key`
 :	Read a private key from the terminal (or standard input) and write
@@ -275,6 +282,9 @@ send the transaction to standard output unless `-i` has been
 supplied.  `-i` and `-o` are mutually exclusive, and can only be used
 in default mode.
 
+`-post`
+:	Submit the transaction to the network.
+
 `-preauth`
 :	Hash a transaction to strkey for use as a pre-auth transaction
 signer.  Beware that `-net` must be set correctly or the hash will be
@@ -284,12 +294,19 @@ ID as well as the transaction.
 `-pub`
 :	Print the public key corresponding to a particular private key.
 
-`-builtin-config`
-:	Print the built-in system configuration file that is used if no
-`stc.conf` file is found.
-
 `-qa`
 :	Query the network for the state of a particular account.
+
+`-qt`
+:	Query the network for the results and effects of a particular
+transaction.  The transaction must be specified in the hex format
+output by `-txhash`.
+
+`-qta`
+:	Query the network for all transactions that have affected a
+particular account, in reverse chronological order.  Also shows the
+effects those transactions had on the target account.  To see effects
+on all accounts, you can look up a particular transaction using `-qt`.
 
 `-sign`
 :	Sign the transaction.  If no `-key` option is specified, it will
@@ -306,6 +323,9 @@ specified.
 depends on the number of operations, so be sure to re-run this if you
 change the number of transactions.  Only available in default mode.
 
+`-v`
+:	Produce more verbose output for the query options.
+
 # EXAMPLES
 
 `stc trans`
@@ -321,7 +341,7 @@ until the editor quits without making any changes.
 `stc -c -i -key mykey trans`
 :	Reads a transaction in file `trans`, signs it using key `mykey`,
 then overwrite the `trans` file with the signed transaction in base64
-format.
+format.  The original unsigned transaction is backed up in `trans~`.
 
 `stc -post trans`
 :	Posts a transaction in file `trans` to the network.  The
@@ -366,8 +386,8 @@ When using a network _NetName_, as specified by `$STCNET` or the
 `-net` command-line argument, three configuration files are parsed in
 order:
 
-1. $STCDIR/_NetName_.net (or the default value of $STCDIR specified in
-   the ENVIRONMENT section if $STCDIR is unset)
+1. $STCDIR/_NetName_.net (or the default value of $STCDIR as described
+   in the ENVIRONMENT section if $STCDIR is unset)
 
 1. `$STCDIR/global.conf`
 
@@ -478,5 +498,7 @@ The options that interact with Horizon and parse JSON (such as `-qa`)
 report things in a different style from the options that manipulate
 XDR.
 
-Various forms of malformed textual input will surely cause stc to
-panic, though the binary parser should be pretty robust.
+The txrep format has periodically been updated, and stc does not
+attempt to maintain backwards compatibility with old files.  Binary
+XDR, however has been standard since 1995, so stc should be able to
+parse any binary transaction since the launch of the Stellar network.
