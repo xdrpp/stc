@@ -1,6 +1,6 @@
 CMDS = stc
 CLEANFILES = .*~ *~ */*~ goxdr
-BUILT_SOURCES = stx/xdr_generated.go uhelper.go stcdetail/stcxdr.go
+BUILT_SOURCES = stx/xdr_generated.go uhelper.go
 XDRS = xdr/Stellar-SCP.x xdr/Stellar-ledger-entries.x			\
 xdr/Stellar-ledger.x xdr/Stellar-overlay.x xdr/Stellar-transaction.x	\
 xdr/Stellar-types.x
@@ -13,11 +13,6 @@ build: $(BUILT_SOURCES) always go.mod
 
 stx/xdr_generated.go: goxdr $(XDRS)
 	./goxdr -p stx -enum-comments -o $@~ $(XDRS)
-	cmp $@~ $@ 2> /dev/null || mv -f $@~ $@
-
-stcdetail/stcxdr.go: goxdr stcdetail/stcxdr.x
-	./goxdr -i github.com/xdrpp/stc/stx -p stcdetail -o $@~ \
-		stcdetail/stcxdr.x
 	cmp $@~ $@ 2> /dev/null || mv -f $@~ $@
 
 uhelper.go: stx/xdr_generated.go uniontool/uniontool.go go.mod

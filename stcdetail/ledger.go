@@ -89,29 +89,33 @@ func (md MetaDelta) AccountID() *stx.AccountID {
 	return getAccountID(&md.Key)
 }
 
-func GetMetaDeltas(m xdr.XdrAggregate) (ret []MetaDelta) {
+// Extract the before/after ledger entry values from XDR structures
+// containing LedgerEntryChanges.
+func GetMetaDeltas(ms...xdr.XdrType) (ret []MetaDelta) {
 	kmap := make(map[string]int)
-	ForEachXdrType(m, func(c *stx.LedgerEntryChange) {
-		k, e := changeInfo(c)
-		kk := XdrToBin(&k)
-		var md *MetaDelta
-		first := false
-		if i, ok := kmap[kk]; ok {
-			md = &ret[i]
-		} else {
-			i = len(ret)
-			first = true
-			ret = append(ret, MetaDelta{Key: k})
-			kmap[kk] = i
-			md = &ret[i]
-		}
-		if c.Type == stx.LEDGER_ENTRY_STATE {
-			if first {
-				md.Old = e
+	for _, m := range ms {
+		ForEachXdrType(m, func(c *stx.LedgerEntryChange) {
+			k, e := changeInfo(c)
+			kk := XdrToBin(&k)
+			var md *MetaDelta
+			first := false
+			if i, ok := kmap[kk]; ok {
+				md = &ret[i]
+			} else {
+				i = len(ret)
+				first = true
+				ret = append(ret, MetaDelta{Key: k})
+				kmap[kk] = i
+				md = &ret[i]
 			}
-		} else {
-			md.New = e
-		}
-	})
+			if c.Type == stx.LEDGER_ENTRY_STATE {
+				if first {
+					md.Old = e
+				}
+			} else {
+				md.New = e
+			}
+		})
+	}
 	return
 }

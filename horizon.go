@@ -156,7 +156,7 @@ func (net *StellarNet) IterateJSON(
 	j.Embedded.Records.i = reflect.New(reflect.SliceOf(tp)).Interface()
 
 	backoff := time.Second
-	for url := net.Horizon + query; ctx.Err() == nil; url =
+	for url := net.Horizon + query; ctx == nil || ctx.Err() == nil; url =
 		j.Links.Next.Href {
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
@@ -166,7 +166,7 @@ func (net *StellarNet) IterateJSON(
 		}
 		cleanup()
 		resp, err = http.DefaultClient.Do(req)
-		if err != nil || ctx.Err() != nil {
+		if err != nil || ctx != nil && ctx.Err() != nil {
 			return err
 		} else if resp.StatusCode != 200 {
 			if resp.StatusCode != 429 {
@@ -360,10 +360,11 @@ func showLedgerKey(k stx.LedgerKey) string {
 }
 
 func (net *StellarNet) AccountDelta(
-	m *stcdetail.StellarMetas, acct *AccountID, prefix string) string {
+	m *StellarMetas, acct *AccountID, prefix string) string {
 	pprefix := prefix + "  "
 	out := &strings.Builder{}
-	mds := stcdetail.GetMetaDeltas(m)
+	mds := stcdetail.GetMetaDeltas(stx.XDR_LedgerEntryChanges(&m.FeeMeta),
+		&m.ResultMeta)
 	target := ""
 	if acct != nil {
 		target = stcdetail.XdrToBin(acct)
@@ -392,13 +393,19 @@ func (net *StellarNet) AccountDelta(
 	return out.String()
 }
 
+// Ledger entries changed by a transaction.
+type StellarMetas struct {
+	FeeMeta stx.LedgerEntryChanges
+	ResultMeta stx.TransactionMeta
+}
+
 type HorizonTxResult struct {
 	Txhash stx.Hash
 	Ledger uint32
 	Time time.Time
 	Env stx.TransactionEnvelope
 	Result stx.TransactionResult
-	stcdetail.StellarMetas
+	StellarMetas
 	PagingToken string
 }
 
