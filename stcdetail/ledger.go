@@ -59,7 +59,7 @@ func GetLedgerEntryKey(e *stx.LedgerEntry) stx.LedgerKey {
 
 // Return the first AccountID found when traversing a data structure
 // (or nil if none).
-func GetAccountID(a xdr.XdrAggregate) (ret *stx.AccountID) {
+func getAccountID(a xdr.XdrAggregate) (ret *stx.AccountID) {
 	XdrExtract(a, &ret)
 	return
 }
@@ -77,13 +77,16 @@ func changeInfo(c *stx.LedgerEntryChange) (key stx.LedgerKey,
 	}
 }
 
+// Structure representing the value of a specific ledger entry before
+// and after execution of a transaction.
 type MetaDelta struct {
 	Key      stx.LedgerKey
 	Old, New *stx.LedgerEntry
 }
 
+// The account that owns the ledger entry.
 func (md MetaDelta) AccountID() *stx.AccountID {
-	return GetAccountID(&md.Key)
+	return getAccountID(&md.Key)
 }
 
 func GetMetaDeltas(m xdr.XdrAggregate) (ret []MetaDelta) {

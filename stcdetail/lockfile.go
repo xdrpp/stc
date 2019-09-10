@@ -238,7 +238,8 @@ func LockFile(path string, perm os.FileMode) (LockedFile, error) {
 }
 
 // Like LockFile, but fails if file's stat information (other than
-// atime) does not exactly match fi.
+// atime) does not exactly match fi.  If fi is nil, then acts like
+// LockFile with perm of 0666.
 func LockFileIfUnchanged(path string, fi os.FileInfo) (LockedFile, error) {
 	if fi != nil {
 		return doLockFile(path, fi.Mode() & os.ModePerm, fi)

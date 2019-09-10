@@ -205,10 +205,12 @@ func TestForEachXdrType(t *testing.T) {
 	}
 }
 
-func TestGetAccountID(t *testing.T) {
+func TestXdrExtract(t *testing.T) {
 	var e stx.TransactionMetaV1
 	e.TxChanges = make([]stx.LedgerEntryChange, 5)
-	if GetAccountID(&e) != &e.TxChanges[0].Created().Data.Account().AccountID {
+	var accp *stx.AccountID
+	if XdrExtract(&e, &accp) != true ||
+		accp != &e.TxChanges[0].Created().Data.Account().AccountID {
 		t.Fail()
 	}
 }

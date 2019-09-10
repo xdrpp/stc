@@ -634,6 +634,8 @@ type IniEditor struct {
 	lastSec   *IniSection
 }
 
+// Write the contents of IniEditor to a Writer after applying edits
+// have been made.
 func (ie *IniEditor) WriteTo(w io.Writer) (int64, error) {
 	var ret int64
 	for e := ie.fragments.Front(); e != nil; e = e.Next() {
@@ -646,7 +648,7 @@ func (ie *IniEditor) WriteTo(w io.Writer) (int64, error) {
 	return ret, nil
 }
 
-func (ie IniEditor) String() string {
+func (ie *IniEditor) String() string {
 	ret := strings.Builder{}
 	ie.WriteTo(&ret)
 	return ret.String()
@@ -726,6 +728,7 @@ func (ie *IniEditor) appendItem(r *IniRange) (e1, e2 *list.Element) {
 	return
 }
 
+// Called by IniParseContents; do not call directly.
 func (ie *IniEditor) Section(ss IniSecStart) error {
 	// git-config associates comments with following section
 	e, _ := ie.appendItem(&ss.IniRange)
@@ -734,6 +737,7 @@ func (ie *IniEditor) Section(ss IniSecStart) error {
 	return nil
 }
 
+// Called by IniParseContents; do not call directly.
 func (ie *IniEditor) Item(ii IniItem) error {
 	k := ii.QKey()
 	_, e := ie.appendItem(&ii.IniRange)
@@ -741,6 +745,7 @@ func (ie *IniEditor) Item(ii IniItem) error {
 	return nil
 }
 
+// Called by IniParseContents; do not call directly.
 func (ie *IniEditor) Done(r IniRange) {
 	e, _ := ie.appendItem(&r)
 	if e == nil {
@@ -750,6 +755,9 @@ func (ie *IniEditor) Done(r IniRange) {
 	ie.lastSec = nil
 }
 
+// Create an IniEdit for a file with contents.  Note that filename is
+// only used for parse errors; the file must already be read before
+// calling this function.
 func NewIniEdit(filename string, contents []byte) (*IniEditor, error) {
 	ret := IniEditor{
 		secEnd: make(map[string]*list.Element),
