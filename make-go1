@@ -14,9 +14,7 @@ export GIT_INDEX_FILE="$GIT_DIR/index.go1"
 rm -f "$GIT_INDEX_FILE"
 
 git read-tree HEAD
-cp go.mod go.mod~
 make built_sources
-mv -f go.mod~ go.mod
 git add -u
 git add -f go.mod
 test ! -r go.sum || git add -f go.sum
