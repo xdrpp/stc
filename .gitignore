@@ -1,5 +1,6 @@
 *~
 /cmd/goxdr
+/go.mod
 /go.sum
 /goxdr
 /stcdetail/stcxdr.go
