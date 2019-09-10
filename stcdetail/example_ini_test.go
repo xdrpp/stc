@@ -8,16 +8,10 @@ import (
 type IniDumper struct{}
 
 func (IniDumper) Item(item stcdetail.IniItem) error {
-	if item.IniSection != nil {
-		fmt.Printf("%s.", item.Section)
-		if item.Subsection != nil {
-			fmt.Printf("%s.", *item.Subsection)
-		}
-	}
 	if item.Value == nil {
-		fmt.Printf("%s\n", item.Key)
+		fmt.Printf("%s\n", item.QKey())
 	} else {
-		fmt.Printf("%s = %s\n", item.Key, *item.Value)
+		fmt.Printf("%s = %s\n", item.QKey(), *item.Value)
 	}
 	return nil
 }

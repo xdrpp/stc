@@ -156,7 +156,7 @@ func (net *StellarNet) IterateJSON(
 	j.Embedded.Records.i = reflect.New(reflect.SliceOf(tp)).Interface()
 
 	backoff := time.Second
-	for url := net.Horizon + query; !stcdetail.IsDone(ctx); url =
+	for url := net.Horizon + query; ctx.Err() == nil; url =
 		j.Links.Next.Href {
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
@@ -166,7 +166,7 @@ func (net *StellarNet) IterateJSON(
 		}
 		cleanup()
 		resp, err = http.DefaultClient.Do(req)
-		if err != nil || stcdetail.IsDone(ctx) {
+		if err != nil || ctx.Err() != nil {
 			return err
 		} else if resp.StatusCode != 200 {
 			if resp.StatusCode != 429 {

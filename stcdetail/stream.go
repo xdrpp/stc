@@ -16,18 +16,6 @@ func (e HTTPerror) Error() string {
 	return string(e)
 }
 
-func IsDone(ctx context.Context) bool {
-	if ctx == nil {
-		return false
-	}
-	select {
-	case <-ctx.Done():
-		return true
-	default:
-		return false
-	}
-}
-
 type streamEvent struct {
 	Type  string
 	Data  []byte
@@ -126,10 +114,10 @@ func Stream(ctx context.Context, url string,
 	}
 	defer cleanup()
 
-	for !IsDone(ctx) {
+	for ctx.Err() == nil {
 		cleanup()
 		resp, err = http.DefaultClient.Do(req)
-		if err != nil || IsDone(ctx) {
+		if err != nil || ctx.Err() != nil {
 			return err
 		}
 		if resp.StatusCode != 200 {
