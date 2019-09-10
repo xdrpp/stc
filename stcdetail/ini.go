@@ -332,8 +332,9 @@ func isKeyChar(c rune) bool {
 	return isAlpha(c) || (c >= '0' && c <= '9') || c == '-'
 }
 
-// Test if string is a valid INI file key.  Valid keys contain one or
-// more alphanumeric characters or '-'.
+// Test if string is a valid INI file key.  Valid keys start with a
+// letter followed by zero or more alphanumeric characters or '-'
+// characters.
 func ValidIniKey(s string) bool {
 	return s != "" && isAlpha(rune(s[0])) &&
 		-1 == strings.IndexFunc(s, func(r rune)bool {

@@ -6,14 +6,15 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
-	"path/filepath"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/xdrpp/stc"
@@ -145,22 +146,26 @@ func isZeroAccount(ac *stx.AccountID) bool {
 }
 
 func fixTx(net *StellarNet, e *TransactionEnvelope) {
-	var async stcdetail.Async
-	async.RunVoid(func(){
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		if h, err := net.GetFeeStats(); err == nil {
 			// 20 should be a parameter
 			e.Tx.Fee = h.Percentile(20) * uint32(len(e.Tx.Operations))
 		}
-	})
+	}()
 	if !isZeroAccount(&e.Tx.SourceAccount) {
-		async.RunVoid(func(){
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 			if a, _ := net.GetAccountEntry(e.Tx.SourceAccount.String());
 			a != nil {
 				e.Tx.SeqNum = a.NextSeq()
 			}
-		})
+		}()
 	}
-	async.Wait()
+	wg.Wait()
 }
 
 // Guess whether input is key: value lines or compiled base64

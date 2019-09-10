@@ -7,6 +7,13 @@ import (
 	"strings"
 )
 
+// Takes two inputs in txrep format, and returns a string describing
+// all the lines that have changed in the form:
+//
+//     field: old_value -> new_value
+//
+// Either old_value or new_value may be empty for a field that appears
+// only in a or only in b.
 func RepDiff(prefix, arep, brep string) string {
 	out := &strings.Builder{}
 	amap := make(map[string]string)

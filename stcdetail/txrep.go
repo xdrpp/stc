@@ -136,9 +136,9 @@ type xdrEnumNames interface {
 	XdrEnumNames() map[int32]string
 }
 
-// Show an empty vector as "0 bytes", since we need to show it as
-// something.  (Note the bytes is a comment, but just "0" might be
-// unintuitive.)
+// Convert an array of bytes into a string of hex digits.  Show an
+// empty vector as "0 bytes", since we need to show it as something.
+// (Note the bytes is a comment, but just "0" might be unintuitive.)
 func PrintVecOpaque(bs []byte) string {
 	if len(bs) == 0 {
 		return "0 bytes"

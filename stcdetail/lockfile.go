@@ -40,7 +40,10 @@ func clearAtime(sys interface{}) bool {
 }
 
 // Return true if a file may have been changed between the times that
-// the two FileInfo structures were read.
+// the two FileInfo structures were read.  Note that it modifies the
+// two arguments to set the atimes to zero before doing a deep compare
+// of all fields.  (This ensures files will be considered changed if
+// their ctimes differ, even if the mtimes are the same.)
 func FileChanged(a, b os.FileInfo) bool {
 	if a.ModTime() != b.ModTime() || a.Size() != b.Size() {
 		return true
@@ -52,6 +55,12 @@ func FileChanged(a, b os.FileInfo) bool {
 	return !reflect.DeepEqual(a, b)
 }
 
+// Read the contents of a file and also return the FileInfo at the
+// time the file is read.  The returned FileInfo can be checked with
+// FileChanged to see if the file has changed since it was last read,
+// and the result will be guaranteed not to miss modifications (at
+// least on Unix where setting the mtime to something in the past
+// increases the ctime).
 func ReadFile(path string) ([]byte, os.FileInfo, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -238,7 +247,7 @@ func LockFileIfUnchanged(path string, fi os.FileInfo) (LockedFile, error) {
 	}
 }
 
-// Writes data tile filename in a safe way.  If path is "foo", then
+// Writes data to file path in a safe way.  If path is "foo", then
 // data is first written to a file called "foo.lock" and that file is
 // flushed to disk.  Then, if a file called "foo" already exists,
 // "foo" is linked to "foo~" to keep a backup.  Finally, "foo.lock" is
@@ -257,7 +266,7 @@ func SafeWriteFile(path string, data string, perm os.FileMode) error {
 // lock is acquired.  Does not exclusively create the target file, but
 // rather uses a lockfile to ensure that if the file is created it
 // will have data as its contents.  (Exclusively creating the target
-// file could lead to the file being existing and being empty after a
+// file could lead to the file existing but being empty after a
 // crash.)
 func SafeCreateFile(path string, data string, perm os.FileMode) error {
 	lf, err := LockFile(path, perm)

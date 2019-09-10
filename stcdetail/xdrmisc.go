@@ -13,15 +13,20 @@ func (trivSprintf) Sprintf(f string, args ...interface{}) string {
 }
 
 // Marshal an XDR type to the raw binary bytes defined in RFC4506.
-// The return value is not UTF-8.
+// The return value is binary, not UTF-8.  For most marshaling
+// purposes you might prefer a []byte (so see XdrOut), but this
+// function is handy if you want to convert the contents of an XDR
+// structure into a map key or compare two XDR structures for
+// equality.
 func XdrToBin(t xdr.XdrType) string {
 	out := strings.Builder{}
 	t.XdrMarshal(&xdr.XdrOut{&out}, "")
 	return out.String()
 }
 
+/*
 // Unmarshal an XDR type from the raw binary bytes defined in RFC4506.
-func XdrFromBin(t xdr.XdrType, input string) (err error) {
+func xdrFromBin(t xdr.XdrType, input string) (err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			if xe, ok := i.(xdr.XdrError); ok {
@@ -35,6 +40,7 @@ func XdrFromBin(t xdr.XdrType, input string) (err error) {
 	t.XdrMarshal(&xdr.XdrIn{in}, "")
 	return
 }
+*/
 
 type forEachXdr struct {
 	fn func(xdr.XdrType) bool
