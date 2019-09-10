@@ -77,13 +77,8 @@ depend: always
 	$(MAKE) go.mod
 
 go1: always
-	rm -f go.sum
-	echo 'module github.com/xdrpp/stc' > go.mod
-	echo 'require github.com/xdrpp/goxdr go1' >> go.mod
+	rm -f go.sum go.mod
 	$(MAKE) build
-	mv -f go.mod go.mod~
-	sed -e 's!github.com/xdrpp/goxdr v.*!github.com/xdrpp/goxdr go1!' \
-		go.mod~ > go.mod
 	./make-go1
 	rm -f go.mod
 
