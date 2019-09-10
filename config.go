@@ -37,7 +37,10 @@ func getGlobalConfigContents() []byte {
 	if globalConfigContents != nil {
 		return globalConfigContents
 	}
-	confs := []string{ filepath.FromSlash("/etc/" + configFileName) }
+	confs := []string{
+		path.Join(getConfigDir(false), configFileName),
+		filepath.FromSlash("/etc/" + configFileName),
+	}
 	if exe, err := os.Executable(); err == nil {
 		confs = append(confs,
 			path.Join(path.Dir(path.Dir(exe)), "share", configFileName))
@@ -56,7 +59,7 @@ func getGlobalConfigContents() []byte {
 
 var stcDir string
 
-func getConfigDir() string {
+func getConfigDir(create bool) string {
 	if stcDir != "" {
 		return stcDir
 	} else if d, ok := os.LookupEnv("STCDIR"); ok {
@@ -73,7 +76,7 @@ func getConfigDir() string {
 			stcDir = d
 		}
 	}
-	if _, err := os.Stat(stcDir); os.IsNotExist(err) &&
+	if _, err := os.Stat(stcDir); os.IsNotExist(err) && create &&
 		os.MkdirAll(stcDir, 0777) == nil {
 		if _, err = LoadStellarNet("main",
 			path.Join(stcDir, "main.net")); err == nil {
@@ -91,7 +94,7 @@ func getConfigDir() string {
 // configuration directory doesn't exist, it gets created, but the
 // underlying path requested will not be created.
 func ConfigPath(components...string) string {
-	return path.Join(append([]string{getConfigDir()}, components...)...)
+	return path.Join(append([]string{getConfigDir(true)}, components...)...)
 }
 
 func ValidNetName(name string) bool {
