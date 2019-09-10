@@ -24,7 +24,8 @@ go.mod: $(MAKEFILE_LIST)
 	if test -d cmd/goxdr; then \
 	    echo 'replace github.com/xdrpp/goxdr => ./cmd/goxdr' >> go.mod; \
 	else \
-	    go get github.com/xdrpp/goxdr/cmd/goxdr@go1; \
+	    export GOPRIVATE='*'; \
+	    go get -u github.com/xdrpp/goxdr/cmd/goxdr@go1; \
 	fi
 
 $(XDRS): xdr
