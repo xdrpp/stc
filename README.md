@@ -22,7 +22,7 @@ limitation](https://github.com/golang/go/issues/27526) leaves your
 tree in a detached state, so that `go get -u` cannot pull from the
 remote `go1` branch.  The `GOPRIVATE` environment variable requests
 the latest version of the software from github, instead of calling
-home to Google's module proxy which allows Google to supply an
+home to Google's module proxy and allowing Google to supply an
 incorrect or stale version of the software (which unfortunately
 happened to the author).
 
