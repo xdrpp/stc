@@ -34,7 +34,6 @@ type StellarNet struct {
 
 	// File status at the time the configuration file was parsed (so
 	// you can tell if it's been changed since it was parsed).
-	// XXX - not implemented yet
 	Status os.FileInfo
 
 	// Changes to be applied by Save().

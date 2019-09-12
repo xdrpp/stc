@@ -211,10 +211,15 @@ func LoadStellarNet(name string, paths...string) (*StellarNet, error) {
 		setName: true,
 	}
 
-	for _, path := range paths {
-		if err := stcdetail.IniParse(&snp, path); err != nil &&
-			!os.IsNotExist(err) {
-			fmt.Fprintln(os.Stderr, err)
+	for i, path := range paths {
+		contents, fi, err := stcdetail.ReadFile(path)
+		if i == 0 {
+			ret.Status = fi
+		}
+		if err == nil {
+			err = stcdetail.IniParseContents(&snp, path, contents)
+		}
+		if err != nil && !os.IsNotExist(err) {
 			return nil, err
 		} else if !ValidNetName(ret.Name) {
 			return nil, fmt.Errorf("%s: invalid or missing net.name", path)
