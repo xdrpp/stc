@@ -107,6 +107,7 @@ type stellarNetParser struct {
 	*StellarNet
 	itemCB func(stcdetail.IniItem)error
 	setName bool
+	secCB func(stcdetail.IniSecStart) func(stcdetail.IniItem) error
 }
 
 func (snp *stellarNetParser) Init() {
@@ -190,6 +191,9 @@ func (snp *stellarNetParser) Section(iss stcdetail.IniSecStart) error {
 			snp.itemCB = snp.doSigners
 		}
 	}
+	if snp.itemCB == nil && snp.secCB != nil {
+		snp.itemCB = snp.secCB(iss)
+	}
 	return nil
 }
 
@@ -200,6 +204,15 @@ func (snp *stellarNetParser) Section(iss stcdetail.IniSecStart) error {
 // After that, there must be a valid NetworkId or the function will
 // return nil.
 func LoadStellarNet(name string, paths...string) (*StellarNet, error) {
+	return LoadStellarNetExtension(name, nil, paths...)
+}
+
+// Like LoadStellarNet, but for unknown section names (those other
+// than net, accounts, and signers with nil or the current netname),
+// allows a callback to parse them in some application-specific way.
+func LoadStellarNetExtension(name string,
+	secCB func(stcdetail.IniSecStart) func(stcdetail.IniItem) error,
+	paths...string) (*StellarNet, error) {
 	ret := StellarNet{
 		Name: name,
 	}
@@ -209,6 +222,7 @@ func LoadStellarNet(name string, paths...string) (*StellarNet, error) {
 	snp := stellarNetParser{
 		StellarNet: &ret,
 		setName: true,
+		secCB: secCB,
 	}
 
 	for i, path := range paths {
