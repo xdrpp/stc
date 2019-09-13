@@ -500,5 +500,5 @@ XDR.
 
 The txrep format has periodically been updated, and stc does not
 attempt to maintain backwards compatibility with old files.  Binary
-XDR, however has been standard since 1995, so stc should be able to
+XDR, however, has been standard since 1995, so stc should be able to
 parse any binary transaction since the launch of the Stellar network.
