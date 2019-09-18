@@ -3,12 +3,12 @@ package stcdetail
 import (
 	"bytes"
 	"crypto"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"github.com/xdrpp/goxdr/xdr"
 	"github.com/xdrpp/stc/stx"
-	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"io/ioutil"

@@ -64,10 +64,8 @@ func getConfigDir(create bool) string {
 		return stcDir
 	} else if d, ok := os.LookupEnv("STCDIR"); ok {
 		stcDir = d
-	} else if d, ok = os.LookupEnv("XDG_CONFIG_HOME"); ok {
+	} else if d, err := os.UserConfigDir(); err == nil {
 		stcDir = filepath.Join(d, "stc")
-	} else if d, ok = os.LookupEnv("HOME"); ok {
-		stcDir = filepath.Join(d, ".config", "stc")
 	} else {
 		stcDir = ".stc"
 	}
@@ -89,10 +87,11 @@ func getConfigDir(create bool) string {
 // Return the path to a file under the user's configuration directory.
 // The configuration directory is found based on environment
 // variables.  From highest to lowest precedence tries $STCDIR,
-// $XDG_CONFIG_HOME/.stc, $HOME/.config/stc, or ./.stc, using the
-// first one with for which the environment variable exists.  If the
-// configuration directory doesn't exist, it gets created, but the
-// underlying path requested will not be created.
+// UserConfigDir() (i.e., on Unix $XDG_CONFIG_HOME/.stc or
+// $HOME/.config/stc), or ./.stc, using the first one with for which
+// the environment variable exists.  If the configuration directory
+// doesn't exist, it gets created, but the underlying path requested
+// will not be created.
 func ConfigPath(components...string) string {
 	return path.Join(append([]string{getConfigDir(true)}, components...)...)
 }
