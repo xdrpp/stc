@@ -36,7 +36,10 @@ func TxPayloadHash(network string, tx *stx.Transaction) *stx.Hash {
 	return &ret
 }
 
-/*
+// Verify a signature on an arbitrary raw message.  Stellar messages
+// should be hashed with the NetworkID before signing or verifying, so
+// you probably don't want to use this function.  See VerifyTx and the
+// ToSignerKey() method of PublicKey, instead.
 func Verify(pk *stx.PublicKey, message []byte, sig []byte) bool {
 	switch pk.Type {
 	case stx.PUBLIC_KEY_TYPE_ED25519:
@@ -45,7 +48,6 @@ func Verify(pk *stx.PublicKey, message []byte, sig []byte) bool {
 		return false
 	}
 }
-*/
 
 // Verify the signature on a transaction.
 func VerifyTx(pk *stx.SignerKey, network string, tx *stx.Transaction,
