@@ -66,7 +66,7 @@ func TestSetOverflowString(t *testing.T) {
 func TestSetOverflowVector(t *testing.T) {
 	var acct AccountID
 	asset := MkAsset(acct, "1234")
-	var op stx.PathPaymentOp
+	var op stx.PathPaymentStrictSendOp
 	// This should work
 	Set(&op, asset, 0, acct, asset, 0, make([]stx.Asset, 5))
 	// This shoudn't

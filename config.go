@@ -203,56 +203,58 @@ func (snp *stellarNetParser) Section(iss stcdetail.IniSecStart) error {
 // After that, there must be a valid NetworkId or the function will
 // return nil.
 func LoadStellarNet(name string, paths...string) (*StellarNet, error) {
-	return LoadStellarNetExtension(name, nil, paths...)
+	ret := StellarNet{ Name: name }
+	err := ret.LoadExtension(nil, 0666, paths...)
+	if err != nil {
+		return nil, err
+	}
+	return &ret, nil
 }
 
-// Like LoadStellarNet, but for unknown section names (those other
-// than net, accounts, and signers with nil or the current netname),
-// allows a callback to parse them in some application-specific way.
-func LoadStellarNetExtension(name string,
+// Load a StelalrNet from file paths, but for unknown section names
+// (those other than net, accounts, and signers with nil or the
+// current netname), allows a callback to parse them in some
+// application-specific way.
+func (net *StellarNet) LoadExtension(
 	secCB func(stcdetail.IniSecStart) func(stcdetail.IniItem) error,
-	paths...string) (*StellarNet, error) {
-	ret := StellarNet{
-		Name: name,
-	}
+	perm os.FileMode, paths...string) error {
 	if len(paths) > 0 {
-		ret.SavePath = paths[0]
+		net.SavePath = paths[0]
 	}
 	snp := stellarNetParser{
-		StellarNet: &ret,
+		StellarNet: net,
 		setName: true,
 		secCB: secCB,
 	}
 
 	for i, path := range paths {
 		contents, fi, err := stcdetail.ReadFile(path)
-		if i == 0 {
-			ret.Status = fi
+		if err == nil && i == 0 {
+			net.Status = fi
 		}
 		if err == nil {
 			err = stcdetail.IniParseContents(&snp, path, contents)
 		}
 		if err != nil && !os.IsNotExist(err) {
-			return nil, err
-		} else if !ValidNetName(ret.Name) {
-			return nil, fmt.Errorf("%s: invalid or missing net.name", path)
+			return err
+		} else if !ValidNetName(net.Name) {
+			return fmt.Errorf("%s: invalid or missing net.name", path)
 		} else if snp.setName {
-			ret.Edits.Set("net", "name", ret.Name)
+			net.Edits.Set("net", "name", net.Name)
 			snp.setName = false
 		}
 	}
 
 	// Finish with global configuration
 	stcdetail.IniParseContents(&snp, "", getGlobalConfigContents())
-	if ret.GetNetworkId() == "" {
-		return nil, fmt.Errorf("could not determine network-id for %s",
-			ret.Name)
-	} else if ret.SavePath != "" {
-		if err := ret.Save(); err != nil {
-			return nil, err
+	if net.GetNetworkId() == "" {
+		return fmt.Errorf("could not determine network-id for %s", net.Name)
+	} else if net.SavePath != "" {
+		if err := net.doSave(perm); err != nil {
+			return err
 		}
 	}
-	return &ret, nil
+	return nil
 }
 
 var netCache map[string]*StellarNet
@@ -288,14 +290,20 @@ func DefaultStellarNet(name string) *StellarNet {
 	return ret
 }
 
-func (net *StellarNet) Save() error {
+func (net *StellarNet) doSave(perm os.FileMode) error {
 	if len(net.Edits) == 0 {
 		return nil
 	}
 	if net.SavePath == "" {
 		return os.ErrInvalid
 	}
-	lf, err := stcdetail.LockFileIfUnchanged(net.SavePath, net.Status)
+	var lf stcdetail.LockedFile
+	var err error
+	if net.Status != nil {
+		lf, err = stcdetail.LockFileIfUnchanged(net.SavePath, net.Status)
+	} else {
+		lf, err = stcdetail.LockFile(net.SavePath, perm)
+	}
 	if err != nil {
 		return err
 	}
@@ -310,4 +318,8 @@ func (net *StellarNet) Save() error {
 	net.Edits.Apply(ie)
 	ie.WriteTo(lf)
 	return lf.Commit()
+}
+
+func (net *StellarNet) Save() error {
+	return net.doSave(0666)
 }
