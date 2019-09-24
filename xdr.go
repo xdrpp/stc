@@ -16,7 +16,6 @@ import (
 	"strings"
 )
 
-type TxrepError = stcdetail.TxrepError
 type PublicKey = stx.PublicKey
 type AccountID = stx.AccountID
 type SignerKey = stx.SignerKey
@@ -238,7 +237,7 @@ func (net *StellarNet) TxToRep(txe *TransactionEnvelope) string {
 
 // Parse a transaction in human-readable Txrep format into a
 // TransactionEnvelope.
-func TxFromRep(rep string) (*TransactionEnvelope, TxrepError) {
+func TxFromRep(rep string) (*TransactionEnvelope, error) {
 	in := strings.NewReader(rep)
 	txe := NewTransactionEnvelope()
 	if err := stcdetail.XdrFromTxrep(in, "", txe); err != nil {

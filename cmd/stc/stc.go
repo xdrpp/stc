@@ -206,7 +206,7 @@ func readTx(infile string) (
 		compiled = true
 		txe, err = TxFromBase64(sinput)
 	} else if newe, pe := TxFromRep(sinput); pe != nil {
-		err = ParseError{pe, infile}
+		err = ParseError{pe.(stcdetail.TxrepError), infile}
 	} else {
 		txe = newe
 	}
@@ -383,7 +383,7 @@ func doEdit(net *StellarNet, arg string) {
 		}
 		err = nil
 		if newe, pe := TxFromRep(string(contents)); pe != nil {
-			err = ParseError{pe, path}
+			err = ParseError{pe.(stcdetail.TxrepError), path}
 		} else {
 			e = newe
 		}

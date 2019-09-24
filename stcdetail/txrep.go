@@ -301,6 +301,11 @@ func (e TxrepError) FileError(filename string) string {
 	return e.render(filename + ":")
 }
 
+func (TxrepError) Is(e error) bool {
+	_, ret := e.(TxrepError)
+	return ret
+}
+
 type lineval struct {
 	line int
 	val  string
