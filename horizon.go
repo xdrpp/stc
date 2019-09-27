@@ -287,8 +287,8 @@ func (hs *HorizonAccountEntry) String() string {
 
 // Return the next sequence number (1 + Sequence) as an int64 (or 0 if
 // an invalid sequence number was returned by horizon).
-func (ae *HorizonAccountEntry) NextSeq() int64 {
-	val := int64(ae.Sequence)
+func (ae *HorizonAccountEntry) NextSeq() stx.SequenceNumber {
+	val := stx.SequenceNumber(ae.Sequence)
 	if val <= 0 {
 		return 0
 	} else {
@@ -518,7 +518,11 @@ func (fs FeeStats) String() string {
 func (fs *FeeStats) Percentile(target int) uint32 {
 	var fee uint32
 	if len(fs.Percentiles) > 0 {
-		fee = 1 + fs.Percentiles[len(fs.Percentiles)-1].Fee
+		max := fs.Percentiles[len(fs.Percentiles)-1].Fee
+		fee = max + 1
+		if fee < max {
+			fee = max
+		}
 	}
 	for lo, hi := 0, len(fs.Percentiles); lo < hi; {
 		n := (lo + hi) / 2
@@ -614,10 +618,22 @@ func (fs *FeeStats) UnmarshalJSON(data []byte) error {
 // Queries the network for the latest fee statistics.
 func (net *StellarNet) GetFeeStats() (*FeeStats, error) {
 	var ret FeeStats
+	now := time.Now()
 	if err := net.GetJSON("fee_stats", &ret); err != nil {
 		return nil, err
 	}
+	net.FeeCache = &ret
+	net.FeeCacheTime = now
 	return &ret, nil
+}
+
+// Like GetFeeStats but a version cached for 1 minute
+func (net *StellarNet) GetFeeCache() (*FeeStats, error) {
+	now := time.Now()
+	if net.FeeCache != nil && now.Sub(net.FeeCacheTime) < 60*time.Second {
+		return net.FeeCache, nil
+	}
+	return net.GetFeeStats()
 }
 
 // Fetch the latest ledger header over the network.

@@ -6,6 +6,7 @@ import (
 	"github.com/xdrpp/stc/stx"
 	"os"
 	"strings"
+	"time"
 )
 
 type StellarNet struct {
@@ -38,6 +39,10 @@ type StellarNet struct {
 
 	// Changes to be applied by Save().
 	Edits stcdetail.IniEdits
+
+	// Cache of fee stats
+	FeeCache *FeeStats
+	FeeCacheTime time.Time
 }
 
 func (net *StellarNet) AddHint(acct, hint string) {
