@@ -6,6 +6,7 @@ import "fmt"
 import "io"
 import "io/ioutil"
 import "os"
+import "reflect"
 import "strings"
 
 const tabwidth = 8
@@ -839,4 +840,71 @@ func (ie *IniEdits) Apply(target *IniEditor) {
 		f(target)
 	}
 	*ie = nil
+}
+
+type genericIniSink struct {
+	sec *IniSection
+	fields map[string]reflect.Value
+}
+
+func (s *genericIniSink) String() string {
+	out := strings.Builder{}
+	if s.sec != nil {
+		fmt.Fprintf(&out, "%s\n", s.sec.String())
+	}
+	for name, val := range s.fields {
+		fmt.Fprintf(&out, "\t%s = %s\n", name,
+			EscapeIniValue(fmt.Sprint(val.Interface())))
+	}
+	return out.String()
+}
+
+func (s *genericIniSink) Item(ii IniItem) error {
+	if s.sec.Eq(ii.IniSection) {
+		if v, ok := s.fields[ii.Key]; ok {
+			if ii.Value == nil {
+				v.Set(reflect.Zero(v.Type()))
+			} else if v.Kind() == reflect.String {
+				v.SetString(ii.Val())
+			} else {
+				_, err := fmt.Sscan(*ii.Value, v.Addr().Interface())
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// Make a generic IniSink that just looks an field names within a
+// struct, or the ini struct field tag if one exists (similar to the
+// json tag in json unmarshaling).  The returned sink does not look at
+// the section, only the key and value.  If sec is non-nil, then
+// ignores items whose section is not equal to sec.
+func MkIniSink(sec *IniSection, i interface{}) IniSink {
+	v := reflect.ValueOf(i)
+	if v.Kind() != reflect.Ptr {
+		return nil
+	}
+	v = v.Elem()
+	if v.Kind() != reflect.Struct {
+		return nil
+	}
+	ret := genericIniSink {
+		sec: sec,
+		fields: make(map[string]reflect.Value),
+	}
+
+	t := v.Type()
+	for i, n := 0, t.NumField(); i < n; i++ {
+		f := t.Field(i)
+		name := f.Tag.Get("ini")
+		if name == "-" {
+			continue
+		} else if name == "" {
+			name = strings.ReplaceAll(f.Name, "_", "-")
+		}
+		ret.fields[name] = v.Field(i)
+	}
+
+	return &ret
 }

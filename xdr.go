@@ -148,7 +148,7 @@ The helper types are:
 
 	type CreateAccount stx.CreateAccountOp
 	type Payment stx.PaymentOp
-	type PathPayment stx.PathPaymentOp
+	type PathPaymentStrictReceive stx.PathPaymentStrictReceiveOp
 	type ManageSellOffer stx.ManageSellOfferOp
 	type CreatePassiveSellOffer stx.CreatePassiveSellOfferOp
 	type SetOptions stx.SetOptionsOp
@@ -159,6 +159,7 @@ The helper types are:
 	type ManageData stx.ManageDataOp
 	type BumpSequence stx.BumpSequenceOp
 	type ManageBuyOffer stx.ManageBuyOfferOp
+	type PathPaymentStrictSend stx.PathPaymentStrictSendOp
 
 */
 func (txe *TransactionEnvelope) Append(
