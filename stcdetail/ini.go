@@ -2,6 +2,7 @@ package stcdetail
 
 import "bytes"
 import "container/list"
+import "errors"
 import "fmt"
 import "io"
 import "io/ioutil"
@@ -842,22 +843,46 @@ func (ie *IniEdits) Apply(target *IniEditor) {
 	*ie = nil
 }
 
-// A generic IniSink
+// A generic IniSink that uses fmt.Sscan to parse fields.
 type GenericIniSink struct {
-	// If non-nil, only match this specific section (otherwise ignore
-	// section).
+	// If non-nil, only match this specific section (otherwise
+	// ignore).
 	Sec *IniSection
 
 	// Pointers to the fields that should be parsed.
 	Fields map[string]interface{}
-
-	// If no known field name is found, or if Sec does not match the
-	// current section, then pass the item on to Next.
-	Next IniSink
 }
 
 func (s *GenericIniSink) AddField(name string, ptr interface{}) {
 	s.Fields[name] = ptr
+}
+
+var errNotStructPtr = errors.New("argument must be pointer to struct")
+
+// Populate a GenericIniSink with fields of a struct, using the field
+// name or or the ini struct field tag (`ini:"field-name"`) if one
+// exists.  Tag `ini:"-"` says to ignore a field.  Note that i must be
+// a pointer to a structure or this function will panic.
+func (s *GenericIniSink) AddStruct(i interface{}) {
+	v := reflect.ValueOf(i)
+	if v.Kind() != reflect.Ptr {
+		panic(errNotStructPtr)
+	}
+	v = v.Elem()
+	if v.Kind() != reflect.Struct {
+		panic(errNotStructPtr)
+	}
+	t := v.Type()
+	for i, n := 0, t.NumField(); i < n; i++ {
+		f := t.Field(i)
+		name := f.Tag.Get("ini")
+		if name == "-" {
+			continue
+		} else if name == "" {
+			name = strings.ReplaceAll(f.Name, "_", "-")
+		}
+		s.Fields[name] = v.Field(i).Addr().Interface()
+	}
 }
 
 func (s *GenericIniSink) String() string {
@@ -887,42 +912,56 @@ func (s *GenericIniSink) Item(ii IniItem) error {
 			return nil
 		}
 	}
-	if s.Next != nil {
-		return s.Next.Item(ii)
-	}
 	return nil
 }
 
-// Make a generic IniSink that just looks an field names within a
-// struct, or the ini struct field tag if one exists (similar to the
-// json tag in json unmarshaling).  The returned sink does not look at
-// the section, only the key and value.  If sec is non-nil, then
-// ignores items whose section is not equal to sec.
-func NewIniSink(sec *IniSection, i interface{}) *GenericIniSink {
-	v := reflect.ValueOf(i)
-	if v.Kind() != reflect.Ptr {
-		return nil
-	}
-	v = v.Elem()
-	if v.Kind() != reflect.Struct {
-		return nil
-	}
-	ret := GenericIniSink {
-		Sec: sec,
-		Fields: make(map[string]interface{}),
-	}
-
-	t := v.Type()
-	for i, n := 0, t.NumField(); i < n; i++ {
-		f := t.Field(i)
-		name := f.Tag.Get("ini")
-		if name == "-" {
-			continue
-		} else if name == "" {
-			name = strings.ReplaceAll(f.Name, "_", "-")
-		}
-		ret.Fields[name] = v.Field(i).Addr().Interface()
-	}
-
-	return &ret
+func (s *GenericIniSink) IniSink() IniSink {
+	return s
 }
+
+var _ IniSinker = &GenericIniSink{} // XXX
+
+type IniSinker interface {
+	IniSink() IniSink
+}
+
+type IniSinks []IniSink
+
+func (s IniSinks) Init() {
+	for i := range s {
+		if init, ok := s[i].(interface{ Init() }); ok {
+			init.Init()
+		}
+	}
+}
+func (s IniSinks) Item(ii IniItem) error {
+	for i := range s {
+		if err := s[i].Item(ii); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s IniSinks) Section(ss IniSecStart) error {
+	for i := range s {
+		if sec, ok := s[i].(interface{ Section(IniSecStart) error }); ok {
+			if err := sec.Section(ss); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+func (s IniSinks) Done() {
+	for i := range s {
+		if done, ok := s[i].(interface{ Done() }); ok {
+			done.Done()
+		}
+	}
+}
+
+func (s IniSinks) IniSink() IniSink {
+	return s
+}
+
+var _ IniSinker = IniSinks{}
