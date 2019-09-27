@@ -2,6 +2,7 @@ package stc
 
 import (
 	"fmt"
+	"github.com/xdrpp/stc/ini"
 	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
 	"os"
@@ -38,7 +39,7 @@ type StellarNet struct {
 	Status os.FileInfo
 
 	// Changes to be applied by Save().
-	Edits stcdetail.IniEdits
+	Edits ini.IniEdits
 
 	// Cache of fee stats
 	FeeCache *FeeStats

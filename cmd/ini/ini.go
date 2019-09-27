@@ -6,6 +6,7 @@
 package main
 
 import "fmt"
+import "github.com/xdrpp/stc/ini"
 import "github.com/xdrpp/stc/stcdetail"
 import "os"
 import "path"
@@ -23,9 +24,9 @@ func usage(n int) {
 	os.Exit(n)
 }
 
-func getSecKey(arg string) (sec *stcdetail.IniSection, key string) {
+func getSecKey(arg string) (sec *ini.IniSection, key string) {
 	if n := strings.IndexByte(arg, '.'); n >= 0 {
-		sec = &stcdetail.IniSection{
+		sec = &ini.IniSection{
 			Section: arg[:n],
 		}
 		arg = arg[n+1:]
@@ -36,13 +37,13 @@ func getSecKey(arg string) (sec *stcdetail.IniSection, key string) {
 		sec.Subsection = &subsec
 	}
 	key = arg
-	if stcdetail.ValidIniKey(key) && sec.Valid() {
+	if ini.ValidIniKey(key) && sec.Valid() {
 		return
 	}
 	return nil, ""
 }
 
-func doupdates(target string, actions []func(*stcdetail.IniEditor)) int {
+func doupdates(target string, actions []func(*ini.IniEditor)) int {
 	lf, err := stcdetail.LockFile(target, 0666)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -56,7 +57,7 @@ func doupdates(target string, actions []func(*stcdetail.IniEditor)) int {
 		return 1
 	}
 
-	ie, err := stcdetail.NewIniEdit(target, contents)
+	ie, err := ini.NewIniEdit(target, contents)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
@@ -80,7 +81,7 @@ func main() {
 		progname = path.Base(av[0])
 		av = av[1:]
 	}
-	var actions []func(*stcdetail.IniEditor)
+	var actions []func(*ini.IniEditor)
 	if len(av) == 0 {
 		usage(1)
 	}
@@ -106,7 +107,7 @@ func main() {
 			if len(av) < 2 {
 				usage(1)
 			}
-			actions = append(actions, func(ie *stcdetail.IniEditor) {
+			actions = append(actions, func(ie *ini.IniEditor) {
 				ie.Del(sec, key)
 			})
 			av = av[2:]
@@ -115,7 +116,7 @@ func main() {
 				usage(1)
 			}
 			val := av[2]
-			actions = append(actions, func(ie *stcdetail.IniEditor) {
+			actions = append(actions, func(ie *ini.IniEditor) {
 				ie.Set(sec, key, val)
 			})
 			av = av[3:]
@@ -124,7 +125,7 @@ func main() {
 				usage(1)
 			}
 			val := av[2]
-			actions = append(actions, func(ie *stcdetail.IniEditor) {
+			actions = append(actions, func(ie *ini.IniEditor) {
 				ie.Add(sec, key, val)
 			})
 			av = av[3:]

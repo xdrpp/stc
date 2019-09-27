@@ -1,15 +1,18 @@
 package stcdetail_test
 
-import "fmt"
-import "io/ioutil"
-import "math/rand"
-import "strings"
-import "testing"
-import "github.com/xdrpp/stc"
-import "github.com/xdrpp/stc/stx"
-import . "github.com/xdrpp/stc/stcdetail"
-import "time"
-import "os"
+import (
+	"fmt"
+	"github.com/xdrpp/stc"
+	"github.com/xdrpp/stc/ini"
+	"github.com/xdrpp/stc/stx"
+	"io/ioutil"
+	"math/rand"
+	"os"
+	"strings"
+	"testing"
+	"time"
+	. "github.com/xdrpp/stc/stcdetail"
+)
 
 func ExampleScaleFmt() {
 	fmt.Println(ScaleFmt(987654321, 7))
@@ -285,7 +288,7 @@ func ExampleLockFile() error {
 }
 
 func ExampleIniEdit() {
-	ini := []byte(
+	bini := []byte(
 `; Here's a comment
 [sec1]
 	key1 = val1
@@ -294,10 +297,10 @@ func ExampleIniEdit() {
 [sec2]
 	key3 = val3
 `)
-	ie, _ := NewIniEdit("", ini)
-	sec1 := IniSection{Section: "sec1"}
-	sec2 := IniSection{Section: "sec2"}
-	sec3 := IniSection{Section: "sec3"}
+	ie, _ := ini.NewIniEdit("", bini)
+	sec1 := ini.IniSection{Section: "sec1"}
+	sec2 := ini.IniSection{Section: "sec2"}
+	sec3 := ini.IniSection{Section: "sec3"}
 	ie.Add(&sec1, "key4", "val4")
 	ie.Del(&sec1, "key2")
 	ie.Set(&sec1, "key1", "second version of val1")

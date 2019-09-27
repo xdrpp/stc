@@ -1,13 +1,13 @@
-package stcdetail_test
+package ini_test
 
 import (
 	"fmt"
-	"github.com/xdrpp/stc/stcdetail"
+	"github.com/xdrpp/stc/ini"
 )
 
 type IniDumper struct{}
 
-func (IniDumper) Item(item stcdetail.IniItem) error {
+func (IniDumper) Item(item ini.IniItem) error {
 	if item.Value == nil {
 		fmt.Printf("%s\n", item.QKey())
 	} else {
@@ -28,7 +28,7 @@ key4 = " value4"   ; this one started with a space
 `)
 
 func ExampleIniParseContents() {
-	stcdetail.IniParseContents(IniDumper{}, "(test)", contents)
+	ini.IniParseContents(IniDumper{}, "(test)", contents)
 	// Output:
 	// bare-key = bare value
 	// section.key1 = value1

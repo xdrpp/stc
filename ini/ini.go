@@ -1,4 +1,5 @@
-package stcdetail
+// Ini file parser library.
+package ini
 
 import "bytes"
 import "container/list"

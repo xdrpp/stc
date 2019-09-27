@@ -48,7 +48,7 @@ RECURSE = @set -e; for dir in $(CMDS); do \
 	done
 
 test: always
-	go test -v . ./stcdetail
+	go test -v . ./stcdetail ./ini
 	$(RECURSE)
 
 clean: always

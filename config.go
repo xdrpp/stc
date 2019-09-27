@@ -2,6 +2,7 @@ package stc
 
 import (
 	"fmt"
+	"github.com/xdrpp/stc/ini"
 	"github.com/xdrpp/stc/stcdetail"
 	"io/ioutil"
 	"os"
@@ -98,15 +99,15 @@ func ConfigPath(components...string) string {
 
 func ValidNetName(name string) bool {
 	return len(name) > 0 && name[0] != '.' &&
-		stcdetail.ValidIniSubsection(name) &&
+		ini.ValidIniSubsection(name) &&
 		strings.IndexByte(name, '/') == -1
 }
 
 type stellarNetParser struct {
 	*StellarNet
-	itemCB func(stcdetail.IniItem)error
+	itemCB func(ini.IniItem)error
 	setName bool
-	secCB func(stcdetail.IniSecStart) func(stcdetail.IniItem) error
+	secCB func(ini.IniSecStart) func(ini.IniItem) error
 }
 
 func (snp *stellarNetParser) Init() {
@@ -118,14 +119,14 @@ func (snp *stellarNetParser) Init() {
 	}
 }
 
-func (snp *stellarNetParser) Item(ii stcdetail.IniItem) error {
+func (snp *stellarNetParser) Item(ii ini.IniItem) error {
 	if snp.itemCB != nil {
 		return snp.itemCB(ii)
 	}
 	return nil
 }
 
-func (snp *stellarNetParser) doNet(ii stcdetail.IniItem) error {
+func (snp *stellarNetParser) doNet(ii ini.IniItem) error {
 	var target *string
 	switch ii.Key {
 	case "name":
@@ -151,10 +152,10 @@ func (snp *stellarNetParser) doNet(ii stcdetail.IniItem) error {
 	return nil
 }
 
-func (snp *stellarNetParser) doAccounts(ii stcdetail.IniItem) error {
+func (snp *stellarNetParser) doAccounts(ii ini.IniItem) error {
 	var acct AccountID
 	if _, err := fmt.Sscan(ii.Key, &acct); err != nil {
-		return stcdetail.BadKey(err.Error())
+		return ini.BadKey(err.Error())
 	}
 	if ii.Value == nil {
 		delete(snp.Accounts, ii.Key)
@@ -164,10 +165,10 @@ func (snp *stellarNetParser) doAccounts(ii stcdetail.IniItem) error {
 	return nil
 }
 
-func (snp *stellarNetParser) doSigners(ii stcdetail.IniItem) error {
+func (snp *stellarNetParser) doSigners(ii ini.IniItem) error {
 	var signer SignerKey
 	if _, err := fmt.Sscan(ii.Key, &signer); err != nil {
-		return stcdetail.BadKey(err.Error())
+		return ini.BadKey(err.Error())
 	}
 	if ii.Value == nil {
 		snp.Signers.Del(ii.Key)
@@ -177,7 +178,7 @@ func (snp *stellarNetParser) doSigners(ii stcdetail.IniItem) error {
 	return nil
 }
 
-func (snp *stellarNetParser) Section(iss stcdetail.IniSecStart) error {
+func (snp *stellarNetParser) Section(iss ini.IniSecStart) error {
 	snp.itemCB = nil
 	if iss.Subsection == nil ||
 		(*iss.Subsection == snp.Name && ValidNetName(snp.Name)) {
@@ -216,7 +217,7 @@ func LoadStellarNet(name string, paths...string) (*StellarNet, error) {
 // current netname), allows a callback to parse them in some
 // application-specific way.
 func (net *StellarNet) LoadExtension(
-	secCB func(stcdetail.IniSecStart) func(stcdetail.IniItem) error,
+	secCB func(ini.IniSecStart) func(ini.IniItem) error,
 	perm os.FileMode, paths...string) error {
 	if len(paths) > 0 {
 		net.SavePath = paths[0]
@@ -233,7 +234,7 @@ func (net *StellarNet) LoadExtension(
 			net.Status = fi
 		}
 		if err == nil {
-			err = stcdetail.IniParseContents(&snp, path, contents)
+			err = ini.IniParseContents(&snp, path, contents)
 		}
 		if err != nil && !os.IsNotExist(err) {
 			return err
@@ -246,7 +247,7 @@ func (net *StellarNet) LoadExtension(
 	}
 
 	// Finish with global configuration
-	stcdetail.IniParseContents(&snp, "", getGlobalConfigContents())
+	ini.IniParseContents(&snp, "", getGlobalConfigContents())
 	if net.GetNetworkId() == "" {
 		return fmt.Errorf("could not determine network-id for %s", net.Name)
 	} else if net.SavePath != "" {
@@ -314,7 +315,7 @@ func (net *StellarNet) doSave(perm os.FileMode) error {
 		return err
 	}
 
-	ie, _ := stcdetail.NewIniEdit(net.SavePath, contents)
+	ie, _ := ini.NewIniEdit(net.SavePath, contents)
 	net.Edits.Apply(ie)
 	ie.WriteTo(lf)
 	return lf.Commit()
