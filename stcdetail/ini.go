@@ -842,35 +842,53 @@ func (ie *IniEdits) Apply(target *IniEditor) {
 	*ie = nil
 }
 
-type genericIniSink struct {
-	sec *IniSection
-	fields map[string]reflect.Value
+// A generic IniSink
+type GenericIniSink struct {
+	// If non-nil, only match this specific section (otherwise ignore
+	// section).
+	Sec *IniSection
+
+	// Pointers to the fields that should be parsed.
+	Fields map[string]interface{}
+
+	// If no known field name is found, or if Sec does not match the
+	// current section, then pass the item on to Next.
+	Next IniSink
 }
 
-func (s *genericIniSink) String() string {
+func (s *GenericIniSink) AddField(name string, ptr interface{}) {
+	s.Fields[name] = ptr
+}
+
+func (s *GenericIniSink) String() string {
 	out := strings.Builder{}
-	if s.sec != nil {
-		fmt.Fprintf(&out, "%s\n", s.sec.String())
+	if s.Sec != nil {
+		fmt.Fprintf(&out, "%s\n", s.Sec.String())
 	}
-	for name, val := range s.fields {
-		fmt.Fprintf(&out, "\t%s = %s\n", name,
-			EscapeIniValue(fmt.Sprint(val.Interface())))
+	for name, i := range s.Fields {
+		v := reflect.ValueOf(i).Elem().Interface()
+		fmt.Fprintf(&out, "\t%s = %s\n", name, EscapeIniValue(fmt.Sprint(v)))
 	}
 	return out.String()
 }
 
-func (s *genericIniSink) Item(ii IniItem) error {
-	if s.sec.Eq(ii.IniSection) {
-		if v, ok := s.fields[ii.Key]; ok {
+func (s *GenericIniSink) Item(ii IniItem) error {
+	if s.Sec.Eq(ii.IniSection) {
+		if i, ok := s.Fields[ii.Key]; ok {
+			v := reflect.ValueOf(i).Elem()
 			if ii.Value == nil {
 				v.Set(reflect.Zero(v.Type()))
 			} else if v.Kind() == reflect.String {
 				v.SetString(ii.Val())
 			} else {
-				_, err := fmt.Sscan(*ii.Value, v.Addr().Interface())
+				_, err := fmt.Sscan(*ii.Value, i)
 				return err
 			}
+			return nil
 		}
+	}
+	if s.Next != nil {
+		return s.Next.Item(ii)
 	}
 	return nil
 }
@@ -880,7 +898,7 @@ func (s *genericIniSink) Item(ii IniItem) error {
 // json tag in json unmarshaling).  The returned sink does not look at
 // the section, only the key and value.  If sec is non-nil, then
 // ignores items whose section is not equal to sec.
-func MkIniSink(sec *IniSection, i interface{}) IniSink {
+func NewIniSink(sec *IniSection, i interface{}) *GenericIniSink {
 	v := reflect.ValueOf(i)
 	if v.Kind() != reflect.Ptr {
 		return nil
@@ -889,9 +907,9 @@ func MkIniSink(sec *IniSection, i interface{}) IniSink {
 	if v.Kind() != reflect.Struct {
 		return nil
 	}
-	ret := genericIniSink {
-		sec: sec,
-		fields: make(map[string]reflect.Value),
+	ret := GenericIniSink {
+		Sec: sec,
+		Fields: make(map[string]interface{}),
 	}
 
 	t := v.Type()
@@ -903,7 +921,7 @@ func MkIniSink(sec *IniSection, i interface{}) IniSink {
 		} else if name == "" {
 			name = strings.ReplaceAll(f.Name, "_", "-")
 		}
-		ret.fields[name] = v.Field(i)
+		ret.Fields[name] = v.Field(i).Addr().Interface()
 	}
 
 	return &ret
