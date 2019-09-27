@@ -21,7 +21,7 @@ uhelper.go: stx/xdr_generated.go uniontool/uniontool.go go.mod
 
 go.mod: $(MAKEFILE_LIST)
 	echo 'module github.com/xdrpp/stc' > go.mod
-	if test -d cmd/goxdr; then \
+	if test -d cmd/goxdr -a 1 != "$$BUILDING_GO1"; then \
 	    echo 'replace github.com/xdrpp/goxdr => ./cmd/goxdr' >> go.mod; \
 	else \
 	    export GOPRIVATE='*'; \
@@ -78,7 +78,7 @@ depend: always
 
 go1: always
 	rm -f go.sum go.mod
-	$(MAKE) build
+	BUILDING_GO1=1 $(MAKE) build
 	./make-go1
 	rm -f go.mod
 
