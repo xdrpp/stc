@@ -17,10 +17,33 @@ type GenericIniSink struct {
 	Fields map[string]interface{}
 }
 
-func (s *GenericIniSink) AddField(name string, ptr interface{}) {
-	if s.Fields == nil {
-		s.Fields = make(map [string]interface{})
+// NewGenericSink([section [, subsection])
+func NewGenericSink(args...string) *GenericIniSink {
+	var sec *IniSection
+	switch len(args) {
+	case 0:
+		return nil
+	case 1:
+		sec = &IniSection{
+			Section: args[0],
+		}
+	case 2:
+		sec = &IniSection{
+			Section: args[0],
+			Subsection: &args[1],
+		}
+	default:
+		panic(fmt.Errorf("NewGenericSink takes at most 2 arguments, not %d",
+			len(args)))
 	}
+	return &GenericIniSink{
+		Sec: sec,
+		Fields: make(map[string]interface{}),
+	}
+}
+
+// Add a field to be parsed
+func (s *GenericIniSink) AddField(name string, ptr interface{}) {
 	s.Fields[name] = ptr
 }
 
@@ -49,6 +72,21 @@ func (s *GenericIniSink) AddStruct(i interface{}) {
 			name = strings.ReplaceAll(f.Name, "_", "-")
 		}
 		s.AddField(name, v.Field(i).Addr().Interface())
+	}
+}
+
+// Save the current state of an Ini-parsable structure to a set of
+// IniEdits.  This is useful for creating an initial file.  If
+// includeZero is true, then all fields are saved; otherwise, only
+// ones with non-default values are saved.
+func (s *GenericIniSink) SaveAll(ies *IniEdits, includeZero bool) {
+	for name, i := range s.Fields {
+		*ies = append(*ies, func(ie *IniEditor){
+			v := reflect.ValueOf(i).Elem()
+			if includeZero || !v.IsZero() {
+				ie.Set(s.Sec, name, fmt.Sprint(v.Interface()))
+			}
+		})
 	}
 }
 
