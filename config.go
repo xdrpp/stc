@@ -127,18 +127,19 @@ func ValidNetName(name string) bool {
 
 type stellarNetParser struct {
 	*StellarNet
-	itemCB func(ini.IniItem)error
-	setName bool
-	secCB func(ini.IniSecStart) func(ini.IniItem) error
-}
 
-func (snp *stellarNetParser) Init() {
-	if snp.Signers == nil {
-		snp.Signers = make(SignerCache)
-	}
-	if snp.Accounts == nil {
-		snp.Accounts = make(AccountHints)
-	}
+	// How to handle items in the current section
+	itemCB func(ini.IniItem)error
+
+	// This is intended to be initialized to true, and then gets set
+	// to false whenever Name gets set on StellarNet.  The reason is
+	// that initially Name may be set from a source other than the
+	// configuration file, such as a command-line argument or the
+	// STCNET environment variable.  If the configuration file does
+	// not set Name, then setName will never be set to false, which
+	// tells us we need to save it to the configuration file.
+	// (setName means set it in the configuration file.)
+	setName bool
 }
 
 func (snp *stellarNetParser) Item(ii ini.IniItem) error {
@@ -216,9 +217,6 @@ func (snp *stellarNetParser) Section(iss ini.IniSecStart) error {
 			snp.itemCB = snp.doSigners
 		}
 	}
-	if snp.itemCB == nil && snp.secCB != nil {
-		snp.itemCB = snp.secCB(iss)
-	}
 	return nil
 }
 
@@ -243,6 +241,12 @@ func (net *StellarNet) Validate() error {
 }
 
 func (net *StellarNet) IniSink() ini.IniSink {
+	if net.Signers == nil {
+		net.Signers = make(SignerCache)
+	}
+	if net.Accounts == nil {
+		net.Accounts = make(AccountHints)
+	}
 	return &stellarNetParser{
 		StellarNet: net,
 		setName: true,
