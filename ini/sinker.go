@@ -94,6 +94,10 @@ type IniSinker interface {
 
 type IniSinks []IniSink
 
+func (s *IniSinks) Push(i IniSink) {
+	*s = append(*s, i)
+}
+
 func (s IniSinks) Init() {
 	for i := range s {
 		if init, ok := s[i].(interface{ Init() }); ok {
@@ -119,7 +123,7 @@ func (s IniSinks) Section(ss IniSecStart) error {
 	}
 	return nil
 }
-func (s IniSinks) Done() {
+func (s IniSinks) Done(IniRange) {
 	for i := range s {
 		if done, ok := s[i].(interface{ Done() }); ok {
 			done.Done()

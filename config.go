@@ -1,6 +1,7 @@
 package stc
 
 import (
+	"errors"
 	"fmt"
 	"github.com/xdrpp/stc/ini"
 	"github.com/xdrpp/stc/stcdetail"
@@ -97,6 +98,27 @@ func ConfigPath(components...string) string {
 	return path.Join(append([]string{getConfigDir(true)}, components...)...)
 }
 
+// Parse a series of INI configuration files specified by paths,
+// followed by the global or built-in stc.conf file.
+func ParseConfigFiles(sink ini.IniSink, paths...string) error {
+	for _, path := range paths {
+		contents, _, err := stcdetail.ReadFile(path)
+		if err == nil {
+			err = ini.IniParseContents(sink, path, contents)
+		}
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	// Finish with global configuration
+	err := ini.IniParseContents(sink, "", getGlobalConfigContents())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func ValidNetName(name string) bool {
 	return len(name) > 0 && name[0] != '.' &&
 		ini.ValidIniSubsection(name) &&
@@ -131,7 +153,10 @@ func (snp *stellarNetParser) doNet(ii ini.IniItem) error {
 	switch ii.Key {
 	case "name":
 		if (snp.Name == "" || snp.setName) &&
-			ii.Subsection == nil && ValidNetName(ii.Val()) {
+			ii.Val() != "" && ii.Subsection == nil {
+			if !ValidNetName(ii.Val()) {
+				return ErrInvalidNetName
+			}
 			snp.Name = ii.Val()
 			snp.setName = false
 		}
@@ -197,6 +222,33 @@ func (snp *stellarNetParser) Section(iss ini.IniSecStart) error {
 	return nil
 }
 
+func (snp *stellarNetParser) Done(ini.IniRange) {
+	if snp.setName {
+		snp.Edits.Set("net", "name", snp.Name)
+		snp.setName = false
+	}
+}
+
+var ErrNoNetworkId = errors.New("Cannot obtain Stellar network-id")
+var ErrInvalidNetName = errors.New("Invalid or missing Stellar network name")
+
+func (net *StellarNet) Validate() error {
+	if !ValidNetName(net.Name) {
+		return ErrInvalidNetName
+	}
+	if net.GetNetworkId()  == "" {
+		return ErrNoNetworkId
+	}
+	return nil
+}
+
+func (net *StellarNet) IniSink() ini.IniSink {
+	return &stellarNetParser{
+		StellarNet: net,
+		setName: true,
+	}
+}
+
 // Load a Stellar network from an INI files.  If path[0] does not
 // exist but name is valid, the path will be created and net.name will
 // be set to name.  Otherwise the name argument is ignored.  After all
@@ -205,13 +257,19 @@ func (snp *stellarNetParser) Section(iss ini.IniSecStart) error {
 // return nil.
 func LoadStellarNet(name string, paths...string) (*StellarNet, error) {
 	ret := StellarNet{ Name: name }
-	err := ret.LoadExtension(nil, 0666, paths...)
-	if err != nil {
+	if len(paths) > 0 {
+		ret.SavePath = paths[0]
+	}
+	if err := ParseConfigFiles(ret.IniSink(), paths...); err != nil {
+		return nil, err
+	} else if err = ret.Validate(); err != nil {
 		return nil, err
 	}
+	ret.Save()
 	return &ret, nil
 }
 
+/*
 // Load a StelalrNet from file paths, but for unknown section names
 // (those other than net, accounts, and signers with nil or the
 // current netname), allows a callback to parse them in some
@@ -238,25 +296,13 @@ func (net *StellarNet) LoadExtension(
 		}
 		if err != nil && !os.IsNotExist(err) {
 			return err
-		} else if !ValidNetName(net.Name) {
-			return fmt.Errorf("%s: invalid or missing net.name", path)
-		} else if snp.setName {
-			net.Edits.Set("net", "name", net.Name)
-			snp.setName = false
 		}
 	}
 
 	// Finish with global configuration
-	ini.IniParseContents(&snp, "", getGlobalConfigContents())
-	if net.GetNetworkId() == "" {
-		return fmt.Errorf("could not determine network-id for %s", net.Name)
-	} else if net.SavePath != "" {
-		if err := net.doSave(perm); err != nil {
-			return err
-		}
-	}
-	return nil
+	return ini.IniParseContents(&snp, "", getGlobalConfigContents())
 }
+*/
 
 var netCache map[string]*StellarNet
 
@@ -300,11 +346,7 @@ func (net *StellarNet) doSave(perm os.FileMode) error {
 	}
 	var lf stcdetail.LockedFile
 	var err error
-	if net.Status != nil {
-		lf, err = stcdetail.LockFileIfUnchanged(net.SavePath, net.Status)
-	} else {
-		lf, err = stcdetail.LockFile(net.SavePath, perm)
-	}
+	lf, err = stcdetail.LockFile(net.SavePath, perm)
 	if err != nil {
 		return err
 	}

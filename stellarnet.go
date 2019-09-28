@@ -5,7 +5,6 @@ import (
 	"github.com/xdrpp/stc/ini"
 	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
-	"os"
 	"strings"
 	"time"
 )
@@ -33,10 +32,6 @@ type StellarNet struct {
 
 	// Changes will be saved to this file.
 	SavePath string
-
-	// File status at the time the configuration file was parsed (so
-	// you can tell if it's been changed since it was parsed).
-	Status os.FileInfo
 
 	// Changes to be applied by Save().
 	Edits ini.IniEdits

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/xdrpp/goxdr/xdr"
 	"github.com/xdrpp/stc/stcdetail"
@@ -60,7 +61,7 @@ func (net *StellarNet) GetJSON(query string, out interface{}) error {
 	}
 }
 
-var badCb error = fmt.Errorf(
+var badCb error = errors.New(
 	"StreamJSON cb argument must be of type func(*T) or func(*T)error")
 
 // Stream a series of events.  cb is a callback function which must
