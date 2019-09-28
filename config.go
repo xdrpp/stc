@@ -273,41 +273,6 @@ func LoadStellarNet(name string, paths...string) (*StellarNet, error) {
 	return &ret, nil
 }
 
-/*
-// Load a StelalrNet from file paths, but for unknown section names
-// (those other than net, accounts, and signers with nil or the
-// current netname), allows a callback to parse them in some
-// application-specific way.
-func (net *StellarNet) LoadExtension(
-	secCB func(ini.IniSecStart) func(ini.IniItem) error,
-	perm os.FileMode, paths...string) error {
-	if len(paths) > 0 {
-		net.SavePath = paths[0]
-	}
-	snp := stellarNetParser{
-		StellarNet: net,
-		setName: true,
-		secCB: secCB,
-	}
-
-	for i, path := range paths {
-		contents, fi, err := stcdetail.ReadFile(path)
-		if err == nil && i == 0 {
-			net.Status = fi
-		}
-		if err == nil {
-			err = ini.IniParseContents(&snp, path, contents)
-		}
-		if err != nil && !os.IsNotExist(err) {
-			return err
-		}
-	}
-
-	// Finish with global configuration
-	return ini.IniParseContents(&snp, "", getGlobalConfigContents())
-}
-*/
-
 var netCache map[string]*StellarNet
 
 // Load a network from under the ConfigPath() ($STCDIR) directory.  If
@@ -341,7 +306,9 @@ func DefaultStellarNet(name string) *StellarNet {
 	return ret
 }
 
-func (net *StellarNet) doSave(perm os.FileMode) error {
+// Save any changes to SavePath.  If SavePath does not exist, then
+// create it with permissions Perm (subject to umask, of course).
+func (net *StellarNet) SavePerm(perm os.FileMode) error {
 	if len(net.Edits) == 0 {
 		return nil
 	}
@@ -367,6 +334,7 @@ func (net *StellarNet) doSave(perm os.FileMode) error {
 	return lf.Commit()
 }
 
+// Save any changes to to SavePath.  Equivalent to SavePerm(0666).
 func (net *StellarNet) Save() error {
-	return net.doSave(0666)
+	return net.SavePerm(0666)
 }
