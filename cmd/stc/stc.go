@@ -322,7 +322,7 @@ func doEdit(net *StellarNet, arg string) {
 		e = NewTransactionEnvelope()
 		compiled = true
 	} else if err != nil {
-		fmt.Fprint(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	getAccounts(net, e, false)
