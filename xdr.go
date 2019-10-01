@@ -177,6 +177,20 @@ func (txe *TransactionEnvelope) Append(
 	})
 }
 
+// Set the fee of a transaction to baseFee times the number of
+// operations.  If the result would exceed the maximum fee of
+// 0xffffffff (~430 XLM), then just set the fee to 0xffffffff.
+// (Obviously only call this once you have finished adding operations
+// to the transaction with Append.)
+func (txe *TransactionEnvelope) SetFee(baseFee uint32) {
+	fee := int64(baseFee) * int64(len(txe.Tx.Operations))
+	if fee > 0xffffffff {
+		txe.Tx.Fee = 0xffffffff
+	} else {
+		txe.Tx.Fee = uint32(fee)
+	}
+}
+
 func (txe *TransactionEnvelope) GetHelp(name string) bool {
 	_, ok := txe.Help[name]
 	return ok
