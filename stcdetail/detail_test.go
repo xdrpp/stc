@@ -285,3 +285,35 @@ func ExampleLockFile() error {
 
 	return lf.Commit()
 }
+
+func ExampleGetTxrepField() {
+	var a1, a2 stx.AccountID
+	fmt.Sscan("GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L", &a1)
+	fmt.Sscan("GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G", &a2)
+	txe := stc.NewTransactionEnvelope()
+	txe.Tx.SourceAccount = a1
+	txe.Append(nil, stc.Payment{
+		Destination: a1,
+		Asset: stc.NativeAsset(),
+		Amount: 10000000,
+	})
+
+	*GetTxrepField(txe, "tx.operations[0].sourceAccount").
+		XdrPointer().(**stx.AccountID) = &a2
+	XdrToTxrep(os.Stdout, "", txe)
+	// output:
+	// tx.sourceAccount: GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L
+	// tx.fee: 0
+	// tx.seqNum: 0
+	// tx.timeBounds._present: false
+	// tx.memo.type: MEMO_NONE
+	// tx.operations.len: 1
+	// tx.operations[0].sourceAccount._present: true
+	// tx.operations[0].sourceAccount: GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G
+	// tx.operations[0].body.type: PAYMENT
+	// tx.operations[0].body.paymentOp.destination: GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L
+	// tx.operations[0].body.paymentOp.asset: NATIVE
+	// tx.operations[0].body.paymentOp.amount: 10000000 (1e7)
+	// tx.ext.v: 0
+	// signatures.len: 0
+}

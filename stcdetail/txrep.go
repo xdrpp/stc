@@ -497,3 +497,43 @@ func XdrFromTxrep(in io.Reader, name string, t xdr.XdrType) TxrepError {
 	}
 	return nil
 }
+
+type xdrExtractor struct {
+	target string
+	result xdr.XdrType
+}
+
+func (*xdrExtractor) Sprintf(f string, args ...interface{}) string {
+	return fmt.Sprintf(f, args...)
+}
+
+func (xe *xdrExtractor) Marshal(name string, i xdr.XdrType) {
+	if xe.result != nil {
+		return
+	}
+
+	if init, ok := i.(interface{ XdrInitialize() }); ok {
+		init.XdrInitialize()
+	}
+
+	if name == xe.target {
+		xe.result = i
+	} else if v, ok := i.(xdr.XdrAggregate); ok {
+		v.XdrRecurse(xe, name)
+	}
+}
+
+// Extract and return a field with a particular txrep name from an XDR
+// data structure.  Returns nil if the field name doesn't exist,
+// either because it is invalid or because a containing pointer is nil
+// or because a union has a different active case.
+//
+// Note that for pointer fields this functionreturns the pointer, not
+// the underlying value.  Hence the XdrPointer() method returns a
+// pointer-to-pointer type that is guaranteed not to be nil even if
+// the pointer is nil.
+func GetTxrepField(t xdr.XdrType, field string) (ret xdr.XdrType) {
+	xe := xdrExtractor{ target: field }
+	t.XdrMarshal(&xe, "")
+	return xe.result
+}
