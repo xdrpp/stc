@@ -291,15 +291,20 @@ func ExampleGetTxrepField() {
 	fmt.Sscan("GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L", &a1)
 	fmt.Sscan("GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G", &a2)
 	txe := stc.NewTransactionEnvelope()
-	txe.Tx.SourceAccount = a1
 	txe.Append(nil, stc.Payment{
 		Destination: a1,
 		Asset: stc.NativeAsset(),
 		Amount: 10000000,
 	})
 
-	*GetTxrepField(txe, "tx.operations[0].sourceAccount").
-		XdrPointer().(**stx.AccountID) = &a2
+	// The sourceAccount field of a transaction is an AccountID
+	*GetTxrepField(txe, "tx.sourceAccount").XdrPointer().(*stx.AccountID) = a1
+
+	// The sourceAccount field of an operation is a *AccountID, so the
+	// field we get back is of type **AccountID
+	op0src := "tx.operations[0].sourceAccount"
+	*GetTxrepField(txe, op0src).XdrPointer().(**stx.AccountID) = &a2
+
 	XdrToTxrep(os.Stdout, "", txe)
 	// output:
 	// tx.sourceAccount: GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L
