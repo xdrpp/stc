@@ -10,6 +10,7 @@ import (
 	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -18,6 +19,29 @@ import (
 	"strings"
 	"time"
 )
+
+// Try to determine whether a request to Horizon indicates the
+// operation is worth retrying.  Specifically, this function
+// repeatedly unwraps errors and returns true if either A) one of the
+// errors has a Temporary() method that returns true, or B) one of the
+// errors is a net.OpError for Op "dial" and that is not wrapping a
+// DNS error.  The logic here is that if the DNS name of a horizon
+// server does not exist (permanent DNS error), there is likely some
+// misconfiguration.  However, if the horizon server is refusing TCP
+// connections, it may be undergoing maintenance.
+func IsTemporary(err error) bool {
+	dial_not_dns := false
+	for ; err != nil; err = errors.Unwrap(err) {
+		if t, ok := err.(interface{ Temporary()bool }); ok && t.Temporary() {
+			return true
+		} else if operr, ok := err.(*net.OpError); ok && operr.Op == "dial" {
+			dial_not_dns = true
+		} else if _, ok := err.(*net.DNSError); ok {
+			dial_not_dns = false
+		}
+	}
+	return dial_not_dns
+}
 
 // A communication error with horizon
 type horizonFailure string
@@ -64,6 +88,11 @@ func (net *StellarNet) GetJSON(query string, out interface{}) error {
 var badCb error = errors.New(
 	"StreamJSON cb argument must be of type func(*T) or func(*T)error")
 
+type ErrEventStream string
+func (e ErrEventStream) Error() string {
+	return string(e)
+}
+
 // Stream a series of events.  cb is a callback function which must
 // have type func(obj *T)error or func(obj *T), where *T is a type
 // into which JSON can be unmarshalled.  Returns if there is an error
@@ -90,7 +119,7 @@ func (net *StellarNet) StreamJSON(
 	return stcdetail.Stream(ctx, query, func(evtype string, data []byte) error {
 		switch evtype {
 		case "error":
-			return stcdetail.HTTPerror(data)
+			return ErrEventStream(data)
 		case "message":
 			v := reflect.New(tp)
 			if err := json.Unmarshal(data, v.Interface()); err != nil {
@@ -171,7 +200,7 @@ func (net *StellarNet) IterateJSON(
 			return err
 		} else if resp.StatusCode != 200 {
 			if resp.StatusCode != 429 {
-				return stcdetail.HTTPerror(resp.Status)
+				return stcdetail.NewHTTPerror(resp)
 			}
 			if ctx != nil {
 				select {

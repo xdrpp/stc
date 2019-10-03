@@ -4,16 +4,42 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
 )
 
 // A status line for a non-200 HTTP response
-type HTTPerror string
+type HTTPerror struct {
+	Resp *http.Response
+	Body []byte
+}
 
-func (e HTTPerror) Error() string {
-	return string(e)
+func NewHTTPerror(resp *http.Response) *HTTPerror {
+	var body []byte
+	if resp.Body != nil {
+		body, _ = ioutil.ReadAll(resp.Body)
+	}
+	return &HTTPerror {
+		Resp: resp,
+		Body: body,
+	}
+}
+
+func (e *HTTPerror) Error() string {
+	return e.Resp.Status
+}
+
+// Returns true for 503, false otherwise.  Should examine the result
+// more carefully to distinguish between transient or permanent 500
+// errors.
+func (e *HTTPerror) Temporary() bool {
+	switch e.Resp.StatusCode {
+	case 503:
+		return true
+	}
+	return false
 }
 
 type streamEvent struct {
@@ -121,7 +147,7 @@ func Stream(ctx context.Context, url string,
 			return err
 		}
 		if resp.StatusCode != 200 {
-			return HTTPerror(resp.Status)
+			return NewHTTPerror(resp)
 		}
 		body := bufio.NewScanner(resp.Body)
 
