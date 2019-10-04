@@ -439,6 +439,11 @@ type HorizonTxResult struct {
 	PagingToken string
 }
 
+func (r *HorizonTxResult) Success() bool {
+	return r.Result.Result.Code == stx.TxSUCCESS &&
+		len(*r.Result.Result.Results()) > 0
+}
+
 func (r HorizonTxResult) String() string {
 	out := strings.Builder{}
 	fmt.Fprintf(&out, "txhash: %x\n", r.Txhash)
