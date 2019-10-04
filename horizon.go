@@ -441,6 +441,7 @@ type HorizonTxResult struct {
 
 func (r HorizonTxResult) String() string {
 	out := strings.Builder{}
+	fmt.Fprintf(&out, "txhash: %x\n", r.Txhash)
 	fmt.Fprintf(&out, "ledger: %d\ncreated_at: %d (%s)\n",
 		r.Ledger, r.Time.Unix(), r.Time.Format(time.UnixDate))
 	stcdetail.XdrToTxrep(&out, "", &r.Env)
