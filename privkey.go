@@ -21,6 +21,10 @@ type PrivateKey struct {
 	stcdetail.PrivateKeyInterface
 }
 
+func (sec PrivateKey) Valid() bool {
+	return sec.PrivateKeyInterface != nil
+}
+
 func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 	bs, err := ss.Token(true, stx.IsStrKeyChar)
 	if err != nil {
@@ -52,7 +56,7 @@ func NewPrivateKey(pkt stx.PublicKeyType) PrivateKey {
 // Writes the a private key to a file in strkey format.  If passphrase
 // has non-zero length, then the key is symmetrically encrypted in
 // ASCII-armored GPG format.
-func (sk *PrivateKey) Save(file string, passphrase []byte) error {
+func (sk PrivateKey) Save(file string, passphrase []byte) error {
 	out := &strings.Builder{}
 	if len(passphrase) == 0 {
 		fmt.Fprintln(out, sk.String())
@@ -84,19 +88,19 @@ var InvalidKeyFile = errors.New("Invalid private key file")
 
 // Reads a private key from a file, prompting for a passphrase if the
 // key is in ASCII-armored symmetrically-encrypted GPG format.
-func LoadPrivateKey(file string) (*PrivateKey, error) {
+func LoadPrivateKey(file string) (PrivateKey, error) {
 	input, err := ioutil.ReadFile(file)
 	if err != nil {
-		return nil, err
+		return PrivateKey{}, err
 	}
-	ret := &PrivateKey{}
-	if _, err = fmt.Fscan(bytes.NewBuffer(input), ret); err == nil {
+	ret := PrivateKey{}
+	if _, err = fmt.Fscan(bytes.NewBuffer(input), &ret); err == nil {
 		return ret, nil
 	}
 
 	block, err := armor.Decode(bytes.NewBuffer(input))
 	if err != nil {
-		return nil, InvalidKeyFile
+		return ret, InvalidKeyFile
 	}
 	md, err := openpgp.ReadMessage(block.Body, nil,
 		func(keys []openpgp.Key, symmetric bool) ([]byte, error) {
@@ -108,22 +112,21 @@ func LoadPrivateKey(file string) (*PrivateKey, error) {
 			return nil, InvalidPassphrase
 		}, nil)
 	if err != nil {
-		return nil, err
-	} else if _, err = fmt.Fscan(md.UnverifiedBody, ret); err != nil {
-		return nil, err
-	} else if io.Copy(ioutil.Discard, md.UnverifiedBody); md.SignatureError != nil {
-		return nil, md.SignatureError
+		return ret, err
+	} else if _, err = fmt.Fscan(md.UnverifiedBody, &ret); err != nil {
+		return ret, err
+	} else if io.Copy(ioutil.Discard,
+		md.UnverifiedBody); md.SignatureError != nil {
+		return ret, md.SignatureError
 	}
 	return ret, nil
 }
 
 // Reads a private key from standard input.  If standard input is a
 // terminal, disables echo and prints prompt to standard error.
-func InputPrivateKey(prompt string) (*PrivateKey, error) {
+func InputPrivateKey(prompt string) (PrivateKey, error) {
 	key := stcdetail.GetPass(prompt)
 	var sk PrivateKey
-	if _, err := fmt.Fscan(bytes.NewBuffer(key), &sk); err != nil {
-		return nil, err
-	}
-	return &sk, nil
+	_, err := fmt.Fscan(bytes.NewBuffer(key), &sk)
+	return sk, err
 }

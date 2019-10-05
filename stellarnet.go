@@ -71,7 +71,8 @@ func (net *StellarNet) HashTx(tx stx.IsTransaction) *stx.Hash {
 
 // Sign a transaction and append the signature to the
 // TransactionEnvelope.
-func (net *StellarNet) SignTx(sk *PrivateKey, e *TransactionEnvelope) error {
+func (net *StellarNet) SignTx(sk stcdetail.PrivateKeyInterface,
+	e *TransactionEnvelope) error {
 	sig, err := sk.Sign(net.HashTx(e)[:])
 	if err != nil {
 		return err

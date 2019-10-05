@@ -118,8 +118,8 @@ func doKeyGen(outfile string) {
 	}
 }
 
-func getSecKey(file string) (*PrivateKey, error) {
-	var sk *PrivateKey
+func getSecKey(file string) (PrivateKey, error) {
+	var sk PrivateKey
 	var err error
 	if file == "" {
 		sk, err = InputPrivateKey("Secret key: ")
@@ -133,8 +133,8 @@ func getSecKey(file string) (*PrivateKey, error) {
 }
 
 func doSec2pub(file string) {
-	sk, _ := getSecKey(file)
-	if sk != nil {
+	sk, err := getSecKey(file)
+	if err == nil {
 		fmt.Println(sk.Public().String())
 	}
 }

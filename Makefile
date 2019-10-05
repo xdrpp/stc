@@ -48,6 +48,7 @@ RECURSE = @set -e; for dir in $(CMDS); do \
 	done
 
 test: always
+	cd cmd/ini && $(MAKE)
 	go test -v . ./stcdetail ./ini
 	$(RECURSE)
 
