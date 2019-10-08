@@ -173,4 +173,12 @@ func (s IniSinks) IniSink() IniSink {
 	return s
 }
 
+func (s IniSinks) String() string {
+	ret := strings.Builder{}
+	for i := range s {
+		fmt.Fprintln(&ret, s[i])
+	}
+	return ret.String()
+}
+
 var _ IniSinker = IniSinks{}
