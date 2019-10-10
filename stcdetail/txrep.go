@@ -165,7 +165,7 @@ func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
 	switch v := i.(type) {
 	case *stx.Asset:
 		asset := v.String()
-		if asset == "NATIVE" {
+		if asset == "native" {
 			asset = xp.native
 		}
 		fmt.Fprintf(xp.out, "%s: %s\n", name, asset)
@@ -261,7 +261,7 @@ func XdrToTxrep(out io.Writer, name string, t xdr.XdrType) XdrBadValue {
 		ctx.native = i.GetNativeAsset()
 	}
 	if ctx.native == "" {
-		ctx.native = "NATIVE"
+		ctx.native = "native"
 	}
 
 	t.XdrMarshal(&ctx, name)

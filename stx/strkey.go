@@ -137,7 +137,7 @@ func (a Asset) String() string {
 	var issuer *AccountID
 	switch a.Type {
 	case ASSET_TYPE_NATIVE:
-		return "NATIVE"
+		return "native"
 	case ASSET_TYPE_CREDIT_ALPHANUM4:
 		code = a.AlphaNum4().AssetCode[:]
 		issuer = &a.AlphaNum4().Issuer
@@ -205,7 +205,7 @@ func (a *Asset) Scan(ss fmt.ScanState, _ rune) error {
 	colon := bytes.LastIndexByte(bs, ':')
 	if colon == -1 {
 		if len(bs) > 12 {
-			return StrKeyError("Asset should be Code:AccountID or NATIVE")
+			return StrKeyError("Asset should be Code:AccountID or native")
 		}
 		a.Type = ASSET_TYPE_NATIVE
 		return nil
