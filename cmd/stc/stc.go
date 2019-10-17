@@ -444,6 +444,8 @@ func main() {
 		"List keys that have been stored in $STCDIR")
 	opt_fee_stats := flag.Bool("fee-stats", false,
 		"Dump fee stats from network")
+	opt_ledger_header := flag.Bool("ledger-header", false,
+		"Dump ledger header from network")
 	opt_acctinfo := flag.Bool("qa", false,
 		"Query Horizon for information on account")
 	opt_txinfo := flag.Bool("qt", false,
@@ -471,6 +473,7 @@ func main() {
        %[1]s -preauth [-net=ID] INPUT-FILE
        %[1]s -txhash [-net=ID] _INPUT-FILE
        %[1]s -fee-stats
+       %[1]s -ledger-header
        %[1]s -qa [-net=ID] ACCT
        %[1]s -qt [-net=ID] TXHASH
        %[1]s -qta [-net=ID] ACCT
@@ -499,11 +502,12 @@ func main() {
 	if n := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit, *opt_keygen,
 		*opt_date, *opt_sec2pub, *opt_import_key, *opt_export_key,
 		*opt_acctinfo, *opt_txinfo, *opt_txacct, *opt_friendbot,
-		*opt_list_keys, *opt_fee_stats,
+		*opt_list_keys, *opt_fee_stats, *opt_ledger_header,
 		*opt_print_default_config); n > 1 || len(flag.Args()) > 1 ||
 		(len(flag.Args()) == 0 &&
 			!(*opt_keygen || *opt_sec2pub || *opt_list_keys ||
-			*opt_fee_stats || *opt_friendbot || *opt_print_default_config)) {
+			*opt_fee_stats || *opt_ledger_header || *opt_friendbot ||
+			*opt_print_default_config)) {
 		flag.Usage()
 		os.Exit(2)
 	} else if n == 1 {
@@ -684,6 +688,17 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Print(fs)
+		return
+	}
+
+	if *opt_ledger_header {
+		lh, err := net.GetLedgerHeader()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error fetching fee stats: %s\n",
+				err.Error())
+			os.Exit(1)
+		}
+		fmt.Print(net.ToRep(lh))
 		return
 	}
 

@@ -17,6 +17,7 @@ stc -qa [-net=ID] _accountID_ \
 stc -qt [-net=ID] _txhash_ \
 stc -qta [-net=ID] _accountID_ \
 stc -fee-stats \
+stc -ledger-header \
 stc -create [-net=ID] _accountID_ \
 stc -keygen [_name_] \
 stc -pub [_name_] \
@@ -169,22 +170,24 @@ assume you do not encrypt your private keys.
 ## Network query mode
 
 stc runs in network query mode when one of the `-post`, `-fee-stats`,
-`-qa`, `-qt`, `-qta`, or `-create` options is provided.
+`ledger-header`, `-qa`, `-qt`, `-qta`, or `-create` options is
+provided.
 
 Post-mode, selected by `-post`, submits a transaction to the Stellar
 network.  This is how you actually execute a transaction you have
 properly formatted and signed.
 
-`-fee-stats` reports on recent transaction fees.  `-qa` reports on the
-state of a particular account.  `-qt` reports the result of a
-transaction that has been previously submitted.  `-qta` reports
-transactions on an account in reverse chronological order (use `-qt`
-to get more detail on any transaction ID).  Unfortunately, some of
-these requests are parsed from horizon responses in JSON rather than
-XDR format, and so are reported in a somewhat incomparable style to
-txrep format.  For example, balances are shown as a fixed-point number
-10^7 times the underlying int64.  `-create` creates and funds an
-account (which only works when the test network is specified).
+`-fee-stats` reports on recent transaction fees.  `-ledger-header`
+returns the latest ledger header.  `-qa` reports on the state of a
+particular account.  `-qt` reports the result of a transaction that
+has been previously submitted.  `-qta` reports transactions on an
+account in reverse chronological order (use `-qt` to get more detail
+on any transaction ID).  Unfortunately, some of these requests are
+parsed from horizon responses in JSON rather than XDR format, and so
+are reported in a somewhat incomparable style to txrep format.  For
+example, balances are shown as a fixed-point number 10^7 times the
+underlying int64.  `-create` creates and funds an account (which only
+works when the test network is specified).
 
 ## Miscellaneous modes
 
