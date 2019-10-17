@@ -108,7 +108,7 @@ func ExampleXdrToJson() {
 	//                     "type": "PAYMENT",
 	//                     "paymentOp": {
 	//                         "destination": "GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L",
-	//                         "asset": "NATIVE",
+	//                         "asset": "native",
 	//                         "amount": "20000000"
 	//                     }
 	//                 }
@@ -317,7 +317,7 @@ func ExampleGetTxrepField() {
 	// tx.operations[0].sourceAccount: GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G
 	// tx.operations[0].body.type: PAYMENT
 	// tx.operations[0].body.paymentOp.destination: GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L
-	// tx.operations[0].body.paymentOp.asset: NATIVE
+	// tx.operations[0].body.paymentOp.asset: native
 	// tx.operations[0].body.paymentOp.amount: 10000000 (1e7)
 	// tx.ext.v: 0
 	// signatures.len: 0

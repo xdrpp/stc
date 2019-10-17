@@ -22,7 +22,7 @@ func NewGenericSink(args...string) *GenericIniSink {
 	var sec *IniSection
 	switch len(args) {
 	case 0:
-		return nil
+		sec = nil
 	case 1:
 		sec = &IniSection{
 			Section: args[0],
@@ -96,8 +96,16 @@ func (s *GenericIniSink) String() string {
 		fmt.Fprintf(&out, "%s\n", s.Sec.String())
 	}
 	for name, i := range s.Fields {
-		v := reflect.ValueOf(i).Elem().Interface()
-		fmt.Fprintf(&out, "\t%s = %s\n", name, EscapeIniValue(fmt.Sprint(v)))
+		v := reflect.ValueOf(i).Elem()
+		if v.Kind() == reflect.Slice {
+			for j := 0; j < v.Len(); j++ {
+				fmt.Fprintf(&out, "\t%s = %s\n", name,
+					EscapeIniValue(fmt.Sprint(v.Index(j).Interface())))
+			}
+		} else {
+			fmt.Fprintf(&out, "\t%s = %s\n", name,
+				EscapeIniValue(fmt.Sprint(v.Interface())))
+		}
 	}
 	return out.String()
 }
@@ -110,6 +118,15 @@ func (s *GenericIniSink) Item(ii IniItem) error {
 				v.Set(reflect.Zero(v.Type()))
 			} else if v.Kind() == reflect.String {
 				v.SetString(ii.Val())
+			} else if v.Kind() == reflect.Slice {
+				e := reflect.New(v.Type().Elem())
+				if e.Kind() == reflect.String {
+					e.Elem().SetString(ii.Val())
+				} else if _, err :=
+					fmt.Sscan(*ii.Value, e.Interface()); err != nil {
+					return err
+				}
+				v.Set(reflect.Append(v, e.Elem()))
 			} else {
 				_, err := fmt.Sscan(*ii.Value, i)
 				return err
