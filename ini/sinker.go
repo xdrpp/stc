@@ -120,7 +120,7 @@ func (s *GenericIniSink) Item(ii IniItem) error {
 				v.SetString(ii.Val())
 			} else if v.Kind() == reflect.Slice {
 				e := reflect.New(v.Type().Elem())
-				if e.Kind() == reflect.String {
+				if e.Elem().Kind() == reflect.String {
 					e.Elem().SetString(ii.Val())
 				} else if _, err :=
 					fmt.Sscan(*ii.Value, e.Interface()); err != nil {
