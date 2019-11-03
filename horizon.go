@@ -93,6 +93,19 @@ func (e ErrEventStream) Error() string {
 	return string(e)
 }
 
+func setField(v reflect.Value, field string, val reflect.Value) {
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	if v.Kind() == reflect.Struct {
+		if f := v.FieldByName(field); (f != reflect.Value{} &&
+			f.Type() == val.Type()) {
+			f.Set(val)
+			return
+		}
+	}
+}
+
 // Stream a series of events.  cb is a callback function which must
 // have type func(obj *T)error or func(obj *T), where *T is a type
 // into which JSON can be unmarshalled.  Returns if there is an error
@@ -116,12 +129,14 @@ func (net *StellarNet) StreamJSON(
 	}
 	query = net.Horizon + query
 
+	netval := reflect.ValueOf(net)
 	return stcdetail.Stream(ctx, query, func(evtype string, data []byte) error {
 		switch evtype {
 		case "error":
 			return ErrEventStream(data)
 		case "message":
 			v := reflect.New(tp)
+			setField(v, "Net", netval)
 			if err := json.Unmarshal(data, v.Interface()); err != nil {
 				return err
 			}
@@ -185,6 +200,8 @@ func (net *StellarNet) IterateJSON(
 	}
 	j.Embedded.Records.i = reflect.New(reflect.SliceOf(tp)).Interface()
 
+	netval := reflect.ValueOf(net)
+
 	backoff := time.Second
 	for url := net.Horizon + query; ctx == nil || ctx.Err() == nil; url =
 		j.Links.Next.Href {
@@ -224,6 +241,7 @@ func (net *StellarNet) IterateJSON(
 			break
 		}
 		for i := 0; i < n; i++ {
+			setField(v.Index(i), "Net", netval)
 			errs := cbv.Call([]reflect.Value{v.Index(i).Addr()})
 			if len(errs) != 0 {
 				if err, ok := errs[0].Interface().(error); ok && err != nil {
@@ -298,6 +316,7 @@ func (hb *HorizonBalance) UnmarshalJSON(data []byte) error {
 // Structure into which you can unmarshal JSON returned by a query to
 // horizon for an account endpoint
 type HorizonAccountEntry struct {
+	Net                   *StellarNet `json:"-"`
 	Sequence              stcdetail.JsonInt64
 	Balance               stcdetail.JsonInt64e7
 	Subentry_count        uint32
@@ -311,8 +330,32 @@ type HorizonAccountEntry struct {
 	Data                  map[string]string
 }
 
+func (net *StellarNet) prettyPrintAux(i interface{}) (string, bool) {
+	if _, ok := i.(StellarNet); ok {
+		return "", true
+	} else if net == nil {
+		return "", false
+	}
+	switch v := i.(type) {
+	case stx.AccountID:
+		if note := net.AccountIDNote(&v); note != "" {
+			return fmt.Sprintf("%s (%s)", v, note), true
+		}
+	case stx.SignerKey:
+		b := stcdetail.XdrToBin(&v)
+		if skis, ok := net.Signers[v.Hint()]; ok {
+			for j := range skis {
+				if stcdetail.XdrToBin(&skis[j].Key) == b {
+					return fmt.Sprintf("%s (%s)", v, skis[j].Comment), true
+				}
+			}
+		}
+	}
+	return "", false
+}
+
 func (hs *HorizonAccountEntry) String() string {
-	return stcdetail.PrettyPrint(hs)
+	return stcdetail.PrettyPrintAux(hs.Net.prettyPrintAux, hs)
 }
 
 // Return the next sequence number (1 + Sequence) as an int64 (or 0 if
@@ -345,7 +388,7 @@ func (ae *HorizonAccountEntry) UnmarshalJSON(data []byte) error {
 // network.
 func (net *StellarNet) GetAccountEntry(acct string) (
 	*HorizonAccountEntry, error) {
-	var ret HorizonAccountEntry
+	ret := HorizonAccountEntry{ Net: net }
 	if err := net.GetJSON("accounts/"+acct, &ret); err != nil {
 		return nil, err
 	}
@@ -430,6 +473,7 @@ type StellarMetas struct {
 }
 
 type HorizonTxResult struct {
+	Net *StellarNet
 	Txhash stx.Hash
 	Ledger uint32
 	Time time.Time
@@ -449,11 +493,10 @@ func (r HorizonTxResult) String() string {
 	fmt.Fprintf(&out, "txhash: %x\n", r.Txhash)
 	fmt.Fprintf(&out, "ledger: %d\ncreated_at: %d (%s)\n",
 		r.Ledger, r.Time.Unix(), r.Time.Format(time.UnixDate))
-	stcdetail.XdrToTxrep(&out, "", &r.Env)
-	stcdetail.XdrToTxrep(&out, "", &r.Result)
-	stcdetail.XdrToTxrep(&out, "feeMeta",
-		stx.XDR_LedgerEntryChanges(&r.FeeMeta))
-	stcdetail.XdrToTxrep(&out, "resultMeta", &r.ResultMeta)
+	r.Net.WriteRep(&out, "", &r.Env)
+	r.Net.WriteRep(&out, "", &r.Result)
+	r.Net.WriteRep(&out, "feeMeta", stx.XDR_LedgerEntryChanges(&r.FeeMeta))
+	r.Net.WriteRep(&out, "resultMeta", &r.ResultMeta)
 	fmt.Fprintf(&out, "paging_token: %s\n", r.PagingToken)
 	return out.String()
 }
@@ -497,7 +540,7 @@ func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 }
 
 func (net *StellarNet) GetTxResult(txid string) (*HorizonTxResult, error) {
-	var ret HorizonTxResult
+	ret := HorizonTxResult{ Net: net }
 	if err := net.GetJSON("transactions/"+txid, &ret); err != nil {
 		return nil, err
 	}

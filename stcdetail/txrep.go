@@ -62,7 +62,8 @@ func (x *trackTypes) track(i xdr.XdrType) (cleanup func()) {
 
 type txStringCtx struct {
 	accountIDNote func(*stx.AccountID) string
-	signerNote    func(*stx.TransactionEnvelope, *stx.DecoratedSignature) string
+	sigNote       func(*stx.TransactionEnvelope, *stx.DecoratedSignature) string
+	signerNote    func(*stx.SignerKey) string
 	getHelp       func(string) bool
 	out           io.Writer
 	native        string
@@ -176,6 +177,12 @@ func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
 		} else {
 			fmt.Fprintf(xp.out, "%s: %s\n", name, ac)
 		}
+	case *stx.SignerKey:
+		if hint := xp.signerNote(v); hint != "" {
+			fmt.Fprintf(xp.out, "%s: %s (%s)\n", name, v, hint)
+		} else {
+			fmt.Fprintf(xp.out, "%s: %s\n", name, v)
+		}
 	case xdrEnumNames:
 		if xp.getHelp(name) {
 			fmt.Fprintf(xp.out, "%s: %s (", name, v.String())
@@ -207,7 +214,7 @@ func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
 		v.XdrMarshalN(xp, name, v.GetVecLen())
 	case *stx.DecoratedSignature:
 		var hint string
-		if note := xp.signerNote(xp.env, v); note != "" {
+		if note := xp.sigNote(xp.env, v); note != "" {
 			hint = fmt.Sprintf("%x (%s)", v.Hint, note)
 		} else {
 			hint = fmt.Sprintf("%x", v.Hint)
@@ -228,15 +235,19 @@ func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
 // Comment for AccountID:
 //   AccountIDNote(*AccountID) string
 //
+// Comment for SignerKey:
+//   SignerNote(*SignerKey) string
+//
 // Comment for Signature:
-//   SignerNote(*TransactionEnvelope, *DecoratedSignature)
+//   SigNote(*TransactionEnvelope, *DecoratedSignature) string
 //
 // Help comment for field fieldname:
 //   GetHelp(fieldname string) bool
 func XdrToTxrep(out io.Writer, name string, t xdr.XdrType) XdrBadValue {
 	ctx := txStringCtx{
 		accountIDNote: func(*stx.AccountID) string { return "" },
-		signerNote: func(*stx.TransactionEnvelope,
+		signerNote: func(*stx.SignerKey) string { return "" },
+		sigNote: func(*stx.TransactionEnvelope,
 			*stx.DecoratedSignature) string {
 			return ""
 		},
@@ -248,11 +259,13 @@ func XdrToTxrep(out io.Writer, name string, t xdr.XdrType) XdrBadValue {
 	if i, ok := t.(interface{ AccountIDNote(*stx.AccountID) string }); ok {
 		ctx.accountIDNote = i.AccountIDNote
 	}
-	if i, ok := t.(interface {
-		SignerNote(*stx.TransactionEnvelope,
-			*stx.DecoratedSignature) string
-	}); ok {
+	if i, ok := t.(interface{ SignerNote(*stx.SignerKey) string }); ok {
 		ctx.signerNote = i.SignerNote
+	}
+	if i, ok := t.(interface {
+		SigNote(*stx.TransactionEnvelope, *stx.DecoratedSignature) string
+	}); ok {
+		ctx.sigNote = i.SigNote
 	}
 	if i, ok := t.(interface{ GetHelp(string) bool }); ok {
 		ctx.getHelp = i.GetHelp

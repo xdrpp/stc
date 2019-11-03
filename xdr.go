@@ -12,6 +12,7 @@ import (
 	"github.com/xdrpp/goxdr/xdr"
 	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
+	"io"
 	"reflect"
 	"strings"
 )
@@ -204,7 +205,7 @@ func (txe *TransactionEnvelope) SetHelp(name string) {
 	}
 }
 
-func (net *StellarNet) SignerNote(txe *stx.TransactionEnvelope,
+func (net *StellarNet) SigNote(txe *stx.TransactionEnvelope,
 	sig *stx.DecoratedSignature) string {
 	if txe == nil {
 		return ""
@@ -219,29 +220,38 @@ func (net *StellarNet) AccountIDNote(acct *stx.AccountID) string {
 	return net.Accounts[acct.String()]
 }
 
-// Convert an arbitrary XDR data structure to human-readable Txrep
-// format.
-func (net *StellarNet) ToRep(txe xdr.XdrType) string {
-	var out strings.Builder
+func (net *StellarNet) SignerNote(key *stx.SignerKey) string {
+	return net.Signers.LookupComment(key)
+}
 
+// Write the human-readable Txrep of an XDR structure to a Writer.
+func (net *StellarNet) WriteRep(out io.Writer, name string, txe xdr.XdrType) {
 	type helper interface {
 		xdr.XdrType
 		GetHelp(string) bool
 	}
-	if e, ok := txe.(helper); ok {
+	if net == nil {
+		stcdetail.XdrToTxrep(out, name, txe)
+	} else if e, ok := txe.(helper); ok {
 		ntxe := struct {
 			helper
 			*StellarNet
 		}{e, (*StellarNet)(net)}
-		stcdetail.XdrToTxrep(&out, "", ntxe)
+		stcdetail.XdrToTxrep(out, name, ntxe)
 	} else {
 		ntxe := struct {
 			xdr.XdrType
 			*StellarNet
 		}{txe, (*StellarNet)(net)}
-		stcdetail.XdrToTxrep(&out, "", ntxe)
+		stcdetail.XdrToTxrep(out, name, ntxe)
 	}
+}
 
+// Convert an arbitrary XDR data structure to human-readable Txrep
+// format.
+func (net *StellarNet) ToRep(txe xdr.XdrType) string {
+	var out strings.Builder
+	net.WriteRep(&out, "", txe)
 	return out.String()
 }
 

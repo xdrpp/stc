@@ -133,6 +133,18 @@ func (c SignerCache) String() string {
 	return out.String()
 }
 
+func (c SignerCache) LookupComment(key *stx.SignerKey) string {
+	if skis, ok := c[key.Hint()]; ok {
+		b := stcdetail.XdrToBin(key)
+		for j := range skis {
+			if stcdetail.XdrToBin(&skis[j].Key) == b {
+				return skis[j].Comment
+			}
+		}
+	}
+	return ""
+}
+
 // Finds the signer in a SignerCache that corresponds to a particular
 // signature on a transaction.
 func (c SignerCache) Lookup(networkID string, e *stx.TransactionEnvelope,
