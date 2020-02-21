@@ -9,6 +9,7 @@ import (
 	"github.com/xdrpp/goxdr/xdr"
 	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -547,46 +548,105 @@ func (net *StellarNet) GetTxResult(txid string) (*HorizonTxResult, error) {
 	return &ret, nil
 }
 
-var feeSuffix string = "_accepted_fee"
+// A Fee Value is currently 32 bits, but could become 64 bits if
+// CAP-0015 is adopted.
+type FeeVal = uint32
+const feeValSize = 32
 
-type feePercentile = struct {
+func parseFeeVal(i interface{}) (FeeVal, error) {
+	// Annoyingly, Horizion always returns strings instead of numbers
+	// for the /fee_stats endpoint.  Because this behavior is
+	// annoying, we want to be prepared for it to change, which is why
+	// we Sprint and then Parse.
+	n, err := strconv.ParseUint(fmt.Sprint(i), 10, feeValSize)
+	return uint32(n), err
+}
+
+type FeePercentile = struct {
 	Percentile int
-	Fee        uint32
+	Fee FeeVal
 }
 
-// Go representation of the Horizon Fee Stats structure response.  The
-// fees are per operation in a transaction, and the individual fields
-// are documented here:
-// https://www.stellar.org/developers/horizon/reference/endpoints/fee-stats.html
-type FeeStats struct {
-	Last_ledger           uint64
-	Last_ledger_base_fee  uint32
-	Ledger_capacity_usage float64
-	Min_accepted_fee      uint32
-	Mode_accepted_fee     uint32
-	Percentiles           []struct {
-		Percentile int
-		Fee        uint32
+// Distribution of offered or charged fees.
+type FeeDist struct {
+	Max FeeVal
+	Min FeeVal
+	Mode FeeVal
+	Percentiles []FeePercentile
+}
+
+func getPercentage(k string) (bool, int) {
+	if len(k) < 2 || k[0] != 'p' || len(k) > 4 {
+		return false, -1
 	}
+	r := 0
+	for i := 1; i < len(k); i++ {
+		if k[i] < '0' || k[i] > '9' {
+			return false, -1
+		}
+		r = r * 10 + int(k[i]-'0')
+	}
+	return true, r
 }
 
-func (fs FeeStats) String() string {
-	out := strings.Builder{}
-	rv := reflect.ValueOf(&fs).Elem()
-	tp := rv.Type()
-	for i := 0; i < tp.NumField(); i++ {
-		field := tp.Field(i).Name
-		if field != "Percentiles" {
-			fmt.Fprintf(&out, "%24s: %v\n", strings.ToLower(field),
-				rv.Field(i).Interface())
+func setVal(v reflect.Value, s string) bool {
+	if !v.IsValid() {
+		return false
+	}
+	switch v.Kind() {
+	case reflect.Uint32:
+		if n, err := strconv.ParseUint(s, 10, 32); err == nil {
+			v.SetUint(n)
+			return true
+		}
+	case reflect.Uint64:
+		if n, err := strconv.ParseUint(s, 10, 64); err == nil {
+			v.SetUint(n)
+			return true
+		}
+	case reflect.Float64:
+		if n, err := strconv.ParseFloat(s, 64); err == nil {
+			v.SetFloat(n)
+			return true
 		}
 	}
-	for i := range fs.Percentiles {
-		fmt.Fprintf(&out, "%9d_percentile_fee: %d\n",
-			fs.Percentiles[i].Percentile,
-			fs.Percentiles[i].Fee)
+	return false
+}
+
+func (fd *FeeDist) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	var obj map[string]interface{}
+	if err := dec.Decode(&obj); err != nil {
+		return err
 	}
-	return out.String()
+
+	rv := reflect.ValueOf(fd).Elem()
+	for k := range obj {
+		if ok, p := getPercentage(k); ok {
+			if fee, err := parseFeeVal(obj[k]); err == nil {
+				fd.Percentiles = append(fd.Percentiles, FeePercentile{
+						Percentile: int(p),
+						Fee: fee,
+				})
+				continue
+			}
+		}
+		capk := capitalize(k)
+		if capk == "Percentiles" {
+			continue			// Server is trolling us
+		}
+		setVal(rv.FieldByName(capk), fmt.Sprint(obj[k]))
+	}
+	if fd.Min == 0 || fd.Max == 0 || len(fd.Percentiles) == 0 {
+		// Something's wrong; don't return garbage
+		return horizonFailure("Garbled fee_stats")
+	}
+
+	sort.Slice(fd.Percentiles, func(i, j int) bool {
+		return fd.Percentiles[i].Percentile < fd.Percentiles[j].Percentile
+	})
+	return nil
 }
 
 // Conservatively returns a fee that is a known fee for the target or
@@ -594,18 +654,18 @@ func (fs FeeStats) String() string {
 // if you ask for the 51st percentile but only the 50th and 60th are
 // known, returns the 60th percentile.  Never returns a value less
 // than the base fee.
-func (fs *FeeStats) Percentile(target int) uint32 {
-	var fee uint32
-	if len(fs.Percentiles) > 0 {
-		max := fs.Percentiles[len(fs.Percentiles)-1].Fee
+func (fd *FeeDist) Percentile(target int) FeeVal {
+	var fee FeeVal
+	if len(fd.Percentiles) > 0 {
+		max := fd.Percentiles[len(fd.Percentiles)-1].Fee
 		fee = max + 1
 		if fee < max {
 			fee = max
 		}
 	}
-	for lo, hi := 0, len(fs.Percentiles); lo < hi; {
+	for lo, hi := 0, len(fd.Percentiles); lo < hi; {
 		n := (lo + hi) / 2
-		p := &fs.Percentiles[n]
+		p := &fd.Percentiles[n]
 		if p.Percentile == target {
 			fee = p.Fee
 			break
@@ -618,10 +678,88 @@ func (fs *FeeStats) Percentile(target int) uint32 {
 			lo = n + 1
 		}
 	}
+	return fee
+}
+
+func printFsField(out io.Writer, field string, v interface{}) {
+	fmt.Fprintf(out, "%24s: %v\n", field, v)
+}
+
+func (fd *FeeDist) withPrefix(out io.Writer, prefix string) {
+	printFsField(out, prefix + "max", fd.Max)
+	printFsField(out, prefix + "min", fd.Min)
+	printFsField(out, prefix + "mode", fd.Mode)
+	for i := range fd.Percentiles {
+		printFsField(out,
+			fmt.Sprintf("%sp%d", prefix, fd.Percentiles[i].Percentile),
+			fd.Percentiles[i].Fee)
+	}
+}
+
+// Go representation of the Horizon Fee Stats structure response.  The
+// fees are per operation in a transaction, and the individual fields
+// are documented here:
+// https://www.stellar.org/developers/horizon/reference/endpoints/fee-stats.html
+type FeeStats struct {
+	Last_ledger uint64
+	Last_ledger_base_fee uint32
+	Ledger_capacity_usage float64
+	Charged FeeDist
+	Offered FeeDist
+}
+
+func (fs *FeeStats) UnmarshalJSON(data []byte) error {
+	type feeNumbers struct {
+		Last_ledger json.Number
+		Last_ledger_base_fee json.Number
+		Ledger_capacity_usage json.Number
+		Fee_charged FeeDist
+		Max_fee FeeDist
+	}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	var obj feeNumbers
+	if err := dec.Decode(&obj); err != nil {
+		return err
+	}
+	if n, err := obj.Last_ledger.Int64(); err != nil {
+		return err
+	} else {
+		fs.Last_ledger = uint64(n)
+	}
+	if n, err := obj.Last_ledger_base_fee.Int64(); err != nil {
+		return err
+	} else {
+		fs.Last_ledger_base_fee = uint32(n)
+	}
+	if n, err := obj.Ledger_capacity_usage.Float64(); err != nil {
+		return err
+	} else {
+		fs.Ledger_capacity_usage = n
+	}
+	fs.Charged = obj.Fee_charged
+	fs.Offered = obj.Max_fee
+	return nil
+}
+
+// Conservatively a known offered fee for the target or a higher
+// percentile.  Never returns a value less than the base fee.
+func (fs *FeeStats) Percentile(target int) FeeVal {
+	fee := fs.Offered.Percentile(target)
 	if fee < fs.Last_ledger_base_fee {
 		fee = fs.Last_ledger_base_fee
 	}
 	return fee
+}
+
+func (fs FeeStats) String() string {
+	out := &strings.Builder{}
+	printFsField(out, "last_ledger", fs.Last_ledger)
+	printFsField(out, "last_ledger_base_fee", fs.Last_ledger_base_fee)
+	printFsField(out, "ledger_capacity_usage", fs.Ledger_capacity_usage)
+	fs.Charged.withPrefix(out, "fee_charged.")
+	fs.Offered.withPrefix(out, "max_fee.")
+	return out.String()
 }
 
 func capitalize(s string) string {
@@ -629,69 +767,6 @@ func capitalize(s string) string {
 		return string(s[0]&^0x20) + s[1:]
 	}
 	return s
-}
-
-func parseU32(i interface{}) (uint32, error) {
-	// Annoyingly, Horizion always returns strings instead of numbers
-	// for the /fee_stats endpoint.  Because this behavior is
-	// annoying, we want to be prepared for it to change, which is why
-	// we Sprint and then Parse.
-	n, err := strconv.ParseUint(fmt.Sprint(i), 10, 32)
-	return uint32(n), err
-}
-
-func (fs *FeeStats) UnmarshalJSON(data []byte) error {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	var obj map[string]interface{}
-	if err := dec.Decode(&obj); err != nil {
-		return err
-	}
-
-	rv := reflect.ValueOf(fs).Elem()
-	for k := range obj {
-		if strings.HasSuffix(k, feeSuffix) &&
-			k[0] == 'p' && k[1] >= '0' || k[1] <= '9' {
-			if p, err := parseU32(k[1 : len(k)-len(feeSuffix)]); err == nil {
-				if fee, err := parseU32(obj[k]); err == nil {
-					fs.Percentiles = append(fs.Percentiles, feePercentile{
-						Percentile: int(p),
-						Fee:        fee,
-					})
-				}
-			}
-			continue
-		}
-		capk := capitalize(k)
-		if capk == "Percentiles" {
-			continue // Server is messing with us
-		}
-		switch field, s :=
-			rv.FieldByName(capk), fmt.Sprint(obj[k]); field.Kind() {
-		case reflect.Uint32:
-			if v, err := strconv.ParseUint(s, 10, 32); err == nil {
-				field.SetUint(v)
-			}
-		case reflect.Uint64:
-			if v, err := strconv.ParseUint(s, 10, 64); err == nil {
-				field.SetUint(v)
-			}
-		case reflect.Float64:
-			if v, err := strconv.ParseFloat(s, 64); err == nil {
-				field.SetFloat(v)
-			}
-		}
-	}
-	if fs.Min_accepted_fee == 0 || fs.Last_ledger_base_fee == 0 ||
-		len(fs.Percentiles) == 0 {
-		// Something's wrong; don't return garbage
-		return horizonFailure("Garbled fee_stats")
-	}
-
-	sort.Slice(fs.Percentiles, func(i, j int) bool {
-		return fs.Percentiles[i].Percentile < fs.Percentiles[j].Percentile
-	})
-	return nil
 }
 
 // Queries the network for the latest fee statistics.
