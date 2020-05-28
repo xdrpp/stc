@@ -77,7 +77,7 @@ func NewSignerKey(pk PublicKey, weight uint32) *stx.Signer {
 }
 
 // Create a pre-signed transaction from a transaction and weight.
-func (net *StellarNet) NewSignerPreauth(tx stx.IsTransaction,
+func (net *StellarNet) NewSignerPreauth(tx stx.Signable,
 	weight uint32) *stx.Signer {
 	ret := stx.Signer{Weight: weight}
 	ret.Key.Type = stx.SIGNER_KEY_TYPE_PRE_AUTH_TX
@@ -110,10 +110,6 @@ func NewString(v string) *string { return &v }
 type TransactionEnvelope struct {
 	*stx.TransactionEnvelope
 	Help map[string]struct{}
-}
-
-func (txe *TransactionEnvelope) ToTransaction() *stx.Transaction {
-	return txe.TransactionEnvelope.ToTransaction()
 }
 
 func NewTransactionEnvelope() *TransactionEnvelope {

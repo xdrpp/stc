@@ -58,15 +58,15 @@ func (net *StellarNet) GetNativeAsset() string {
 // Returns true only if sig is a valid signature on e for public key
 // pk.
 func (net *StellarNet) VerifySig(
-	pk *SignerKey, tx stx.IsTransaction, sig Signature) bool {
-	return stcdetail.VerifyTx(pk, net.GetNetworkId(), tx.ToTransaction(), sig)
+	pk *SignerKey, tx stx.Signable, sig Signature) bool {
+	return stcdetail.VerifyTx(pk, net.GetNetworkId(), tx, sig)
 }
 
 // Return a transaction hash (which in Stellar is defined as the hash
 // of the constant ENVELOPE_TYPE_TX, the NetworkID, and the marshaled
 // XDR of the Transaction).
-func (net *StellarNet) HashTx(tx stx.IsTransaction) *stx.Hash {
-	return stcdetail.TxPayloadHash(net.GetNetworkId(), tx.ToTransaction())
+func (net *StellarNet) HashTx(tx stx.Signable) *stx.Hash {
+	return stcdetail.TxPayloadHash(net.GetNetworkId(), tx)
 }
 
 // Sign a transaction and append the signature to the

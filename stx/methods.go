@@ -1,6 +1,9 @@
 
 package stx
 
+import "github.com/xdrpp/goxdr/xdr"
+import "io"
+
 func (pk SignerKey) ToSignerKey() SignerKey {
 	return pk
 }
@@ -36,14 +39,27 @@ func (code AllowTrustAsset) ToAllowTrustAsset() AllowTrustAsset {
 	return code
 }
 
-type IsTransaction interface {
-	ToTransaction() *Transaction
+// Types that can be hashed
+type Signable interface {
+    // Writes the signature payload *without* the network ID.  Be sure
+    // to write the SHA256 hash of the network ID before calling this.
+	WriteTaggedTx(io.Writer)
 }
 
-func (txe *TransactionEnvelope) ToTransaction() *Transaction {
-	return &txe.Tx
+func (t *TransactionSignaturePayload) WriteTaggedTx(w io.Writer) {
+	t.XdrMarshal(&xdr.XdrOut{ Out: w }, "")
 }
 
-func (tx *Transaction) ToTransaction() *Transaction {
-	return tx
+func (tx *Transaction) WriteTaggedTx(w io.Writer) {
+	out := xdr.XdrOut{ Out: w }
+	tp := ENVELOPE_TYPE_TX
+	tp.XdrMarshal(out, "")
+	tx.XdrMarshal(out, "")
+}
+
+func (txe *TransactionEnvelope) WriteTaggedTx(w io.Writer) {
+	out := xdr.XdrOut{ Out: w }
+	tp := ENVELOPE_TYPE_TX
+	tp.XdrMarshal(out, "")
+	txe.Tx.XdrMarshal(out, "")
 }
