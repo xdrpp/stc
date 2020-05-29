@@ -157,12 +157,15 @@ func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
 			xp.err = append(xp.err, struct {
 				Field string
 				Msg   string
-			}{
-				name, v.Error()})
+			}{ name, v.Error() })
 		default:
 			panic(v)
 		}
 	}()
+	dot := "."
+	if name == "" {
+		dot = ""
+	}
 	if k, ok := i.(xdr.XdrArrayOpaque); ok && len(k) == 32 &&
 		strings.HasSuffix(name, "tx.sourceAccountEd25519") {
 		name = name[:len(name)-20] + "sourceAccount"
@@ -171,6 +174,11 @@ func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
 		i = pk
 	}
 	switch v := i.(type) {
+	case *stx.TransactionEnvelope:
+		fmt.Fprintf(xp.out, "%s%stype: %s\n", name, dot, v.Type)
+		if ag, ok := v.XdrUnionBody().(xdr.XdrType); ok {
+			ag.XdrMarshal(xp, name)
+		}
 	case *stx.Asset:
 		asset := v.String()
 		if asset == "native" {
@@ -217,7 +225,7 @@ func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
 		fmt.Fprintf(xp.out, "%s%s: %v\n", name, xp.present(), v.GetPresent())
 		v.XdrMarshalValue(xp, name)
 	case xdr.XdrVec:
-		fmt.Fprintf(xp.out, "%s.%s: %d\n", name, ps_len, v.GetVecLen())
+		fmt.Fprintf(xp.out, "%s%s%s: %d\n", name, dot, ps_len, v.GetVecLen())
 		v.XdrMarshalN(xp, name, v.GetVecLen())
 	case *stx.DecoratedSignature:
 		var hint string
@@ -365,7 +373,16 @@ func (xs *xdrScan) Marshal(name string, i xdr.XdrType) {
 	if init, ok := i.(interface{ XdrInitialize() }); ok {
 		init.XdrInitialize()
 	}
+	dot := "."
+	if name == "" {
+		dot = ""
+	}
 	switch v := i.(type) {
+	case *stx.TransactionEnvelope:
+		v.Type.XdrMarshal(xs, name + dot + "type")
+		if ag, ok := v.XdrUnionBody().(xdr.XdrType); ok {
+			ag.XdrMarshal(xs, name)
+		}
 	case xdr.XdrArrayOpaque:
 		if !ok {
 			return
