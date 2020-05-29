@@ -77,7 +77,8 @@ func (net *StellarNet) SignTx(sk stcdetail.PrivateKeyInterface,
 	if err != nil {
 		return err
 	}
-	e.Signatures = append(e.Signatures, stx.DecoratedSignature{
+	sigs := e.Signatures()
+	*sigs = append(*sigs, stx.DecoratedSignature{
 		Hint:      sk.Public().Hint(),
 		Signature: sig,
 	})
@@ -151,7 +152,7 @@ func (c SignerCache) Lookup(networkID string, e *stx.TransactionEnvelope,
 	ds *stx.DecoratedSignature) *SignerKeyInfo {
 	skis := c[ds.Hint]
 	for i := range skis {
-		if stcdetail.VerifyTx(&skis[i].Key, networkID, &e.Tx, ds.Signature) {
+		if stcdetail.VerifyTx(&skis[i].Key, networkID, e, ds.Signature) {
 			return &skis[i]
 		}
 	}

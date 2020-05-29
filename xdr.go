@@ -114,7 +114,9 @@ type TransactionEnvelope struct {
 
 func NewTransactionEnvelope() *TransactionEnvelope {
 	return &TransactionEnvelope{
-		TransactionEnvelope: &stx.TransactionEnvelope{},
+		TransactionEnvelope: &stx.TransactionEnvelope{
+			Type: stx.ENVELOPE_TYPE_TX,
+		},
 		Help:                nil,
 	}
 }
@@ -160,15 +162,19 @@ The helper types are:
 
 */
 func (txe *TransactionEnvelope) Append(
-	sourceAccount *stx.AccountID,
+	sourceAccount *stx.MuxedAccount,
 	body OperationBody) {
-	if len(txe.Tx.Operations) >= stx.MAX_OPS_PER_TX {
-		xdr.XdrPanic("TransactionEnvelope.Op: attempt to exceed %d operations",
+	ops := txe.Operations()
+	if ops == nil {
+		xdr.XdrPanic("TransactionEnvelope.Append: invalid envelope type")
+	} else if len(*ops) >= stx.MAX_OPS_PER_TX {
+		xdr.XdrPanic(
+			"TransactionEnvelope.Append: attempt to exceed %d operations",
 			stx.MAX_OPS_PER_TX)
-	} else if len(txe.Signatures) > 0 {
-		xdr.XdrPanic("TransactionEnvelope.Op: transaction already signed")
+	} else if len(*txe.Signatures()) > 0 {
+		xdr.XdrPanic("TransactionEnvelope.Append: transaction already signed")
 	}
-	txe.Tx.Operations = append(txe.Tx.Operations, stx.Operation{
+	*ops = append(*ops, stx.Operation{
 		SourceAccount: sourceAccount,
 		Body:          body.To_Operation_Body(),
 	})
@@ -180,12 +186,43 @@ func (txe *TransactionEnvelope) Append(
 // (Obviously only call this once you have finished adding operations
 // to the transaction with Append.)
 func (txe *TransactionEnvelope) SetFee(baseFee uint32) {
-	fee := int64(baseFee) * int64(len(txe.Tx.Operations))
-	if fee > 0xffffffff {
-		txe.Tx.Fee = 0xffffffff
-	} else {
-		txe.Tx.Fee = uint32(fee)
+	if txe.Type == stx.ENVELOPE_TYPE_TX_FEE_BUMP {
+		txe.FeeBump().Tx.Fee = int64(baseFee) *
+			int64(len(txe.FeeBump().Tx.InnerTx.V1().Tx.Operations))
+		return
 	}
+	if ops := txe.Operations(); ops != nil {
+		fee := int64(baseFee) * int64(len(*ops))
+		fee32 := uint32(fee)
+		if fee > 0xffffffff {
+			fee32 = 0xffffffff
+		}
+		switch txe.Type {
+		case stx.ENVELOPE_TYPE_TX:
+			txe.V1().Tx.Fee = fee32
+			return
+		case stx.ENVELOPE_TYPE_TX_V0:
+			txe.V0().Tx.Fee = fee32
+			return
+		}
+	}
+	xdr.XdrPanic("SetFee: Invalid envelope type %s", txe.Type)
+}
+
+func (txe *TransactionEnvelope) SourceAccount() *stx.MuxedAccount {
+	switch txe.Type {
+	case stx.ENVELOPE_TYPE_TX_V0:
+		ret := stx.MuxedAccount{ Type: stx.KEY_TYPE_ED25519 }
+		*ret.Ed25519() = txe.V0().Tx.SourceAccountEd25519
+		return &ret
+	case stx.ENVELOPE_TYPE_TX:
+		return &txe.V1().Tx.SourceAccount
+	case stx.ENVELOPE_TYPE_TX_FEE_BUMP:
+		return &txe.FeeBump().Tx.FeeSource
+	}
+	xdr.XdrPanic("SourceAccountEd25519: unknown TransactionEnvelope type %s",
+		txe.Type)
+	return nil
 }
 
 func (txe *TransactionEnvelope) GetHelp(name string) bool {

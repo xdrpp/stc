@@ -23,20 +23,28 @@ import (
 	"github.com/xdrpp/goxdr/xdr"
 )
 
+type isSignerKey interface {
+	ToSignerKey() SignerKey
+}
+
 func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
-	accounts := make(map[stx.AccountID][]HorizonSigner)
-	stcdetail.ForEachXdrType(e, func(ac *stx.AccountID) {
-		if !isZeroAccount(ac) {
-			acs := ac.ToSignerKey()
-			accounts[*ac] = []HorizonSigner{{Key: acs}}
+	accounts := make(map[string][]HorizonSigner)
+	record := func(ac isSignerKey) {
+		k := ac.ToSignerKey()
+		if !isZeroAccount(k) {
+			accounts[k.String()] = []HorizonSigner{{Key: k}}
 		}
+	}
+	record(e.SourceAccount())
+	stcdetail.ForEachXdrType(e, func(ac isSignerKey) {
+		record(ac)
 	})
 
 	if usenet {
 		c := make(chan func())
 		for ac := range accounts {
-			go func(ac stx.AccountID) {
-				if ae, err := net.GetAccountEntry(ac.String()); err == nil {
+			go func(ac string) {
+				if ae, err := net.GetAccountEntry(ac); err == nil {
 					c <- func() { accounts[ac] = ae.Signers }
 				} else {
 					c <- func() {}
@@ -49,10 +57,9 @@ func getAccounts(net *StellarNet, e *TransactionEnvelope, usenet bool) {
 	}
 
 	for ac, signers := range accounts {
-		acs := ac.ToSignerKey()
 		for _, signer := range signers {
 			var comment string
-			if acs != signer.Key {
+			if ac != signer.Key.String() {
 				comment = fmt.Sprintf("signer for account %s", ac)
 			}
 			net.AddSigner(signer.Key.String(), comment)
@@ -140,9 +147,10 @@ func doSec2pub(file string) {
 }
 
 var u256zero stx.Uint256
-func isZeroAccount(ac *stx.AccountID) bool {
-	return ac.Type == stx.PUBLIC_KEY_TYPE_ED25519 &&
-		bytes.Compare(ac.Ed25519()[:], u256zero[:]) == 0
+func isZeroAccount(ac isSignerKey) bool {
+	k := ac.ToSignerKey()
+	return k.Type == stx.SIGNER_KEY_TYPE_ED25519 &&
+		bytes.Compare(k.Ed25519()[:], u256zero[:]) == 0
 }
 
 func fixTx(net *StellarNet, e *TransactionEnvelope) {
@@ -152,16 +160,22 @@ func fixTx(net *StellarNet, e *TransactionEnvelope) {
 		defer wg.Done()
 		if h, err := net.GetFeeStats(); err == nil {
 			// 20 should be a parameter
-			e.Tx.Fee = h.Percentile(20) * uint32(len(e.Tx.Operations))
+			e.SetFee(h.Percentile(20))
 		}
 	}()
-	if !isZeroAccount(&e.Tx.SourceAccount) {
+	if !isZeroAccount(e.SourceAccount()) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if a, _ := net.GetAccountEntry(e.Tx.SourceAccount.String());
+			if a, _ := net.GetAccountEntry(
+				e.SourceAccount().ToSignerKey().String());
 			a != nil {
-				e.Tx.SeqNum = a.NextSeq()
+				switch e.Type {
+				case stx.ENVELOPE_TYPE_TX:
+					e.V1().Tx.SeqNum = a.NextSeq()
+				case stx.ENVELOPE_TYPE_TX_V0:
+					e.V0().Tx.SeqNum = a.NextSeq()
+				}
 			}
 		}()
 	}
