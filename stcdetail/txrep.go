@@ -163,6 +163,13 @@ func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
 			panic(v)
 		}
 	}()
+	if k, ok := i.(xdr.XdrArrayOpaque); ok && len(k) == 32 &&
+		strings.HasSuffix(name, "tx.sourceAccountEd25519") {
+		name = name[:len(name)-20] + "sourceAccount"
+		pk := &stx.AccountID { Type: stx.PUBLIC_KEY_TYPE_ED25519 }
+		copy(pk.Ed25519()[:], k)
+		i = pk
+	}
 	switch v := i.(type) {
 	case *stx.Asset:
 		asset := v.String()
@@ -346,6 +353,13 @@ func (xs *xdrScan) report(line int, fmtstr string, args ...interface{}) {
 
 func (xs *xdrScan) Marshal(name string, i xdr.XdrType) {
 	defer xs.track(i)()
+	var fixSourceAcct xdr.XdrArrayOpaque
+	if k, ok := i.(xdr.XdrArrayOpaque); ok && len(k) == 32 &&
+		strings.HasSuffix(name, "tx.sourceAccountEd25519") {
+		name = name[:len(name)-20] + "sourceAccount"
+		fixSourceAcct = k
+		i = &stx.AccountID { Type: stx.PUBLIC_KEY_TYPE_ED25519 }
+	}
 	lv, ok := xs.kvs[name]
 	val := lv.val
 	if init, ok := i.(interface{ XdrInitialize() }); ok {
@@ -437,6 +451,16 @@ func (xs *xdrScan) Marshal(name string, i xdr.XdrType) {
 		fmt.Sscan(val, i.XdrPointer())
 	}
 	delete(xs.kvs, name)
+	if fixSourceAcct != nil {
+		pk := i.(*stx.AccountID)
+		switch pk.Type {
+		case stx.PUBLIC_KEY_TYPE_ED25519:
+			copy(fixSourceAcct, pk.Ed25519()[:])
+		default:
+			xs.report(xs.kvs[name].line,
+				"sourceAccount must be type Ed25519 for V0 transaction")
+		}
+	}
 }
 
 type inputLine []byte

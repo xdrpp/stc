@@ -78,7 +78,8 @@ type PrivateKeyInterface interface {
 type Ed25519Priv ed25519.PrivateKey
 
 func (sk Ed25519Priv) String() string {
-	return stx.ToStrKey(stx.STRKEY_SEED_ED25519, ed25519.PrivateKey(sk).Seed())
+	return stx.ToStrKey(stx.STRKEY_PRIVKEY|stx.STRKEY_ALG_ED25519,
+		ed25519.PrivateKey(sk).Seed())
 }
 
 func (sk Ed25519Priv) Sign(msg []byte) ([]byte, error) {
