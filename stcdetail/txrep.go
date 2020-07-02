@@ -37,27 +37,117 @@ func (e XdrBadValue) Error() string {
 	return out.String()
 }
 
-type trackTypes struct {
-	ptrDepth int
-	env      *stx.TransactionEnvelope
-	err      XdrBadValue
+// Return true for field names of the form v[0-9]+
+func vField(field string) bool {
+	if len(field) < 2 || field[0] != 'v' {
+		return false
+	}
+	for _, c := range field[1:] {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
 
-func (x *trackTypes) present() string {
-	return "." + strings.Repeat("_inner", x.ptrDepth-1) + ps_present
-}
-func (x *trackTypes) track(i xdr.XdrType) (cleanup func()) {
-	oldx := *x
-	switch v := i.(type) {
-	case xdr.XdrPtr:
-		x.ptrDepth++
-	case *stx.TransactionEnvelope:
-		// In case some XDR structure wraps TransactionEnvelope
-		x.env = v
-	default:
-		return func() {}
+func dotJoin(a string, b string) string {
+	if a == "" {
+		return b
+	} else if b == "" {
+		return a
+	} else if b[0] == '[' {
+		return a + b
 	}
-	return func() { *x = oldx }
+	return fmt.Sprintf("%s.%s", a, b)
+}
+
+type xdrHolder struct {
+	field string
+	name string
+	obj xdr.XdrType
+	ptrDepth int
+	next *xdrHolder
+}
+
+func parentUnion(h *xdrHolder) xdr.XdrUnion {
+	for ; h != nil; h = h.next {
+		switch v := h.obj.(type) {
+		case xdr.XdrUnion:
+			return v
+		case xdr.XdrPtr:
+			// do nothing
+		default:
+			return nil
+		}
+	}
+	return nil
+}
+
+type txrState struct {
+	front *xdrHolder
+	err XdrBadValue
+}
+
+
+func (xs *txrState) push(field string, obj xdr.XdrType) {
+	parent := xs.front
+	h := &xdrHolder {
+		field: field,
+		obj: obj,
+		next: parent,
+	}
+	xs.front = h
+
+	if _, ok := obj.(xdr.XdrPtr); ok {
+		if h.next != nil {
+			h.ptrDepth = 1 + h.next.ptrDepth
+		} else {
+			h.ptrDepth = 1
+		}
+	}
+
+	if h.next != nil {
+		h.name = h.next.name
+	}
+	if parent != nil && vField(field) {
+		if u, ok := parent.obj.(xdr.XdrUnion); ok &&
+			field != u.XdrUnionTagName() {
+			if pp := parentUnion(parent.next); pp == nil ||
+				u.XdrUnionTagName() != pp.XdrUnionTagName() {
+				field = ""
+			}
+		}
+	}
+	h.name = dotJoin(h.name, field)
+}
+
+func (xs *txrState) pop() {
+	xs.front = xs.front.next
+}
+
+func (xs *txrState) envelope() *stx.TransactionEnvelope {
+	for h := xs.front; h != nil; h = h.next {
+		if e, ok := h.obj.(*stx.TransactionEnvelope); ok {
+			return e
+		}
+	}
+	return nil
+}
+
+func (xs *txrState) name() string {
+	if xs.front != nil {
+		return xs.front.name
+	}
+	return ""
+}
+
+func (xs *txrState) present() string {
+	return dotJoin(xs.name(),
+		strings.Repeat("_inner", xs.front.ptrDepth-1) + ps_present)
+}
+
+func (xs *txrState) length() string {
+	return dotJoin(xs.name(), ps_len)
 }
 
 type txStringCtx struct {
@@ -67,7 +157,7 @@ type txStringCtx struct {
 	getHelp       func(string) bool
 	out           io.Writer
 	native        string
-	trackTypes
+	txrState
 }
 
 func (xp *txStringCtx) Sprintf(f string, args ...interface{}) string {
@@ -131,12 +221,6 @@ func dateComment(ut uint64) string {
 	return fmt.Sprintf(" (%s)", time.Unix(it, 0).Format(time.UnixDate))
 }
 
-type xdrEnumNames interface {
-	fmt.Stringer
-	fmt.Scanner
-	XdrEnumNames() map[int32]string
-}
-
 // Convert an array of bytes into a string of hex digits.  Show an
 // empty vector as "0 bytes", since we need to show it as something.
 // (Note the bytes is a comment, but just "0" might be unintuitive.)
@@ -147,8 +231,10 @@ func PrintVecOpaque(bs []byte) string {
 	return fmt.Sprintf("%x", bs)
 }
 
-func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
-	defer xp.track(i)()
+func (xp *txStringCtx) Marshal(field string, i xdr.XdrType) {
+	xp.push(field, i)
+	defer xp.pop()
+	name := xp.name()
 	defer func() {
 		switch v := recover().(type) {
 		case nil:
@@ -162,23 +248,15 @@ func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
 			panic(v)
 		}
 	}()
-	dot := "."
-	if name == "" {
-		dot = ""
-	}
+
 	if k, ok := i.(xdr.XdrArrayOpaque); ok && len(k) == 32 &&
-		strings.HasSuffix(name, "tx.sourceAccountEd25519") {
-		name = name[:len(name)-20] + "sourceAccount"
+		field == "sourceAccountEd25519" {
+		name = name[:len(name)-len(field)] + "sourceAccount"
 		pk := &stx.AccountID { Type: stx.PUBLIC_KEY_TYPE_ED25519 }
 		copy(pk.Ed25519()[:], k)
 		i = pk
 	}
 	switch v := i.(type) {
-	case *stx.TransactionEnvelope:
-		fmt.Fprintf(xp.out, "%s%stype: %s\n", name, dot, v.Type)
-		if ag, ok := v.XdrUnionBody().(xdr.XdrType); ok {
-			ag.XdrMarshal(xp, name)
-		}
 	case *stx.Asset:
 		asset := v.String()
 		if asset == "native" {
@@ -198,7 +276,7 @@ func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
 		} else {
 			fmt.Fprintf(xp.out, "%s: %s\n", name, v)
 		}
-	case xdrEnumNames:
+	case xdr.XdrEnum:
 		if xp.getHelp(name) {
 			fmt.Fprintf(xp.out, "%s: %s (", name, v.String())
 			var notfirst bool
@@ -222,14 +300,14 @@ func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
 	case fmt.Stringer:
 		fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
 	case xdr.XdrPtr:
-		fmt.Fprintf(xp.out, "%s%s: %v\n", name, xp.present(), v.GetPresent())
-		v.XdrMarshalValue(xp, name)
+		fmt.Fprintf(xp.out, "%s: %v\n", xp.present(), v.GetPresent())
+		v.XdrMarshalValue(xp, "")
 	case xdr.XdrVec:
-		fmt.Fprintf(xp.out, "%s%s%s: %d\n", name, dot, ps_len, v.GetVecLen())
-		v.XdrMarshalN(xp, name, v.GetVecLen())
+		fmt.Fprintf(xp.out, "%s: %d\n", xp.length(), v.GetVecLen())
+		v.XdrMarshalN(xp, "", v.GetVecLen())
 	case *stx.DecoratedSignature:
 		var hint string
-		if note := xp.sigNote(xp.env, v); note != "" {
+		if note := xp.sigNote(xp.envelope(), v); note != "" {
 			hint = fmt.Sprintf("%x (%s)", v.Hint, note)
 		} else {
 			hint = fmt.Sprintf("%x", v.Hint)
@@ -237,7 +315,7 @@ func (xp *txStringCtx) Marshal(name string, i xdr.XdrType) {
 		fmt.Fprintf(xp.out, "%[1]s.hint: %[2]s\n%[1]s.signature: %[3]s\n",
 			name, hint, PrintVecOpaque(v.Signature))
 	case xdr.XdrAggregate:
-		v.XdrRecurse(xp, name)
+		v.XdrRecurse(xp, "")
 	default:
 		fmt.Fprintf(xp.out, "%s: %v\n", name, i)
 	}
@@ -269,7 +347,6 @@ func XdrToTxrep(out io.Writer, name string, t xdr.XdrType) XdrBadValue {
 		getHelp: func(string) bool { return false },
 		out:     out,
 	}
-	ctx.env, _ = t.XdrPointer().(*stx.TransactionEnvelope)
 
 	if i, ok := t.(interface{ AccountIDNote(*stx.AccountID) string }); ok {
 		ctx.accountIDNote = i.AccountIDNote
@@ -340,7 +417,7 @@ type lineval struct {
 }
 
 type xdrScan struct {
-	trackTypes
+	txrState
 	kvs     map[string]lineval
 	err     TxrepError
 	setHelp func(string)
@@ -359,30 +436,23 @@ func (xs *xdrScan) report(line int, fmtstr string, args ...interface{}) {
 	}{line, msg})
 }
 
-func (xs *xdrScan) Marshal(name string, i xdr.XdrType) {
-	defer xs.track(i)()
+func (xs *xdrScan) Marshal(field string, i xdr.XdrType) {
+	xs.push(field, i)
+	defer xs.pop()
+	name := xs.name()
 	var fixSourceAcct xdr.XdrArrayOpaque
 	if k, ok := i.(xdr.XdrArrayOpaque); ok && len(k) == 32 &&
-		strings.HasSuffix(name, "tx.sourceAccountEd25519") {
-		name = name[:len(name)-20] + "sourceAccount"
+		field == "sourceAccountEd25519" {
+		name = name[:len(name)-len(field)] + "sourceAccount"
 		fixSourceAcct = k
 		i = &stx.AccountID { Type: stx.PUBLIC_KEY_TYPE_ED25519 }
 	}
 	lv, ok := xs.kvs[name]
 	val := lv.val
-	if init, ok := i.(interface{ XdrInitialize() }); ok {
+	if init, hasInit := i.(interface{ XdrInitialize() }); hasInit {
 		init.XdrInitialize()
 	}
-	dot := "."
-	if name == "" {
-		dot = ""
-	}
 	switch v := i.(type) {
-	case *stx.TransactionEnvelope:
-		v.Type.XdrMarshal(xs, name + dot + "type")
-		if ag, ok := v.XdrUnionBody().(xdr.XdrType); ok {
-			ag.XdrMarshal(xs, name)
-		}
 	case xdr.XdrArrayOpaque:
 		if !ok {
 			return
@@ -410,14 +480,14 @@ func (xs *xdrScan) Marshal(name string, i xdr.XdrType) {
 		}
 	case *xdr.XdrSize:
 		var size uint32
-		lv = xs.kvs[name+"."+ps_len]
+		lv = xs.kvs[xs.length()]
 		fmt.Sscan(lv.val, &size)
 		if size <= v.XdrBound() {
 			v.SetU32(size)
 		} else {
 			v.SetU32(v.XdrBound())
-			xs.report(lv.line, "%s.%s (%d) exceeds maximum size %d.",
-				name, ps_len, size, v.XdrBound())
+			xs.report(lv.line, "%s (%d) exceeds maximum size %d.",
+				xs.length(), size, v.XdrBound())
 		}
 	case fmt.Scanner:
 		if !ok {
@@ -433,14 +503,14 @@ func (xs *xdrScan) Marshal(name string, i xdr.XdrType) {
 		}
 	case xdr.XdrPtr:
 		val = "false"
-		field := name + xs.present()
-		if _, err := fmt.Sscanf(xs.kvs[field].val, "%s", &val); err != nil {
+		if _, err := fmt.Sscanf(xs.kvs[xs.present()].val, "%s", &val);
+		err != nil {
 			if ok {
 				val = "true"
 			} else {
-				field = name + "."
+				prefix := name + "."
 				for f := range xs.kvs {
-					if strings.HasPrefix(f, field) {
+					if strings.HasPrefix(f, prefix) {
 						val = "true"
 						break
 					}
@@ -455,12 +525,12 @@ func (xs *xdrScan) Marshal(name string, i xdr.XdrType) {
 		default:
 			// We are throwing error anyway, so also try parsing any fields
 			v.SetPresent(true)
-			xs.report(xs.kvs[field].line,
-				"%s (%s) must be true or false", field, val)
+			xs.report(xs.kvs[xs.present()].line,
+				"%s (%s) must be true or false", xs.present(), val)
 		}
-		v.XdrMarshalValue(xs, name)
+		v.XdrMarshalValue(xs, "")
 	case xdr.XdrAggregate:
-		v.XdrRecurse(xs, name)
+		v.XdrRecurse(xs, "")
 	default:
 		if !ok {
 			return
@@ -555,16 +625,21 @@ func XdrFromTxrep(in io.Reader, name string, t xdr.XdrType) TxrepError {
 type xdrExtractor struct {
 	target string
 	result xdr.XdrType
+	txrState
 }
 
 func (*xdrExtractor) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
 
-func (xe *xdrExtractor) Marshal(name string, i xdr.XdrType) {
+func (xe *xdrExtractor) Marshal(field string, i xdr.XdrType) {
 	if xe.result != nil {
 		return
 	}
+
+	xe.push(field, i)
+	defer xe.pop()
+	name := xe.name()
 
 	if init, ok := i.(interface{ XdrInitialize() }); ok {
 		init.XdrInitialize()
@@ -573,7 +648,7 @@ func (xe *xdrExtractor) Marshal(name string, i xdr.XdrType) {
 	if name == xe.target {
 		xe.result = i
 	} else if v, ok := i.(xdr.XdrAggregate); ok {
-		v.XdrRecurse(xe, name)
+		v.XdrRecurse(xe, "")
 	}
 }
 

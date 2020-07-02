@@ -21,7 +21,7 @@ func NewHTTPerror(resp *http.Response) *HTTPerror {
 	if resp.Body != nil {
 		body, _ = ioutil.ReadAll(resp.Body)
 	}
-	return &HTTPerror {
+	return &HTTPerror{
 		Resp: resp,
 		Body: body,
 	}

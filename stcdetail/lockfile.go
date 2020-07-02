@@ -12,11 +12,13 @@ import (
 )
 
 type ErrIsDirectory string
+
 func (e ErrIsDirectory) Error() string {
 	return string(e) + ": is a directory"
 }
 
 type ErrFileHasChanged string
+
 func (e ErrFileHasChanged) Error() string {
 	return string(e) + ": file has changed since read"
 }
@@ -226,7 +228,6 @@ func doLockFile(path string, perm os.FileMode,
 	return &lf, nil
 }
 
-
 // Locks a file for updating.  Exclusively creates a file with name
 // path + ".lock", returns a writer that lets you write into this
 // lockfile, and then when you call Commit() replaces path with what
@@ -242,7 +243,7 @@ func LockFile(path string, perm os.FileMode) (LockedFile, error) {
 // LockFile with perm of 0666.
 func LockFileIfUnchanged(path string, fi os.FileInfo) (LockedFile, error) {
 	if fi != nil {
-		return doLockFile(path, fi.Mode() & os.ModePerm, fi)
+		return doLockFile(path, fi.Mode()&os.ModePerm, fi)
 	} else {
 		return doLockFile(path, 0666, nil)
 	}

@@ -3,6 +3,7 @@ package stcdetail_test
 import (
 	"fmt"
 	"github.com/xdrpp/stc"
+	. "github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
 	"io/ioutil"
 	"math/rand"
@@ -10,7 +11,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	. "github.com/xdrpp/stc/stcdetail"
 )
 
 func ExampleScaleFmt() {
@@ -293,8 +293,8 @@ func ExampleGetTxrepField() {
 	txe := stc.NewTransactionEnvelope()
 	txe.Append(nil, stc.Payment{
 		Destination: a1,
-		Asset: stc.NativeAsset(),
-		Amount: 10000000,
+		Asset:       stc.NativeAsset(),
+		Amount:      10000000,
 	})
 
 	// The sourceAccount field of a transaction is an AccountID

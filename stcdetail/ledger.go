@@ -91,7 +91,7 @@ func (md MetaDelta) AccountID() *stx.AccountID {
 
 // Extract the before/after ledger entry values from XDR structures
 // containing LedgerEntryChanges.
-func GetMetaDeltas(ms...xdr.XdrType) (ret []MetaDelta) {
+func GetMetaDeltas(ms ...xdr.XdrType) (ret []MetaDelta) {
 	kmap := make(map[string]int)
 	for _, m := range ms {
 		ForEachXdrType(m, func(c *stx.LedgerEntryChange) {

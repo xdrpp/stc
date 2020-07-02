@@ -8,8 +8,7 @@ import (
 
 type printer struct {
 	*strings.Builder
-	aux func (interface{})(string, bool)
-
+	aux func(interface{}) (string, bool)
 }
 
 func canPrint(v reflect.Value) bool {
@@ -83,7 +82,7 @@ func (pp printer) doPretty(prefix string, v reflect.Value) {
 	}
 }
 
-func PrettyPrintAux(aux func (interface{})(string, bool),
+func PrettyPrintAux(aux func(interface{}) (string, bool),
 	arg interface{}) string {
 	v := reflect.ValueOf(arg)
 	if v.Kind() == reflect.Ptr {
