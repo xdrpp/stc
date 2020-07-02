@@ -179,7 +179,7 @@ func (snp *stellarNetParser) doNet(ii ini.IniItem) error {
 }
 
 func (snp *stellarNetParser) doAccounts(ii ini.IniItem) error {
-	var acct AccountID
+	var acct MuxedAccount
 	if _, err := fmt.Sscan(ii.Key, &acct); err != nil {
 		return ini.BadKey(err.Error())
 	}

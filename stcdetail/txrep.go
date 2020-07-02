@@ -151,7 +151,7 @@ func (xs *txrState) length() string {
 }
 
 type txStringCtx struct {
-	accountIDNote func(*stx.AccountID) string
+	accountIDNote func(string) string
 	sigNote       func(*stx.TransactionEnvelope, *stx.DecoratedSignature) string
 	signerNote    func(*stx.SignerKey) string
 	getHelp       func(string) bool
@@ -267,9 +267,9 @@ func (xp *txStringCtx) Marshal(field string, i xdr.XdrType) {
 			asset = xp.native
 		}
 		fmt.Fprintf(xp.out, "%s: %s\n", name, asset)
-	case *stx.AccountID:
+	case stx.IsAccount:
 		ac := v.String()
-		if hint := xp.accountIDNote(v); hint != "" {
+		if hint := xp.accountIDNote(ac); hint != "" {
 			fmt.Fprintf(xp.out, "%s: %s (%s)\n", name, ac, hint)
 		} else {
 			fmt.Fprintf(xp.out, "%s: %s\n", name, ac)
@@ -330,7 +330,7 @@ func (xp *txStringCtx) Marshal(field string, i xdr.XdrType) {
 // be used to add comments into the output
 //
 // Comment for AccountID:
-//   AccountIDNote(*AccountID) string
+//   AccountIDNote(string) string
 //
 // Comment for SignerKey:
 //   SignerNote(*SignerKey) string
@@ -342,7 +342,7 @@ func (xp *txStringCtx) Marshal(field string, i xdr.XdrType) {
 //   GetHelp(fieldname string) bool
 func XdrToTxrep(out io.Writer, name string, t xdr.XdrType) XdrBadValue {
 	ctx := txStringCtx{
-		accountIDNote: func(*stx.AccountID) string { return "" },
+		accountIDNote: func(string) string { return "" },
 		signerNote: func(*stx.SignerKey) string { return "" },
 		sigNote: func(*stx.TransactionEnvelope,
 			*stx.DecoratedSignature) string {
@@ -352,7 +352,7 @@ func XdrToTxrep(out io.Writer, name string, t xdr.XdrType) XdrBadValue {
 		out:     out,
 	}
 
-	if i, ok := t.(interface{ AccountIDNote(*stx.AccountID) string }); ok {
+	if i, ok := t.(interface{ AccountIDNote(string) string }); ok {
 		ctx.accountIDNote = i.AccountIDNote
 	}
 	if i, ok := t.(interface{ SignerNote(*stx.SignerKey) string }); ok {

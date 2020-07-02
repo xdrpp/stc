@@ -19,6 +19,7 @@ import (
 
 type PublicKey = stx.PublicKey
 type AccountID = stx.AccountID
+type MuxedAccount = stx.MuxedAccount
 type SignerKey = stx.SignerKey
 type Signature = stx.Signature
 type TransactionResult = stx.TransactionResult
@@ -249,8 +250,8 @@ func (net *StellarNet) SigNote(txe *stx.TransactionEnvelope,
 		net.Name)
 }
 
-func (net *StellarNet) AccountIDNote(acct *stx.AccountID) string {
-	return net.Accounts[acct.String()]
+func (net *StellarNet) AccountIDNote(acct string) string {
+	return net.Accounts[acct]
 }
 
 func (net *StellarNet) SignerNote(key *stx.SignerKey) string {

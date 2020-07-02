@@ -41,7 +41,7 @@ type StellarNet struct {
 	FeeCacheTime time.Time
 }
 
-func (net *StellarNet) AddHint(acct, hint string) {
+func (net *StellarNet) AddHint(acct string, hint string) {
 	net.Accounts[acct] = hint
 	net.Edits.Set("accounts", acct, hint)
 }

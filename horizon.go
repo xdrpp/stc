@@ -338,8 +338,8 @@ func (net *StellarNet) prettyPrintAux(i interface{}) (string, bool) {
 		return "", false
 	}
 	switch v := i.(type) {
-	case stx.AccountID:
-		if note := net.AccountIDNote(&v); note != "" {
+	case stx.IsAccount:
+		if note := net.AccountIDNote(v.String()); note != "" {
 			return fmt.Sprintf("%s (%s)", v, note), true
 		}
 	case stx.SignerKey:

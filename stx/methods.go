@@ -4,6 +4,28 @@ package stx
 import "github.com/xdrpp/goxdr/xdr"
 import "io"
 
+func (acct *MuxedAccount) ToMuxedAccount() *MuxedAccount {
+	return acct
+}
+
+func (acct *AccountID) ToMuxedAccount() *MuxedAccount {
+	switch acct.Type {
+	case PUBLIC_KEY_TYPE_ED25519:
+		ret := &MuxedAccount{
+			Type: KEY_TYPE_ED25519,
+		}
+		*ret.Ed25519() = *acct.Ed25519()
+		return ret
+	default:
+		return nil
+	}
+}
+
+type IsAccount interface {
+	String() string
+	ToMuxedAccount() *MuxedAccount
+}
+
 func (pk SignerKey) ToSignerKey() SignerKey {
 	return pk
 }
