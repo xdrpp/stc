@@ -164,13 +164,17 @@ func (xp *txStringCtx) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
 
-func (xp *txStringCtx) Marshal_SequenceNumber(name string,
+func (xp *txStringCtx) Marshal_SequenceNumber(field string,
 	v *stx.SequenceNumber) {
-	fmt.Fprintf(xp.out, "%s: %d\n", name, *v)
+	xp.push(field, stx.XDR_SequenceNumber(v))
+	defer xp.pop()
+	fmt.Fprintf(xp.out, "%s: %d\n", xp.name(), *v)
 }
 
-func (xp *txStringCtx) Marshal_TimePoint(name string, v *stx.TimePoint) {
-	fmt.Fprintf(xp.out, "%s: %d%s\n", name, *v, dateComment(*v))
+func (xp *txStringCtx) Marshal_TimePoint(field string, v *stx.TimePoint) {
+	xp.push(field, stx.XDR_TimePoint(v))
+	defer xp.pop()
+	fmt.Fprintf(xp.out, "%s: %d%s\n", xp.name(), *v, dateComment(*v))
 }
 
 var exp10 [20]uint64
