@@ -24,6 +24,8 @@ stc -pub [_name_] \
 stc -import-key _name_ \
 stc -export-key _name_ \
 stc -list-keys \
+stc -mux _accountID_ _uint64_ \
+stc -demux _muxedAccount_ \
 stc -date YYYY-MM-DDThh:mm:ss[Z] \
 stc -builtin-config
 
@@ -200,6 +202,13 @@ The time can have one of several formats:
 * `2006-01-02T15:04:05` (local time)
 * `2006-01-02T15:04` (local time)
 * `2006-01-02` (local time)
+
+The `-mux` and `-demux` options construct and deconstruct a
+multiplexed account identifiers or "MuxedAccount".  MuxedAccounts
+behave the same as the underlying accounts, but contain an unsigned
+64-bit integer that acts as a kind of comment.  This allows a single
+account holder to give out multiple addresses that point the same
+underlying account.
 
 If no `stc.conf` configuration file exists, stc will use a built-in
 one.  To see the contents of the built-in file, you can print it with

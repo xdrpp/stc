@@ -100,8 +100,47 @@ func NewUint(v uint32) *uint32 { return &v }
 // Allocate an int64 when initializing types that take an XDR hyper*.
 func NewHyper(v int64) *int64 { return &v }
 
+// Allocate a uint64 when initializing types that take an XDR unsigned hyper*.
+func NewUhyper(v uint64) *uint64 { return &v }
+
 // Allocate a string when initializing types that take an XDR *string<>.
 func NewString(v string) *string { return &v }
+
+// Created a MuxedAccount from its consituent parts.  id may be nil to
+// indicate there is no embedded identifier.
+func MuxAcct(acct *AccountID, id *uint64) *MuxedAccount {
+	switch acct.Type {
+	case stx.PUBLIC_KEY_TYPE_ED25519:
+		if id == nil {
+			ret := &MuxedAccount { Type: stx.KEY_TYPE_ED25519 }
+			*ret.Ed25519() = *acct.Ed25519()
+			return ret
+		} else {
+			ret := &MuxedAccount { Type: stx.KEY_TYPE_MUXED_ED25519 }
+			ret.Med25519().Ed25519 = *acct.Ed25519()
+			ret.Med25519().Id = *id
+			return ret
+		}
+	}
+	return nil
+}
+
+// Break a MuxedAccount into its consituent parts.  Note that the
+// second return value of type *uint64 may be nil for MuxedAccounts
+// that don't include an embedded identifier.
+func DemuxAcct(macct *MuxedAccount) (*AccountID, *uint64) {
+	switch macct.Type {
+	case stx.KEY_TYPE_ED25519:
+		ret := &AccountID { Type: stx.PUBLIC_KEY_TYPE_ED25519 }
+		*ret.Ed25519() = *macct.Ed25519()
+		return ret, nil
+	case stx.KEY_TYPE_MUXED_ED25519:
+		ret := &AccountID { Type: stx.PUBLIC_KEY_TYPE_ED25519 }
+		*ret.Ed25519() = macct.Med25519().Ed25519
+		return ret, &macct.Med25519().Id
+	}
+	return nil, nil
+}
 
 // This is a wrapper around the XDR TransactionEnvelope structure.
 // The wrapper allows transactions to be built up more easily via the

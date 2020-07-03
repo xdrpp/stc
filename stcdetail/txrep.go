@@ -444,13 +444,6 @@ func (xs *xdrScan) Marshal(field string, i xdr.XdrType) {
 	xs.push(field, i)
 	defer xs.pop()
 	name := xs.name()
-	var fixSourceAcct xdr.XdrArrayOpaque
-	if k, ok := i.(xdr.XdrArrayOpaque); ok && len(k) == 32 &&
-		field == "sourceAccountEd25519" {
-		name = name[:len(name)-len(field)] + "sourceAccount"
-		fixSourceAcct = k
-		i = &stx.AccountID { Type: stx.PUBLIC_KEY_TYPE_ED25519 }
-	}
 	lv, ok := xs.kvs[name]
 	val := lv.val
 	if init, hasInit := i.(interface{ XdrInitialize() }); hasInit {
@@ -460,11 +453,23 @@ func (xs *xdrScan) Marshal(field string, i xdr.XdrType) {
 	case xdr.XdrArrayOpaque:
 		if !ok {
 			return
-		}
-		_, err := fmt.Sscan(val, v)
-		if err != nil {
-			xs.setHelp(name)
-			xs.report(lv.line, "%s", err.Error())
+		} else if len(v) == 32 && field == "sourceAccountEd25519" {
+			var pk stx.AccountID
+			if _, err := fmt.Sscan(val, v); err != nil {
+				xs.setHelp(name)
+				xs.report(lv.line, "%s", err.Error())
+			} else if pk.Type != stx.PUBLIC_KEY_TYPE_ED25519 {
+				xs.setHelp(name)
+				xs.report(lv.line, "Source account must be type Ed25519")
+			} else {
+				copy(v, pk.Ed25519()[:])
+			}
+		} else {
+			_, err := fmt.Sscan(val, v)
+			if err != nil {
+				xs.setHelp(name)
+				xs.report(lv.line, "%s", err.Error())
+			}
 		}
 	case xdr.XdrVecOpaque:
 		if !ok {
@@ -542,16 +547,6 @@ func (xs *xdrScan) Marshal(field string, i xdr.XdrType) {
 		fmt.Sscan(val, i.XdrPointer())
 	}
 	delete(xs.kvs, name)
-	if fixSourceAcct != nil {
-		pk := i.(*stx.AccountID)
-		switch pk.Type {
-		case stx.PUBLIC_KEY_TYPE_ED25519:
-			copy(fixSourceAcct, pk.Ed25519()[:])
-		default:
-			xs.report(xs.kvs[name].line,
-				"sourceAccount must be type Ed25519 for V0 transaction")
-		}
-	}
 }
 
 type inputLine []byte

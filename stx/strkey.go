@@ -76,7 +76,7 @@ func ToStrKey(ver StrKeyVersionByte, bin []byte) string {
 	sum := crc16(out.Bytes())
 	out.WriteByte(byte(sum))
 	out.WriteByte(byte(sum >> 8))
-	return base32.StdEncoding.EncodeToString(out.Bytes())
+	return b32.EncodeToString(out.Bytes())
 }
 
 // FromStrKey decodes a strkey-format string into the raw bytes of the

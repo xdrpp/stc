@@ -466,6 +466,10 @@ func main() {
 		"Query Horizon for information on transaction")
 	opt_txacct := flag.Bool("qta", false,
 		"Query Horizon for transactions on account")
+	opt_mux := flag.Bool("mux", false,
+		"Created a MuxedAccount from an AccountID and uint64")
+	opt_demux := flag.Bool("demux", false,
+		"Split a MuxedAccount into an AccountID and a uint64")
 	opt_friendbot := flag.Bool("create", false,
 		"Create and fund account (on testnet only)")
 	opt_date := flag.Bool("date", false,
@@ -498,6 +502,8 @@ func main() {
        %[1]s -export-key NAME
        %[1]s -list-keys
        %[1]s -date YYYY-MM-DD[Thh:mm:ss[Z]]
+       %[1]s -mux ACCT U64
+       %[1]s -demux ACCT
        %[1]s -builtin-config
 `, progname)
 		flag.PrintDefaults()
@@ -513,18 +519,28 @@ func main() {
 		return
 	}
 
-	if n := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit, *opt_keygen,
+	nmode := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit, *opt_keygen,
 		*opt_date, *opt_sec2pub, *opt_import_key, *opt_export_key,
 		*opt_acctinfo, *opt_txinfo, *opt_txacct, *opt_friendbot,
 		*opt_list_keys, *opt_fee_stats, *opt_ledger_header,
-		*opt_print_default_config); n > 1 || len(flag.Args()) > 1 ||
-		(len(flag.Args()) == 0 &&
-			!(*opt_keygen || *opt_sec2pub || *opt_list_keys ||
-			*opt_fee_stats || *opt_ledger_header || *opt_friendbot ||
-			*opt_print_default_config)) {
+		*opt_print_default_config, *opt_mux, *opt_demux)
+
+	argsMin, argsMax := 1, 1
+	switch {
+	case *opt_fee_stats || *opt_ledger_header || *opt_print_default_config:
+		argsMin, argsMax = 0, 0
+	case *opt_keygen || *opt_sec2pub:
+		argsMin = 0
+	case *opt_mux:
+		argsMin, argsMax = 2, 2
+	}
+
+	if na := len(flag.Args()); nmode > 1 || na < argsMin || na > argsMax {
 		flag.Usage()
 		os.Exit(2)
-	} else if n == 1 {
+	}
+
+	if nmode > 0 {
 		bail := false
 		if *opt_sign || *opt_key != "" {
 			fmt.Fprintln(os.Stderr,
@@ -540,7 +556,7 @@ func main() {
 			bail = true
 		}
 		if *opt_compile {
-			fmt.Fprintln(os.Stderr, "-c o only availble in default mode")
+			fmt.Fprintln(os.Stderr, "-c only availble in default mode")
 			bail = true
 		}
 		if bail {
@@ -549,7 +565,7 @@ func main() {
 	}
 
 	var arg string
-	if len(flag.Args()) == 1 {
+	if len(flag.Args()) >= 1 {
 		arg = flag.Args()[0]
 	}
 
@@ -560,6 +576,42 @@ func main() {
 	}
 
 	switch {
+	case *opt_mux:
+		var pk AccountID
+		var id uint64
+		if _, err := fmt.Sscan(arg, &pk); err != nil {
+			fmt.Fprintf(os.Stderr, "invalid account ID %s\n", arg)
+			os.Exit(2)
+		}
+		arg1 := flag.Args()[1]
+		if _, err := fmt.Sscan(arg1, &id); err != nil {
+			fmt.Fprintf(os.Stderr, "invalid uint64 %q (%s)\n", arg1, err)
+			os.Exit(2)
+		}
+		m := MuxAcct(&pk, &id)
+		if m == nil {
+			fmt.Fprintf(os.Stderr, "cannot multiplex account\n")
+			os.Exit(2)
+		}
+		fmt.Println(m.String())
+		return
+	case *opt_demux:
+		var m MuxedAccount
+		if _, err := fmt.Sscan(arg, &m); err != nil {
+			fmt.Fprintln(os.Stderr, "%s\n", err)
+			os.Exit(2)
+		}
+		pk, id := DemuxAcct(&m)
+		if pk == nil {
+			fmt.Fprintf(os.Stderr, "cannot demultiplex account\n")
+			os.Exit(2)
+		}
+		fmt.Print(pk)
+		if id != nil {
+			fmt.Print(" ", *id)
+		}
+		fmt.Println()
+		return
 	case *opt_date:
 		for _, f := range dateFormats {
 			t, err := time.ParseInLocation(f, arg, time.Local)
