@@ -418,6 +418,7 @@ type xdrScan struct {
 	err     TxrepError
 	setHelp func(string)
 	native  *string
+	lastlv *lineval
 }
 
 func (*xdrScan) Sprintf(f string, args ...interface{}) string {
@@ -437,6 +438,17 @@ func (xs *xdrScan) Marshal(field string, i xdr.XdrType) {
 	defer xs.pop()
 	name := xs.name()
 	lv, ok := xs.kvs[name]
+	if ok {
+		xs.lastlv = &lv
+	}
+	defer func() {
+		switch e := recover().(type) {
+		case xdr.XdrError:
+			xs.report(xs.lastlv.line, "%s", e.Error())
+		case interface{}:
+			panic(e)
+		}
+	}()
 	val := lv.val
 	if init, hasInit := i.(interface{ XdrInitialize() }); hasInit {
 		init.XdrInitialize()
