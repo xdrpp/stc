@@ -8,7 +8,7 @@ func (acct *MuxedAccount) ToMuxedAccount() *MuxedAccount {
 	return acct
 }
 
-func (acct *AccountID) ToMuxedAccount() *MuxedAccount {
+func (acct AccountID) ToMuxedAccount() *MuxedAccount {
 	switch acct.Type {
 	case PUBLIC_KEY_TYPE_ED25519:
 		ret := &MuxedAccount{

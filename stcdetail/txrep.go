@@ -301,9 +301,9 @@ func (xp *txStringCtx) Marshal(field string, i xdr.XdrType) {
 		} else {
 			fmt.Fprintf(xp.out, "%s: %s\n", name, v.String())
 		}
-	case *xdr.XdrInt64:
+	case stx.XdrType_Int64:
 		fmt.Fprintf(xp.out, "%s: %s (%s)\n", name, v.String(),
-			ScaleFmt(int64(*v), 7))
+			ScaleFmt(int64(v.GetU64()), 7))
 	case xdr.XdrVecOpaque:
 		fmt.Fprintf(xp.out, "%s: %s\n", name, PrintVecOpaque(v.GetByteSlice()))
 	case fmt.Stringer:

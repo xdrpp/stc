@@ -72,16 +72,16 @@ func ExampleXdrToJson() {
 
 	// Build a transaction
 	txe := stc.NewTransactionEnvelope()
-	txe.Tx.SourceAccount = mykey.Public()
-	txe.Tx.Fee = 100
-	txe.Tx.SeqNum = 3319833626148865
-	txe.Tx.Memo = stc.MemoText("Hello")
+	txe.SetSourceAccount(mykey.Public())
+	txe.V1().Tx.SeqNum = 3319833626148865
+	txe.V1().Tx.Memo = stc.MemoText("Hello")
 	txe.Append(nil, stc.Payment{
-		Destination: yourkey,
+		Destination: *yourkey.ToMuxedAccount(),
 		Asset:       stc.NativeAsset(),
 		Amount:      20000000,
 	})
 	// ... Can keep appending operations with txe.Append
+	txe.SetFee(100)
 
 	// Sign the transaction
 	stc.DefaultStellarNet("main").SignTx(&mykey, txe)
@@ -138,20 +138,19 @@ func TestJsonToXdr(t *testing.T) {
 
 	// Build a transaction
 	txe := stc.NewTransactionEnvelope()
-	txe.Tx.SourceAccount = mykey.Public()
-	txe.Tx.Fee = 100
-	txe.Tx.SeqNum = 3319833626148865
-	txe.Tx.Memo = stc.MemoText("Hello")
+	txe.SetSourceAccount(mykey.Public())
+	txe.V1().Tx.SeqNum = 3319833626148865
+	txe.V1().Tx.Memo = stc.MemoText("Hello")
 	txe.Append(nil, stc.Payment{
-		Destination: yourkey,
+		Destination: *yourkey.ToMuxedAccount(),
 		Asset:       stc.NativeAsset(),
 		Amount:      20000000,
 	})
 	txe.Append(nil, stc.Inflation{})
-	txe.Append(&yourkey, stc.AllowTrust{
+	txe.Append(yourkey.ToMuxedAccount(), stc.AllowTrust{
 		Trustor:   mykey.Public(),
 		Asset:     stc.MkAllowTrustAsset("ABCDE"),
-		Authorize: true,
+		Authorize: uint32(stx.AUTHORIZED_FLAG),
 	})
 	txe.Append(nil, stc.SetOptions{
 		InflationDest: stc.NewAccountID(mykey.Public()),
@@ -159,10 +158,11 @@ func TestJsonToXdr(t *testing.T) {
 		MasterWeight:  stc.NewUint(255),
 		Signer:        stc.NewSignerKey(yourkey, 1),
 	})
+	txe.SetFee(100)
 
 	net := stc.DefaultStellarNet("test")
 	if net == nil {
-		t.Fatal("could not load main net")
+		t.Fatal("could not load test net")
 	}
 	// Sign the transaction
 	net.SignTx(&mykey, txe)
@@ -203,7 +203,7 @@ func TestForEachXdrType(t *testing.T) {
 		n++
 	})
 	if n != 5 {
-		t.Fail()
+		t.Errorf("expected 5 AccountIDs got %d", n)
 	}
 }
 
@@ -287,7 +287,7 @@ func ExampleLockFile() error {
 }
 
 func ExampleGetTxrepField() {
-	var a1, a2 stx.AccountID
+	var a1, a2 stx.MuxedAccount
 	fmt.Sscan("GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L", &a1)
 	fmt.Sscan("GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G", &a2)
 	txe := stc.NewTransactionEnvelope()
@@ -298,15 +298,17 @@ func ExampleGetTxrepField() {
 	})
 
 	// The sourceAccount field of a transaction is an AccountID
-	*GetTxrepField(txe, "tx.sourceAccount").XdrPointer().(*stx.AccountID) = a1
+	*GetTxrepField(txe, "tx.sourceAccount").XdrPointer().(*stx.MuxedAccount) =
+		a1
 
 	// The sourceAccount field of an operation is a *AccountID, so the
 	// field we get back is of type **AccountID
 	op0src := "tx.operations[0].sourceAccount"
-	*GetTxrepField(txe, op0src).XdrPointer().(**stx.AccountID) = &a2
+	*GetTxrepField(txe, op0src).XdrPointer().(**stx.MuxedAccount) = &a2
 
 	XdrToTxrep(os.Stdout, "", txe)
 	// output:
+	// type: ENVELOPE_TYPE_TX
 	// tx.sourceAccount: GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L
 	// tx.fee: 0
 	// tx.seqNum: 0

@@ -78,8 +78,9 @@ func ForEachXdrType(a xdr.XdrType, fn interface{}) {
 	argt := fnt.In(0)
 	argv := reflect.New(argt).Elem()
 	ForEachXdr(a, func(t xdr.XdrType) bool {
-		if reflect.TypeOf(t).AssignableTo(argt) {
-			argv.Set(reflect.ValueOf(t))
+		p := t.XdrPointer()
+		if p != nil && reflect.TypeOf(p).AssignableTo(argt) {
+			argv.Set(reflect.ValueOf(p))
 			res := fnv.Call([]reflect.Value{argv})
 			if len(res) == 0 || len(res) == 1 && res[0].Bool() {
 				return true
@@ -98,8 +99,10 @@ type xdrExtract struct {
 func (x *xdrExtract) Marshal(_ string, t xdr.XdrType) {
 	if x.done {
 		return
-	} else if reflect.TypeOf(t).AssignableTo(x.out.Type()) {
-		x.out.Set(reflect.ValueOf(t))
+	}
+	p := t.XdrPointer()
+	if p != nil && reflect.TypeOf(p).AssignableTo(x.out.Type()) {
+		x.out.Set(reflect.ValueOf(p))
 		x.done = true
 		return
 	} else if a, ok := t.(xdr.XdrAggregate); ok {

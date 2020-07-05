@@ -66,12 +66,13 @@ func TestSetOverflowString(t *testing.T) {
 func TestSetOverflowVector(t *testing.T) {
 	var acct AccountID
 	asset := MkAsset(acct, "1234")
+	macct := *acct.ToMuxedAccount()
 	var op stx.PathPaymentStrictSendOp
 	// This should work
-	Set(&op, asset, 0, acct, asset, 0, make([]stx.Asset, 5))
+	Set(&op, asset, 0, macct, asset, 0, make([]stx.Asset, 5))
 	// This shoudn't
 	defer failUnlessPanic(t)
-	Set(&op, asset, int64(0), acct, asset, int64(0), make([]stx.Asset, 6))
+	Set(&op, asset, int64(0), macct, asset, int64(0), make([]stx.Asset, 6))
 }
 
 func TestInvalidDefault(t *testing.T) {
@@ -94,11 +95,11 @@ func TestAppend(t *testing.T) {
 		Destination:     AccountID{},
 		StartingBalance: 15000000,
 	})
-	txe.Tx.Operations = make([]stx.Operation, stx.MAX_OPS_PER_TX-1)
+	txe.V1().Tx.Operations = make([]stx.Operation, stx.MAX_OPS_PER_TX-1)
 	txe.Append(nil, AllowTrust{
 		Trustor:   acct,
 		Asset:     MkAllowTrustAsset("ABCDE"),
-		Authorize: true,
+		Authorize: uint32(stx.AUTHORIZED_FLAG),
 	})
 	defer failUnlessPanic(t)
 	txe.Append(nil, CreateAccount{
@@ -123,12 +124,12 @@ func TestParseTxrep(t *testing.T) {
 
 	txe := NewTransactionEnvelope()
 	fmt.Sscan("GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G",
-		&txe.Tx.SourceAccount)
+		&txe.V1().Tx.SourceAccount)
 	var ot stx.OperationType
 	for i := range ot.XdrEnumNames() {
 		var op stx.Operation
 		op.Body.Type = stx.OperationType(i)
-		txe.Tx.Operations = append(txe.Tx.Operations, op)
+		txe.V1().Tx.Operations = append(txe.V1().Tx.Operations, op)
 	}
 	stcdetail.ForEachXdr(txe, func(i xdr.XdrType) bool {
 		switch v := i.(type) {
@@ -164,12 +165,12 @@ func TestXdr(t *testing.T) {
 
 	txe := NewTransactionEnvelope()
 	fmt.Sscan("GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G",
-		&txe.Tx.SourceAccount)
+		&txe.V1().Tx.SourceAccount)
 	var ot stx.OperationType
 	for i := range ot.XdrEnumNames() {
 		var op stx.Operation
 		op.Body.Type = stx.OperationType(i)
-		txe.Tx.Operations = append(txe.Tx.Operations, op)
+		txe.V1().Tx.Operations = append(txe.V1().Tx.Operations, op)
 	}
 	stcdetail.ForEachXdr(txe, func(i xdr.XdrType) bool {
 		switch v := i.(type) {
@@ -213,16 +214,16 @@ func Example_txrep() {
 
 	// Build a transaction
 	txe := NewTransactionEnvelope()
-	txe.Tx.SourceAccount = mykey.Public()
-	txe.Tx.Fee = 100
-	txe.Tx.SeqNum = 3319833626148865
-	txe.Tx.Memo = MemoText("Hello")
+	txe.SetSourceAccount(mykey.Public())
+	txe.V1().Tx.SeqNum = 3319833626148865
+	txe.V1().Tx.Memo = MemoText("Hello")
 	txe.Append(nil, Payment{
-		Destination: yourkey,
+		Destination: *yourkey.ToMuxedAccount(),
 		Asset:       NativeAsset(),
 		Amount:      20000000,
 	})
 	// ... Can keep appending operations with txe.Append
+	txe.SetFee(100)
 
 	net := DefaultStellarNet("main")
 	// Sign the transaction
@@ -232,6 +233,7 @@ func Example_txrep() {
 	fmt.Print(net.TxToRep(txe))
 
 	// Output:
+	// type: ENVELOPE_TYPE_TX
 	// tx.sourceAccount: GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G
 	// tx.fee: 100
 	// tx.seqNum: 3319833626148865
@@ -268,9 +270,9 @@ func Example_postTransaction() {
 
 	// Build a transaction
 	txe := NewTransactionEnvelope()
-	txe.Tx.SourceAccount = mykey.Public()
-	txe.Tx.SeqNum = myacct.NextSeq()
-	txe.Tx.Memo = MemoText("Hello")
+	txe.SetSourceAccount(mykey.Public())
+	txe.V1().Tx.SeqNum = myacct.NextSeq()
+	txe.V1().Tx.Memo = MemoText("Hello")
 	txe.Append(nil, SetOptions{
 		SetFlags:      NewUint(uint32(stx.AUTH_REQUIRED_FLAG)),
 		LowThreshold:  NewUint(2),
@@ -286,7 +288,7 @@ func Example_postTransaction() {
 	if err != nil {
 		panic(err)
 	}
-	txe.Tx.Fee = uint32(len(txe.Tx.Operations)) * fees.Percentile(50)
+	txe.SetFee(fees.Percentile(50))
 
 	// Sign and post the transaction
 	net.SignTx(&mykey, txe)

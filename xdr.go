@@ -157,7 +157,7 @@ func NewTransactionEnvelope() *TransactionEnvelope {
 		TransactionEnvelope: &stx.TransactionEnvelope{
 			Type: stx.ENVELOPE_TYPE_TX,
 		},
-		Help:                nil,
+		Help: nil,
 	}
 }
 
@@ -263,6 +263,23 @@ func (txe *TransactionEnvelope) SourceAccount() *stx.MuxedAccount {
 	xdr.XdrPanic("SourceAccountEd25519: unknown TransactionEnvelope type %s",
 		txe.Type)
 	return nil
+}
+
+func (txe *TransactionEnvelope) SetSourceAccount(m0 stx.IsAccount) {
+	m := m0.ToMuxedAccount()
+	switch txe.Type {
+	case stx.ENVELOPE_TYPE_TX_V0:
+		if m.Type == stx.KEY_TYPE_ED25519 {
+			txe.V0().Tx.SourceAccountEd25519 = *m.Ed25519()
+		} else {
+			xdr.XdrPanic("SetSourceAccount: %v not supported in envelope V0",
+				m.Type)
+		}
+	case stx.ENVELOPE_TYPE_TX:
+		txe.V1().Tx.SourceAccount = *m
+	case stx.ENVELOPE_TYPE_TX_FEE_BUMP:
+		txe.FeeBump().Tx.FeeSource = *m
+	}
 }
 
 func (txe *TransactionEnvelope) GetHelp(name string) bool {
