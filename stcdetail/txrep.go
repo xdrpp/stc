@@ -69,7 +69,7 @@ type xdrHolder struct {
 	next *xdrHolder
 }
 
-func parentUnion(h *xdrHolder) xdr.XdrUnion {
+func xparentUnion(h *xdrHolder) xdr.XdrUnion {
 	for ; h != nil; h = h.next {
 		switch v := h.obj.(type) {
 		case xdr.XdrUnion:
@@ -88,6 +88,15 @@ type txrState struct {
 	err XdrBadValue
 }
 
+func (xs *txrState) validTags() map[int32]bool {
+	if xs.front.next == nil {
+		return nil
+	} else if parent, ok := xs.front.next.obj.(xdr.XdrUnion); ok &&
+		parent.XdrUnionTagName() != xs.front.field {
+		return parent.XdrValidTags()
+	}
+	return nil
+}
 
 func (xs *txrState) push(field string, obj xdr.XdrType) {
 	parent := xs.front
@@ -112,7 +121,7 @@ func (xs *txrState) push(field string, obj xdr.XdrType) {
 	if parent != nil && vField(field) {
 		if u, ok := parent.obj.(xdr.XdrUnion); ok &&
 			field != u.XdrUnionTagName() {
-			if pp := parentUnion(parent.next); pp == nil ||
+			if pp := xparentUnion(parent.next); pp == nil ||
 				u.XdrUnionTagName() != pp.XdrUnionTagName() {
 				field = ""
 			}
@@ -276,7 +285,11 @@ func (xp *txStringCtx) Marshal(field string, i xdr.XdrType) {
 		if xp.getHelp(name) {
 			fmt.Fprintf(xp.out, "%s: %s (", name, v.String())
 			var notfirst bool
-			for _, name := range v.XdrEnumNames() {
+			valid := xp.validTags()
+			for n, name := range v.XdrEnumNames() {
+				if valid != nil && !valid[n] {
+					continue
+				}
 				if notfirst {
 					fmt.Fprintf(xp.out, ", %s", name)
 				} else {
