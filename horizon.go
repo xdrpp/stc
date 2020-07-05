@@ -513,7 +513,6 @@ func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 		Ledger uint32
 		Created_at string
 	}
-	hash := xdr.XdrArrayOpaque(r.Txhash[:])
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	} else if err = stcdetail.XdrFromBase64(&r.Env,
@@ -528,7 +527,8 @@ func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 	} else if err = stcdetail.XdrFromBase64(&r.ResultMeta,
 		j.Result_meta_xdr); err != nil {
 			return err
-	} else if _, err := fmt.Sscanf(j.Hash, "%x", &hash); err != nil {
+	} else if _, err := fmt.Sscanf(j.Hash, "%v",
+		stx.XDR_Hash(&r.Txhash)); err != nil {
 		return err
 	} else if r.Time, err = time.ParseInLocation("2006-01-02T15:04:05Z",
 		j.Created_at, time.UTC); err != nil {

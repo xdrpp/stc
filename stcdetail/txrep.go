@@ -240,11 +240,11 @@ func (xp *txStringCtx) Marshal(field string, i xdr.XdrType) {
 		}
 	}()
 
-	if k, ok := i.(xdr.XdrArrayOpaque); ok && len(k) == 32 &&
+	if k, ok := i.(xdr.XdrArrayOpaque); ok && k.XdrArraySize() == 32 &&
 		field == "sourceAccountEd25519" {
 		name = name[:len(name)-len(field)] + "sourceAccount"
 		pk := &stx.AccountID { Type: stx.PUBLIC_KEY_TYPE_ED25519 }
-		copy(pk.Ed25519()[:], k)
+		copy(pk.Ed25519()[:], k.GetByteSlice())
 		i = pk
 	}
 	switch v := i.(type) {
@@ -445,7 +445,7 @@ func (xs *xdrScan) Marshal(field string, i xdr.XdrType) {
 	case xdr.XdrArrayOpaque:
 		if !ok {
 			return
-		} else if len(v) == 32 && field == "sourceAccountEd25519" {
+		} else if v.XdrArraySize() == 32 && field == "sourceAccountEd25519" {
 			var pk stx.AccountID
 			if _, err := fmt.Sscan(val, v); err != nil {
 				xs.setHelp(name)
@@ -454,7 +454,7 @@ func (xs *xdrScan) Marshal(field string, i xdr.XdrType) {
 				xs.setHelp(name)
 				xs.report(lv.line, "Source account must be type Ed25519")
 			} else {
-				copy(v, pk.Ed25519()[:])
+				copy(v.GetByteSlice(), pk.Ed25519()[:])
 			}
 		} else {
 			_, err := fmt.Sscan(val, v)

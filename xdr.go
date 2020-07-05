@@ -362,7 +362,8 @@ type assignXdr struct {
 	fields []interface{}
 }
 
-func copyOpaqueArray(to xdr.XdrArrayOpaque, from interface{}, name string) {
+func copyOpaqueArray(to0 xdr.XdrArrayOpaque, from interface{}, name string) {
+	to := to0.GetByteSlice()
 	switch f := from.(type) {
 	case []byte:
 		if len(f) > len(to) {

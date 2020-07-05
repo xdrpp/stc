@@ -684,8 +684,7 @@ func main() {
 
 	if *opt_txinfo {
 		var txid stx.Hash
-		slice := xdr.XdrArrayOpaque(txid[:])
-		if _, err := fmt.Sscanf(arg, "%x", &slice); err != nil {
+		if _, err := fmt.Sscanf(arg, "%v", stx.XDR_Hash(&txid)); err != nil {
 			fmt.Fprintln(os.Stderr, "syntactically invalid txid")
 			os.Exit(1)
 		} else if txr, err := net.GetTxResult(arg); err != nil {
