@@ -164,19 +164,6 @@ func (xp *txStringCtx) Sprintf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
 
-func (xp *txStringCtx) Marshal_SequenceNumber(field string,
-	v *stx.SequenceNumber) {
-	xp.push(field, stx.XDR_SequenceNumber(v))
-	defer xp.pop()
-	fmt.Fprintf(xp.out, "%s: %d\n", xp.name(), *v)
-}
-
-func (xp *txStringCtx) Marshal_TimePoint(field string, v *stx.TimePoint) {
-	xp.push(field, stx.XDR_TimePoint(v))
-	defer xp.pop()
-	fmt.Fprintf(xp.out, "%s: %d%s\n", xp.name(), *v, dateComment(*v))
-}
-
 var exp10 [20]uint64
 
 func init() {
@@ -261,6 +248,11 @@ func (xp *txStringCtx) Marshal(field string, i xdr.XdrType) {
 		i = pk
 	}
 	switch v := i.(type) {
+	case stx.XdrType_SequenceNumber:
+		fmt.Fprintf(xp.out, "%s: %d\n", name, v.XdrValue())
+	case stx.XdrType_TimePoint:
+		tp := v.XdrValue().(stx.TimePoint)
+		fmt.Fprintf(xp.out, "%s: %d%s\n", name, tp, dateComment(tp))
 	case *stx.Asset:
 		asset := v.String()
 		if asset == "native" {
