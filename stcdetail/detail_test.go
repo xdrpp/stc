@@ -92,6 +92,7 @@ func ExampleXdrToJson() {
 
 	// Output:
 	// {
+	//     "type": "ENVELOPE_TYPE_TX",
 	//     "tx": {
 	//         "sourceAccount": "GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G",
 	//         "fee": 100,

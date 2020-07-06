@@ -39,6 +39,9 @@ func (_ *jsonIn) Sprintf(f string, args ...interface{}) string {
 }
 func (j *jsonIn) Marshal(name string, xval xdr.XdrType) {
 	jval := j.get(name)
+	if HideFieldName(name, xval) {
+		jval = j.obj
+	}
 	if jval == nil {
 		return
 	}
@@ -165,8 +168,12 @@ func (j *jsonOut) Marshal(name string, val xdr.XdrType) {
 			v.XdrMarshalValue(j, name)
 		}
 	case xdr.XdrAggregate:
-		j.printField(name, "")
-		j.aggregate(v)
+		if HideFieldName(name, val) {
+			v.XdrRecurse(j, "")
+		} else {
+			j.printField(name, "")
+			j.aggregate(v)
+		}
 	default:
 		xdr.XdrPanic("XdrToJson can't handle type %T", val)
 	}

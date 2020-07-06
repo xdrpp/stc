@@ -50,6 +50,39 @@ func vField(field string) bool {
 	return true
 }
 
+func isDigitSandwich(target string, prefix string, suffix string) bool {
+	if !strings.HasPrefix(target, prefix) {
+		return false
+	}
+	target = target[len(prefix):]
+	if !strings.HasSuffix(target, suffix) {
+		return false
+	}
+	target = target[:len(target)-len(suffix)]
+	for _, r := range target {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// Returns true for types whose field names should be hidden when the
+// field name is of the form v[0-9]+.  This if for backwards
+// compatibility, as fields of this type are intended to be used as
+// versions of the same structure in a version union, and eliding the
+// field names (v0, v1, ...) allows one to change the version without
+// invalidating the rest of the fields.
+func HideFieldName(field string, t xdr.XdrType) bool {
+	if i := strings.LastIndexByte(field, '.'); i >= 0 {
+		field = field[i+1:]
+	}
+	if !vField(field) {
+		return false
+	}
+	return isDigitSandwich(t.XdrTypeName(), "TransactionV", "Envelope")
+}
+
 func dotJoin(a string, b string) string {
 	if a == "" {
 		return b
@@ -118,16 +151,9 @@ func (xs *txrState) push(field string, obj xdr.XdrType) {
 	if h.next != nil {
 		h.name = h.next.name
 	}
-	if parent != nil && vField(field) {
-		if u, ok := parent.obj.(xdr.XdrUnion); ok &&
-			field != u.XdrUnionTagName() {
-			if pp := xparentUnion(parent.next); pp == nil ||
-				u.XdrUnionTagName() != pp.XdrUnionTagName() {
-				field = ""
-			}
-		}
+	if !HideFieldName(field, obj) {
+		h.name = dotJoin(h.name, field)
 	}
-	h.name = dotJoin(h.name, field)
 }
 
 func (xs *txrState) pop() {

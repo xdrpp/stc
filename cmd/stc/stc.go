@@ -598,7 +598,7 @@ func main() {
 	case *opt_demux:
 		var m MuxedAccount
 		if _, err := fmt.Sscan(arg, &m); err != nil {
-			fmt.Fprintln(os.Stderr, "%s\n", err)
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(2)
 		}
 		pk, id := DemuxAcct(&m)
