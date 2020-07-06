@@ -54,6 +54,101 @@ func TestLongStrKey(t *testing.T) {
 	}
 }
 
+func TestBadStrKeys(t *testing.T) {
+	badkeys := []string{
+		"GAAAAAAAACGC6",
+		"MAAAAAAAAAAAAAB7BQ2L7E5NBWMXDUCMZSIPOBKRDSBYVLMXGSSKF6YNPIB7Y77ITLVL7",
+		"GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZA",
+		"GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJUACUSI",
+		"G47QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVP2I",
+		"MCAAAAAAAAAAAAB7BQ2L7E5NBWMXDUCMZSIPOBKRDSBYVLMXGSSKF6YNPIB7Y77ITKNOGA",
+		"MAAAAAAAAAAAAAB7BQ2L7E5NBWMXDUCMZSIPOBKRDSBYVLMXGSSKF6YNPIB7Y77ITIADJPA",
+		"M4AAAAAAAAAAAAB7BQ2L7E5NBWMXDUCMZSIPOBKRDSBYVLMXGSSKF6YNPIB7Y77ITIU2K",
+		"MAAAAAAAAAAAAAB7BQ2L7E5NBWMXDUCMZSIPOBKRDSBYVLMXGSSKF6YNPIB7Y77ITLVL6===",
+		"MAAAAAAAAAAAAAB7BQ2L7E5NBWMXDUCMZSIPOBKRDSBYVLMXGSSKF6YNPIB7Y77ITLVL4",
+	}
+	for i := range badkeys {
+		var m MuxedAccount
+		err := m.UnmarshalText([]byte(badkeys[i]))
+		if err == nil {
+			t.Errorf("Successfully parsed invalid MuxedAccount %q", badkeys[i])
+		}
+	}
+}
+
+func TestStrkeyVectors(t *testing.T) {
+	type tvec struct {
+		strkey string
+		bin []byte
+	}
+	tvecs := [...]tvec{
+		tvec{
+			"GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ",
+			[]byte{
+				0x00, 0x00, 0x00, 0x00, 0x3f, 0x0c, 0x34, 0xbf,
+				0x93, 0xad, 0x0d, 0x99, 0x71, 0xd0, 0x4c, 0xcc,
+				0x90, 0xf7, 0x05, 0x51, 0x1c, 0x83, 0x8a, 0xad,
+				0x97, 0x34, 0xa4, 0xa2, 0xfb, 0x0d, 0x7a, 0x03,
+				0xfc, 0x7f, 0xe8, 0x9a,
+			},
+		},
+		tvec{
+			"MAAAAAAAAAAAAAB7BQ2L7E5NBWMXDUCMZSIPOBKRDSBYVLMXGSSKF6YNPIB7Y77ITLVL6",
+			[]byte{
+				0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x3f, 0x0c, 0x34, 0xbf,
+				0x93, 0xad, 0x0d, 0x99, 0x71, 0xd0, 0x4c, 0xcc,
+				0x90, 0xf7, 0x05, 0x51, 0x1c, 0x83, 0x8a, 0xad,
+				0x97, 0x34, 0xa4, 0xa2, 0xfb, 0x0d, 0x7a, 0x03,
+				0xfc, 0x7f, 0xe8, 0x9a,
+			},
+		},
+		tvec{
+			"MCAAAAAAAAAAAAB7BQ2L7E5NBWMXDUCMZSIPOBKRDSBYVLMXGSSKF6YNPIB7Y77ITKNOG",
+			[]byte{
+				0x00, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x3f, 0x0c, 0x34, 0xbf,
+				0x93, 0xad, 0x0d, 0x99, 0x71, 0xd0, 0x4c, 0xcc,
+				0x90, 0xf7, 0x05, 0x51, 0x1c, 0x83, 0x8a, 0xad,
+				0x97, 0x34, 0xa4, 0xa2, 0xfb, 0x0d, 0x7a, 0x03,
+				0xfc, 0x7f, 0xe8, 0x9a,
+			},
+		},
+	}
+	for i := range tvecs {
+		var m MuxedAccount
+		err := m.UnmarshalText([]byte(tvecs[i].strkey))
+		if err != nil {
+			t.Errorf("Could not scan MuxedAccount %q %s",
+				tvecs[i].strkey, err)
+		} else if bin := stcdetail.XdrToBin(&m); bin != string(tvecs[i].bin) {
+			t.Errorf("Incorrectly scanned MuxedAccount %q", tvecs[i].strkey)
+		} else if err = stcdetail.XdrFromBin(&m, bin); err != nil ||
+			m.String() != tvecs[i].strkey {
+			t.Errorf("Round-trip strkey failed for %q", tvecs[i].strkey)
+		}
+	}
+}
+
+func TestMuxDemux(t *testing.T) {
+	acct := "GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ"
+	id := uint64(9223372036854775808)
+	macct := "MCAAAAAAAAAAAAB7BQ2L7E5NBWMXDUCMZSIPOBKRDSBYVLMXGSSKF6YNPIB7Y77ITKNOG"
+	var a AccountID
+	if err := a.UnmarshalText(([]byte)(acct)); err != nil {
+		t.Fatal(err)
+	}
+	var ma MuxedAccount
+	if err := ma.UnmarshalText(([]byte)(macct)); err != nil {
+		t.Fatal(err)
+	}
+	gotma := MuxAcct(&a, &id)
+	gota, gotid := DemuxAcct(&ma)
+	if gotma.String() != macct || gota.String() != acct || *gotid != id {
+		t.Fail()
+	}
+}
+
 func TestSetOverflowString(t *testing.T) {
 	var m stx.Memo
 	// This should work

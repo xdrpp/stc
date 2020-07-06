@@ -24,9 +24,8 @@ func XdrToBin(t xdr.XdrType) string {
 	return out.String()
 }
 
-/*
 // Unmarshal an XDR type from the raw binary bytes defined in RFC4506.
-func xdrFromBin(t xdr.XdrType, input string) (err error) {
+func XdrFromBin(t xdr.XdrType, input string) (err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			if xe, ok := i.(xdr.XdrError); ok {
@@ -40,7 +39,6 @@ func xdrFromBin(t xdr.XdrType, input string) (err error) {
 	t.XdrMarshal(&xdr.XdrIn{in}, "")
 	return
 }
-*/
 
 type forEachXdr struct {
 	fn func(xdr.XdrType) bool
