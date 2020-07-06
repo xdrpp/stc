@@ -12,14 +12,6 @@ import "unicode"
 import "github.com/xdrpp/stc/stx"
 import "github.com/xdrpp/goxdr/xdr"
 
-type union interface {
-	xdr.XdrType
-	XdrUnionTag() interface{}
-	XdrUnionTagName() string
-	XdrUnionBody() interface{}
-	XdrUnionBodyName() string
-}
-
 type enumVal = struct{
 	val int32
 	symbol string
@@ -47,7 +39,7 @@ func camelize(s string) string {
 
 const Xdrinline_prefix = "XdrAnon_"
 
-func genTypes(prefix string, u union, useArmName bool,
+func genTypes(prefix string, u xdr.XdrUnion, useArmName bool,
 	comfn func([]interface{})) {
 	typ := reflect.TypeOf(u.XdrValue()).Name()
 	var method string
@@ -108,7 +100,7 @@ func (arg %[1]s) %[8]s() (ret %[3]s) {
 	}
 }
 
-func genFuncs(prefix string, u union, useArmName bool,
+func genFuncs(prefix string, u xdr.XdrUnion, useArmName bool,
 	comfn func([]interface{})) {
 	typ := reflect.TypeOf(u.XdrValue()).Name()
 	tag := u.XdrUnionTag().(xdr.XdrEnum)
@@ -124,7 +116,10 @@ func genFuncs(prefix string, u union, useArmName bool,
 		if useArmName && armname != "" {
 			gentype = armname
 		}
-		arm := u.XdrUnionBody()
+		var arm interface{}
+		if xt := u.XdrUnionBody(); xt != nil {
+			arm = xt.XdrPointer()
+		}
 		if arm == nil {
 			if comfn != nil {
 				comfn([]interface{}{typ, u.XdrUnionTagName(),
