@@ -42,7 +42,7 @@ func (j *jsonIn) Marshal(name string, xval xdr.XdrType) {
 	if jval == nil {
 		return
 	}
-	switch v := xval.(type) {
+	switch v := xdr.XdrBaseType(xval).(type) {
 	case xdr.XdrString:
 		v.SetString(mustString(jval))
 	case xdr.XdrVecOpaque:

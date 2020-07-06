@@ -176,7 +176,7 @@ func TestJsonToXdr(t *testing.T) {
 
 	txe2 := stc.NewTransactionEnvelope()
 	if err = JsonToXdr(txe2, j); err != nil {
-		t.Errorf("JsonToXdr: %s", err)
+		t.Errorf("%s", err)
 		return
 	}
 
