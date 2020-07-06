@@ -55,7 +55,7 @@ func isDigitSandwich(target string, prefix string, suffix string) bool {
 		return false
 	}
 	target = target[len(prefix):]
-	if !strings.HasSuffix(target, suffix) {
+	if len(target) <= len(suffix) || !strings.HasSuffix(target, suffix) {
 		return false
 	}
 	target = target[:len(target)-len(suffix)]
