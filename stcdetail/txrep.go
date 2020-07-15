@@ -476,7 +476,28 @@ func (xs *xdrScan) Marshal(field string, i xdr.XdrType) {
 	xs.push(field, i)
 	defer xs.pop()
 	name := xs.name()
-	lv, ok := xs.kvs[name]
+	var ok bool
+	var lv lineval
+
+	if k, ok := i.(xdr.XdrArrayOpaque); ok && k.XdrArraySize() == 32 &&
+		field == "sourceAccountEd25519" {
+		name = name[:len(name)-len(field)] + "sourceAccount"
+		pk := &stx.AccountID{}
+		defer func() {
+			if lv.line == -1 || !ok {
+				return
+			}
+			if pk.Type != stx.PUBLIC_KEY_TYPE_ED25519 {
+				xs.report(lv.line,
+					"V0 transaction only supports Ed25519 sourceAccount")
+			} else {
+				copy(k.GetByteSlice(),pk.Ed25519()[:])
+			}
+		}()
+		i = pk
+	}
+
+	lv, ok = xs.kvs[name]
 	if ok {
 		xs.lastlv = &lv
 	}
@@ -484,6 +505,7 @@ func (xs *xdrScan) Marshal(field string, i xdr.XdrType) {
 		switch e := recover().(type) {
 		case xdr.XdrError:
 			xs.report(xs.lastlv.line, "%s", e.Error())
+			lv.line = -1		// flag that error was reported
 		case interface{}:
 			panic(e)
 		}
@@ -496,23 +518,11 @@ func (xs *xdrScan) Marshal(field string, i xdr.XdrType) {
 	case xdr.XdrArrayOpaque:
 		if !ok {
 			return
-		} else if v.XdrArraySize() == 32 && field == "sourceAccountEd25519" {
-			var pk stx.AccountID
-			if _, err := fmt.Sscan(val, v); err != nil {
-				xs.setHelp(name)
-				xs.report(lv.line, "%s", err.Error())
-			} else if pk.Type != stx.PUBLIC_KEY_TYPE_ED25519 {
-				xs.setHelp(name)
-				xs.report(lv.line, "Source account must be type Ed25519")
-			} else {
-				copy(v.GetByteSlice(), pk.Ed25519()[:])
-			}
-		} else {
-			_, err := fmt.Sscan(val, v)
-			if err != nil {
-				xs.setHelp(name)
-				xs.report(lv.line, "%s", err.Error())
-			}
+		}
+		_, err := fmt.Sscan(val, v)
+		if err != nil {
+			xs.setHelp(name)
+			xs.report(lv.line, "%s", err.Error())
 		}
 	case xdr.XdrVecOpaque:
 		if !ok {
