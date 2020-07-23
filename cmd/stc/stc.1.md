@@ -24,6 +24,7 @@ stc -pub [_name_] \
 stc -import-key _name_ \
 stc -export-key _name_ \
 stc -list-keys \
+stc -hint _PublicKey_ \
 stc -mux _accountID_ _uint64_ \
 stc -demux _muxedAccount_ \
 stc -date YYYY-MM-DDThh:mm:ss[Z] \
@@ -202,6 +203,12 @@ The time can have one of several formats:
 * `2006-01-02T15:04:05` (local time)
 * `2006-01-02T15:04` (local time)
 * `2006-01-02` (local time)
+
+Stellar requires each signature to be paired with the last 4 bytes of
+the public key (known as the "hint"), so as to facilitate matching the
+signature to the key.  The `-hint` option outputs the hint
+corresponding to a particular `PublicKey`, for use when manually
+constructing `DecoratedSignature`s.
 
 The `-mux` and `-demux` options construct and deconstruct a
 multiplexed account identifiers or "MuxedAccount".  MuxedAccounts

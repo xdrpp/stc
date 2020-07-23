@@ -476,6 +476,8 @@ func main() {
 		"Convert data to Unix time (for use in TimeBounds)")
 	opt_verbose := flag.Bool("v", false,
 		"Be more verbose for some operations")
+	opt_hint := flag.Bool("hint", false,
+		"Print signature hint for a public key")
 	opt_print_default_config := flag.Bool("builtin-config", false,
 		"Print the built-in stc.conf file used when none is found")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
@@ -502,6 +504,7 @@ func main() {
        %[1]s -export-key NAME
        %[1]s -list-keys
        %[1]s -date YYYY-MM-DD[Thh:mm:ss[Z]]
+       %[1]s -hint PUBKEY
        %[1]s -mux ACCT U64
        %[1]s -demux ACCT
        %[1]s -builtin-config
@@ -523,7 +526,7 @@ func main() {
 		*opt_date, *opt_sec2pub, *opt_import_key, *opt_export_key,
 		*opt_acctinfo, *opt_txinfo, *opt_txacct, *opt_friendbot,
 		*opt_list_keys, *opt_fee_stats, *opt_ledger_header,
-		*opt_print_default_config, *opt_mux, *opt_demux)
+		*opt_print_default_config, *opt_mux, *opt_demux, *opt_hint)
 
 	argsMin, argsMax := 1, 1
 	switch {
@@ -576,6 +579,14 @@ func main() {
 	}
 
 	switch {
+	case *opt_hint:
+		var pk PublicKey
+		if _, err := fmt.Sscan(arg, &pk); err != nil {
+			fmt.Fprintf(os.Stderr, "invalid PublicKey %s\n", arg)
+			os.Exit(2)
+		}
+		fmt.Printf("%x\n", pk.Hint())
+		os.Exit(0)
 	case *opt_mux:
 		var pk AccountID
 		var id uint64
