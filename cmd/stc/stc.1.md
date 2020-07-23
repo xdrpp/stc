@@ -240,6 +240,10 @@ available by querying the `/friendbot?addr=ACCOUNT` path on horizon.
 `-date`
 :	Compute a Unix time from a human-readable time.
 
+`-demux`
+:	Break a `MuxedAccount` (starting with `M`) into its component
+`AccountID` (starting with `G`) 64-bit identifier.
+
 `-edit`
 :	Select edit mode.
 
@@ -251,6 +255,10 @@ available by querying the `/friendbot?addr=ACCOUNT` path on horizon.
 
 `-help`
 :	Print usage information.
+
+`-hint`
+:	Return the last 4 bytes of a public key as a 32-bit "hint",
+required in `DecoratedSignature`s.
 
 `-i`
 :	Edit in place---overwrite the input file with the stc's output.
@@ -283,6 +291,10 @@ account.  Only available in default mode.
 
 `-list-keys`
 :	List all private keys stored under the configuration directory.
+
+`-mux`
+:	Combine an `AccountID` (starting with `G`) and 64-bit identifier
+into a `MuxedAccount`.
 
 `-net` _name_
 :	Specify which network to use for hashing, signing, and posting
@@ -486,6 +498,9 @@ Stellar's web-based XDR viewer:\
 
 SEP-0011, the specification for txrep format:\
 <https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0011.md>
+
+SEP-0023, the specification for strkey:
+<https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0023.md>
 
 RFC4506, the specification for XDR:\
 <https://tools.ietf.org/html/rfc4506>
