@@ -173,7 +173,7 @@ assume you do not encrypt your private keys.
 ## Network query mode
 
 stc runs in network query mode when one of the `-post`, `-fee-stats`,
-`ledger-header`, `-qa`, `-qt`, `-qta`, or `-create` options is
+`-ledger-header`, `-qa`, `-qt`, `-qta`, or `-create` options is
 provided.
 
 Post-mode, selected by `-post`, submits a transaction to the Stellar
@@ -187,10 +187,9 @@ has been previously submitted.  `-qta` reports transactions on an
 account in reverse chronological order (use `-qt` to get more detail
 on any transaction ID).  Unfortunately, some of these requests are
 parsed from horizon responses in JSON rather than XDR format, and so
-are reported in a somewhat incomparable style to txrep format.  For
-example, balances are shown as a fixed-point number 10^7 times the
-underlying int64.  `-create` creates and funds an account (which only
-works when the test network is specified).
+are reported in a somewhat incomparable style to txrep format.
+`-create` creates and funds an account (which only works when the test
+network is specified).
 
 ## Miscellaneous modes
 
@@ -211,7 +210,7 @@ corresponding to a particular `PublicKey`, for use when manually
 constructing `DecoratedSignature`s.
 
 The `-mux` and `-demux` options construct and deconstruct a
-multiplexed account identifiers or "MuxedAccount".  MuxedAccounts
+multiplexed account identifier or "MuxedAccount".  MuxedAccounts
 behave the same as the underlying accounts, but contain an unsigned
 64-bit integer that acts as a kind of comment.  This allows a single
 account holder to give out multiple addresses that point the same
