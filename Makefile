@@ -13,6 +13,8 @@ build: $(BUILT_SOURCES) always go.mod
 
 stx/xdr_generated.go: goxdr $(XDRS)
 	./goxdr -p stx -enum-comments -o $@~ $(XDRS)
+	printf "\nvar StellarCommit = \"%s\"\n" \
+	    `cat xdr/Stellar-version` >> $@~
 	cmp $@~ $@ 2> /dev/null || mv -f $@~ $@
 
 uhelper.go: stx/xdr_generated.go uniontool/uniontool.go go.mod
@@ -32,7 +34,9 @@ $(XDRS): xdr
 
 xdr:
 	git fetch --depth=1 https://github.com/stellar/stellar-core.git master
+	rm -f xdr/Stellar-version
 	git archive --prefix=xdr/ FETCH_HEAD:src/xdr | tar xf -
+	git rev-parse FETCH_HEAD > xdr/Stellar-version
 
 goxdr: always
 	@set -e; if test -d cmd/goxdr; then \
