@@ -824,7 +824,7 @@ type enumComments interface {
 func enumDesc(e xdr.XdrEnum) string {
 	if ec, ok := e.(enumComments); ok {
 		if c, ok := ec.XdrEnumComments()[int32(e.GetU32())]; ok {
-			return c
+			return e.String() + " (" + c + ")"
 		}
 	}
 	return e.String()
@@ -837,6 +837,36 @@ type TxFailure struct {
 	*TransactionResult
 }
 
+type codeExtractor struct {
+	msg string
+}
+func (x *codeExtractor) Sprintf(string, ...interface{}) string {
+	return ""
+}
+func (x *codeExtractor) Marshal(name string, val xdr.XdrType) {
+	if x.msg != "" {
+		return
+	}
+	switch t := val.(type) {
+	case xdr.XdrEnum:
+		x.msg = enumDesc(t)
+	case xdr.XdrAggregate:
+		t.XdrRecurse(x, "")
+	}
+}
+
+func extractCode(t xdr.XdrType) string {
+	e := codeExtractor{}
+	e.Marshal("", t)
+	if e.msg != "" {
+		return e.msg
+	}
+
+	out := strings.Builder{}
+	stcdetail.XdrToTxrep(&out, "", t)
+	return strings.TrimSuffix(out.String(), "\n")
+}
+
 func (e TxFailure) Error() string {
 	msg := enumDesc(&e.Result.Code)
 	switch e.Result.Code {
@@ -844,8 +874,13 @@ func (e TxFailure) Error() string {
 		out := strings.Builder{}
 		out.WriteString(msg)
 		for i := range *e.Result.Results() {
-			fmt.Fprintf(&out, "\noperation %d: %s", i,
-				enumDesc(&(*e.Result.Results())[i].Code))
+			fmt.Fprintf(&out, "\noperation %d: ", i)
+			if code := (*e.Result.Results())[i].Code; code != stx.OpINNER {
+				out.WriteString(enumDesc(&code))
+			} else {
+				out.WriteString(extractCode(
+					(*e.Result.Results())[i].Tr().XdrUnionBody()))
+			}
 		}
 		return out.String()
 	default:
