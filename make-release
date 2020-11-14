@@ -1,0 +1,65 @@
+#!/bin/sh -e
+
+version="$1"
+last_release="$2"
+
+if [ 1 -ne $# -a 2 -ne $# ]; then
+    echo "usage: $(basename $0) VERSION [LAST-RELEASE]" 2>&1
+    exit 1
+elif ! expr "$1" : 'v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*' > /dev/null; then
+    echo "$(basename $0): $version should be of the form v1.2.3" 2>&1
+    exit 1
+elif git rev-parse "$version" -- >/dev/null 2>&1; then
+    echo "$(basename $0): git repository already contains $version" 2>&1
+    exit 1
+fi
+
+find_default_last_release() {
+    local next=
+    while read line; do
+	if [ "$version" == "$line" ]; then
+	    next=1
+	elif [ 1 == "$next" ]; then
+	    echo "$line"
+	    return
+	fi
+    done
+}
+
+if [ -z "$last_release" ]; then
+    default_last_release=$((echo $version; git tag -l "v*.*.*") | \
+			       sort -rVu | find_default_last_release)
+    default_last_release=${default_last_release:-x}
+    printf "Previous release or 'x' for none ($default_last_release)? "
+    read last_release
+    if [ -z "$last_release" ]; then
+	last_release="$default_last_release"
+    fi
+fi
+
+if [ x == "$last_release" ]; then
+    last_release=
+elif ! git rev-parse "$last_release" -- >/dev/null; then
+    echo "$(basename $0): no commit $last_release" 2>&1
+    exit 1
+fi
+
+./make-go1
+
+parent=$(git rev-parse go1^)
+tree=$(git rev-parse go1^{tree})
+
+commit=$(echo "create release $version" | \
+    git commit-tree -p $parent ${last_release:+-p} $last_release $tree)
+git tag "$version" "$commit"
+
+if github=$(git remote -v | sed -ne '/git@github.com/{s/[ 	].*//p;q;}')
+then
+    cat <<EOF
+Now you may want to run:
+
+    git push $github -f go1
+    git push $github $version
+
+EOF
+fi
