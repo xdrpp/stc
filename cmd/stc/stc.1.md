@@ -77,14 +77,18 @@ Two field types have specially formatted values:
 
 * Account IDs and Signers are expressed using Stellar's "strkey"
   format, which is a base32-encoded format where public keys start
-  with "G", pre-auth transaction hashes start with "T", and hash-X
-  signers start with "X".  (Private keys start with "S" in strkey
-  format, but never appear in transactions.)
+  with "G", multiplexed accounts start with "M", pre-auth transaction
+  hashes start with "T", and hash-X signers start with "X".  (Private
+  keys start with "S" in strkey format, but never appear in
+  transactions.)
 
 * Assets are formatted as _code_:_issuer_, where codes are formatted
   as printable ASCII bytes and two-byte hex escapes (e.g., `\x1f`),
   with no surrounding quotes.  A literal backslash or colon in an
   asset code must be escaped (e.g., `\\`).
+
+* The `asset` field in `AllowTrustOp` (where the issuer is implicit)
+  is rendered the same as the _code_ in an asset.
 
 Note that txrep is more likely to change than the base-64 XDR encoding
 of transactions.  Hence, if you want to preserve transactions that you
@@ -95,14 +99,14 @@ an XDR transaction with `stellar-core` itself, using the command
 the web-based Stellar XDR viewer at
 <https://www.stellar.org/laboratory/#xdr-viewer>.  You can also sign
 XDR transactions with `stellar-core`, using "`stellar-core
-sign-transaction --base64 --netid "Public Global Stellar Network ;
-September 2015" FILE`".
+sign-transaction --base64 --netid 'Public Global Stellar Network ;
+September 2015' FILE`".
 
 ## Edit mode
 
 Edit mode is selected whenever stc is invoked with the `-edit` flag.
 In this mode, whether the transaction is originally in base64 binary
-or text, it is output in text format to a temporary file, and your
+or text, it is output in text format to a temporary file and your
 editor is repeatedly invoked to edit the file.  In this way, you can
 change union discriminant values or array sizes, quit the editor, and
 automatically re-enter the editor with any new fields appropriately
