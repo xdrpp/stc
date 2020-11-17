@@ -480,6 +480,7 @@ func main() {
 		"Print signature hint for a public key")
 	opt_print_default_config := flag.Bool("builtin-config", false,
 		"Print the built-in stc.conf file used when none is found")
+	opt_zerosig := flag.Bool("z", false, "Zero out the signatures vector")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
 	} else {
@@ -487,7 +488,7 @@ func main() {
 	}
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
-`Usage: %[1]s [-net=ID] [-sign] [-c] [-l] [-u] [-i | -o FILE] INPUT-FILE
+`Usage: %[1]s [-net=ID] [-z] [-sign] [-c] [-l] [-u] [-i | -o FILE] INPUT-FILE
        %[1]s -edit [-net=ID] FILE
        %[1]s -post [-net=ID] INPUT-FILE
        %[1]s -preauth [-net=ID] INPUT-FILE
@@ -562,9 +563,16 @@ func main() {
 			fmt.Fprintln(os.Stderr, "-c only availble in default mode")
 			bail = true
 		}
+		if *opt_zerosig {
+			fmt.Fprintln(os.Stderr, "-z only availble in default mode")
+			bail = true
+		}
 		if bail {
 			os.Exit(2)
 		}
+	} else if *opt_inplace && *opt_output != "" {
+		fmt.Fprintln(os.Stderr, "-i and -o are mutually exclusive")
+		os.Exit(2)
 	}
 
 	var arg string
@@ -801,6 +809,9 @@ func main() {
 		fmt.Println(&sk)
 	default:
 		getAccounts(net, e, *opt_learn)
+		if *opt_zerosig {
+			*e.Signatures() = nil
+		}
 		if *opt_update {
 			fixTx(net, e)
 		}

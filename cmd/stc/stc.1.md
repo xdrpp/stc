@@ -8,7 +8,7 @@ stc - Stellar transaction compiler
 
 # SYNOPSIS
 
-stc [-net=_id_] [-sign] [-c] [-l] [-u] [-i | -o FILE] _input-file_ \
+stc [-net=_id_] [-z] [-sign] [-c] [-l] [-u] [-i | -o FILE] _input-file_ \
 stc -edit [-net=ID] _file_ \
 stc -post [-net=ID] _input-file_ \
 stc -preauth [-net=ID] _input-file_ \
@@ -359,6 +359,10 @@ change the number of transactions.  Only available in default mode.
 
 `-v`
 :	Produce more verbose output for the query options.
+
+`-z`
+:	Sets the signature vector to zero length, clearing out any
+previous signatures on a transaction.
 
 # EXAMPLES
 
