@@ -531,7 +531,8 @@ func main() {
 
 	argsMin, argsMax := 1, 1
 	switch {
-	case *opt_fee_stats || *opt_ledger_header || *opt_print_default_config:
+	case *opt_fee_stats || *opt_ledger_header ||
+		*opt_print_default_config || *opt_list_keys:
 		argsMin, argsMax = 0, 0
 	case *opt_keygen || *opt_sec2pub:
 		argsMin = 0
