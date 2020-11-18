@@ -396,8 +396,10 @@ Print the public key to standard output.  Write the private key to
 
 # ENVIRONMENT
 
-EDITOR
-:	Name of editor to invoke with the `-edit` argument (default: `vi`)
+STCEDITOR, EDITOR
+:	Name of editor to invoke with the `-edit` argument.  If
+`STCEDITOR` is defined, it takes priority.  Otherwise, if `EDITOR` is
+defined, stc uses that.  If neither is defined, stc defaults to `vi`.
 
 STCDIR
 :	Directory containing all the configuration files (default:

@@ -280,7 +280,10 @@ func signTx(net *StellarNet, key string, e *TransactionEnvelope) error {
 }
 
 func editor(args ...string) {
-	ed, ok := os.LookupEnv("EDITOR")
+	ed, ok := os.LookupEnv("STCEDITOR")
+	if !ok {
+		ed, ok = os.LookupEnv("EDITOR")
+	}
 	if !ok {
 		ed = "vi"
 	}

@@ -1,5 +1,7 @@
 
-* Changes since version v0.1.0
+* Changes in version v0.1.1
+
+Prefer STCEDITOR environment variable over EDITOR.
 
 Added -z option to clear signature list in stc.
 
