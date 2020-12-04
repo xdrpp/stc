@@ -8,7 +8,7 @@ stc - Stellar transaction compiler
 
 # SYNOPSIS
 
-stc [-net=_id_] [-z] [-sign] [-c] [-l] [-u] [-i | -o FILE] _input-file_ \
+stc [-net=_id_] [-z] [-sign] [-c|-json] [-l] [-u] [-i | -o FILE] _input-file_ \
 stc -edit [-net=ID] _file_ \
 stc -post [-net=ID] _input-file_ \
 stc -preauth [-net=ID] _input-file_ \
@@ -272,6 +272,13 @@ available in default mode.
 :	Read a private key from the terminal (or standard input) and write
 it (optionally encrypted) into a file (if the name has a slash) or
 into the configuration directory.
+
+`-json`
+:	Output the transaction in JSON format, using field names similar
+to txrep format.  The JSON representation of transactions is not
+stable and may change over time, but could be convenient for
+extracting field values in scenarios where you already have tools for
+parsing JSON.
 
 `-key` _name_
 :	Specifies the name of a key to sign with.  Implies the `-sign`

@@ -23,6 +23,13 @@ import (
 	"github.com/xdrpp/goxdr/xdr"
 )
 
+type format int
+const (
+	fmt_compiled = format(iota)
+	fmt_txrep
+	fmt_json
+)
+
 type isSignerKey interface {
 	ToSignerKey() SignerKey
 }
@@ -183,14 +190,20 @@ func fixTx(net *StellarNet, e *TransactionEnvelope) {
 }
 
 // Guess whether input is key: value lines or compiled base64
-func isCompiled(content string) bool {
-	if len(content) != 0 && strings.IndexByte(content, ':') == -1 {
+func guessFormat(content string) format {
+	if len(content) == 0 {
+		return fmt_compiled
+	}
+	if strings.IndexAny(content, ":{") == -1 {
 		bs, err := base64.StdEncoding.DecodeString(content)
 		if err == nil && len(bs) > 0 {
-			return true
+			return fmt_compiled
 		}
 	}
-	return false
+	if content[0] == '{' {
+		return fmt_json
+	}
+	return fmt_txrep
 }
 
 type ParseError struct {
@@ -203,7 +216,7 @@ func (pe ParseError) Error() string {
 }
 
 func readTx(infile string) (
-	txe *TransactionEnvelope, compiled bool, err error) {
+	txe *TransactionEnvelope, f format, err error) {
 	var input []byte
 	if infile == "-" {
 		input, err = ioutil.ReadAll(os.Stdin)
@@ -216,33 +229,47 @@ func readTx(infile string) (
 	}
 	sinput := string(input)
 
-	if isCompiled(sinput) {
-		compiled = true
+	switch f = guessFormat(sinput); f {
+	case fmt_txrep:
+		if newe, pe := TxFromRep(sinput); pe != nil {
+			err = ParseError{pe.(stcdetail.TxrepError), infile}
+		} else {
+			txe = newe
+		}
+	case fmt_compiled:
 		txe, err = TxFromBase64(sinput)
-	} else if newe, pe := TxFromRep(sinput); pe != nil {
-		err = ParseError{pe.(stcdetail.TxrepError), infile}
-	} else {
-		txe = newe
+	case fmt_json:
+		e := NewTransactionEnvelope()
+		if err = stcdetail.JsonToXdr(e, input); err == nil {
+			txe = e
+		}
 	}
 	return
 }
 
-func mustReadTx(infile string) (*TransactionEnvelope, bool) {
-	e, compiled, err := readTx(infile)
+func mustReadTx(infile string) (*TransactionEnvelope, format) {
+	e, f, err := readTx(infile)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	return e, compiled
+	return e, f
 }
 
 func writeTx(outfile string, e *TransactionEnvelope, net *StellarNet,
-	compiled bool) error {
+	f format) error {
 	var output string
-	if compiled {
+	switch f {
+	case fmt_compiled:
 		output = TxToBase64(e) + "\n"
-	} else {
+	case fmt_txrep:
 		output = net.TxToRep(e)
+	case fmt_json:
+		if boutput, err := stcdetail.XdrToJson(e); err != nil {
+			panic(err)
+		} else {
+			output = string(boutput)
+		}
 	}
 
 	if outfile == "" {
@@ -256,8 +283,8 @@ func writeTx(outfile string, e *TransactionEnvelope, net *StellarNet,
 }
 
 func mustWriteTx(outfile string, e *TransactionEnvelope, net *StellarNet,
-	compiled bool) {
-	if err := writeTx(outfile, e, net, compiled); err != nil {
+	f format) {
+	if err := writeTx(outfile, e, net, f); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
@@ -334,10 +361,10 @@ func doEdit(net *StellarNet, arg string) {
 		os.Exit(1)
 	}
 
-	e, compiled, err := readTx(arg)
+	e, txfmt, err := readTx(arg)
 	if os.IsNotExist(err) {
 		e = NewTransactionEnvelope()
-		compiled = true
+		txfmt = fmt_compiled
 	} else if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
@@ -406,7 +433,7 @@ func doEdit(net *StellarNet, arg string) {
 		}
 	}
 
-	mustWriteTx(arg, e, net, compiled)
+	mustWriteTx(arg, e, net, txfmt)
 }
 
 func b2i(bs ...bool) int {
@@ -433,6 +460,7 @@ var dateFormats = []string {
 
 func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to base64 XDR")
+	opt_json := flag.Bool("json", false, "Output transaction in JSON format")
 	opt_keygen := flag.Bool("keygen", false, "Create a new signing keypair")
 	opt_sec2pub := flag.Bool("pub", false, "Get public key from private")
 	opt_output := flag.String("o", "", "Output to `FILE` instead of stdout")
@@ -491,7 +519,8 @@ func main() {
 	}
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
-`Usage: %[1]s [-net=ID] [-z] [-sign] [-c] [-l] [-u] [-i | -o FILE] INPUT-FILE
+`Usage: %[1]s [-net=ID] [-z] [-sign] [-c|-json] [-l] [-u] \
+           [-i | -o OUTPUT-FILE] INPUT-FILE
        %[1]s -edit [-net=ID] FILE
        %[1]s -post [-net=ID] INPUT-FILE
        %[1]s -preauth [-net=ID] INPUT-FILE
@@ -548,6 +577,17 @@ func main() {
 		os.Exit(2)
 	}
 
+	outfmt := fmt_txrep
+	if *opt_compile {
+		outfmt = fmt_compiled
+		if *opt_json {
+			fmt.Fprintln(os.Stderr, "-json and -c are mutually exclusive")
+			os.Exit(2)
+		}
+	} else if *opt_json {
+		outfmt = fmt_json
+	}
+
 	if nmode > 0 {
 		bail := false
 		if *opt_sign || *opt_key != "" {
@@ -565,6 +605,10 @@ func main() {
 		}
 		if *opt_compile {
 			fmt.Fprintln(os.Stderr, "-c only availble in default mode")
+			bail = true
+		}
+		if *opt_json {
+			fmt.Fprintln(os.Stderr, "-json only availble in default mode")
 			bail = true
 		}
 		if *opt_zerosig {
@@ -795,7 +839,7 @@ func main() {
 		return
 	}
 
-	e, compiled := mustReadTx(arg)
+	e, infmt := mustReadTx(arg)
 	switch {
 	case *opt_post:
 		res, err := net.Post(e)
@@ -829,10 +873,10 @@ func main() {
 		}
 		if *opt_inplace {
 			*opt_output = arg
-			if compiled {
-				*opt_compile = true
+			if infmt == fmt_compiled && outfmt == fmt_txrep {
+				outfmt = infmt
 			}
 		}
-		mustWriteTx(*opt_output, e, net, *opt_compile)
+		mustWriteTx(*opt_output, e, net, outfmt)
 	}
 }

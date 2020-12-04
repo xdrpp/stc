@@ -1,4 +1,6 @@
 
+Added -json option to stc.
+
 * Changes in version v0.1.1
 
 Prefer STCEDITOR environment variable over EDITOR.
