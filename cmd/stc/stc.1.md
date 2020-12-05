@@ -275,10 +275,11 @@ into the configuration directory.
 
 `-json`
 :	Output the transaction in JSON format, using field names similar
-to txrep format.  The JSON representation of transactions is not
-stable and may change over time, but could be convenient for
-extracting field values in scenarios where you already have tools for
-parsing JSON.
+to txrep format.  The JSON representation of transactions is
+mechanically derived from XDR in a similar fashion as txrep.  However,
+the mapping of XDR to JSON is not standardized anywhere and could
+change between releases of stc.  Nonetheless, this option may be
+convenient in scenarios in which you have tools for parsing JSON.
 
 `-key` _name_
 :	Specifies the name of a key to sign with.  Implies the `-sign`
@@ -400,6 +401,37 @@ standard output, one per line (private key first).
 :	Generate a new private/public key pair.  Prompt for a passphrase.
 Print the public key to standard output.  Write the private key to
 `$HOME/.config/stc/keys/mykey` encrypted with the passphrase.
+
+`stc trans | sed -n 's/^tx.sourceAccount: *//p'`
+:	Extract the source account field of a transaction in file `trans`,
+using sed to strip the txrep field name and print the key.
+
+`stc -json trans | jq -r .tx.sourceAccount`
+:	Use the `jq` command-line JSON processor to extract the source
+account of the transaction in file `trans`.
+
+Here string private key
+:	The following shell script:
+
+	~~~ {.bash}
+	#!/bin/bash
+	PRIV=SAIJXTLM3FRBVO7ZLFZM35T2E3WPSOTK24ERXXDUON6AU7ECPNM33MFT
+	PUB=`stc -pub <<<$PRIV`
+	stc -c -u -key /dev/fd/3 - 3<<<$PRIV << EOF
+	tx.sourceAccount: $PUB
+	tx.operations.len: 1
+	tx.operations[0].body.type: CREATE_ACCOUNT
+	tx.operations[0].body.createAccountOp.destination: GCUOUYGM7GJ27PGHE5FSGDAMPOSPWH6Z26YHMJJVGWWKTUBYMZDBT3I5
+	tx.operations[0].body.createAccountOp.startingBalance: 100000000
+	EOF
+    ~~~
+
+	creates a transaction from standard input and signs it using a key
+that has been directly specified using bash's "here string" syntax.
+Note that there is no way to pass a raw private key on the command
+line, because command-line arguments are visible to other users would
+thus leak the secret.  On the other hand, using a here string to pass
+the private key as file descriptor 3 is safe.
 
 # ENVIRONMENT
 
@@ -536,7 +568,8 @@ to examine pre-signed transactions:  what looks like a valid, signed
 transaction may not actually be valid.
 
 stc uses a potentially imperfect heuristic to decide whether a file
-contains a base64-encoded binary transaction or a textual one.
+contains a base64-encoded binary transaction a txrep transaction, or
+JSON input.
 
 stc can only encrypt secret keys with symmetric encryption.  However,
 the `-sign` option will read a key from standard input, so you can
