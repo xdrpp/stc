@@ -210,7 +210,7 @@ func (a Asset) String() string {
 	return fmt.Sprintf("%s:%s", RenderAssetCode(code), issuer.String())
 }
 
-func (a XdrAnon_AllowTrustOp_Asset) String() string {
+func (a AssetCode) String() string {
 	switch a.Type {
 	case ASSET_TYPE_CREDIT_ALPHANUM4:
 		return RenderAssetCode(a.AssetCode4()[:])
@@ -290,7 +290,7 @@ func (a *Asset) Scan(ss fmt.ScanState, _ rune) error {
 	return nil
 }
 
-func (a *XdrAnon_AllowTrustOp_Asset) Scan(ss fmt.ScanState, _ rune) error {
+func (a *AssetCode) Scan(ss fmt.ScanState, _ rune) error {
 	bs, err := ss.Token(true, nil)
 	code, err := ScanAssetCode(bs)
 	if err != nil {

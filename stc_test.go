@@ -193,7 +193,7 @@ func TestAppend(t *testing.T) {
 	txe.V1().Tx.Operations = make([]stx.Operation, stx.MAX_OPS_PER_TX-1)
 	txe.Append(nil, AllowTrust{
 		Trustor:   acct,
-		Asset:     MkAllowTrustAsset("ABCDE"),
+		Asset:     MkAssetCode("ABCDE"),
 		Authorize: uint32(stx.AUTHORIZED_FLAG),
 	})
 	defer failUnlessPanic(t)

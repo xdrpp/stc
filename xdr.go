@@ -50,8 +50,8 @@ func MkAsset(acc AccountID, code string) stx.Asset {
 	return ret
 }
 
-func MkAllowTrustAsset(code string) stx.AllowTrustAsset {
-	var ret stx.AllowTrustAsset
+func MkAssetCode(code string) stx.AssetCode {
+	var ret stx.AssetCode
 	if len(code) <= 4 {
 		ret.Type = stx.ASSET_TYPE_CREDIT_ALPHANUM4
 		copy(ret.AssetCode4()[:], code)

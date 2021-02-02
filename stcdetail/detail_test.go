@@ -150,7 +150,7 @@ func TestJsonToXdr(t *testing.T) {
 	txe.Append(nil, stc.Inflation{})
 	txe.Append(yourkey.ToMuxedAccount(), stc.AllowTrust{
 		Trustor:   mykey.Public(),
-		Asset:     stc.MkAllowTrustAsset("ABCDE"),
+		Asset:     stc.MkAssetCode("ABCDE"),
 		Authorize: uint32(stx.AUTHORIZED_FLAG),
 	})
 	txe.Append(nil, stc.SetOptions{

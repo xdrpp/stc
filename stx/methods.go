@@ -66,12 +66,7 @@ func (asset Asset) ToAsset() Asset {
 	return asset
 }
 
-// Alias for the asset code required in AllowTrustOp.  Since the
-// issuer is the operation source, an AllowTrustAsset only includes
-// the code, not the issuer.
-type AllowTrustAsset = XdrAnon_AllowTrustOp_Asset
-
-func (code AllowTrustAsset) ToAllowTrustAsset() AllowTrustAsset {
+func (code AssetCode) ToAssetCode() AssetCode {
 	return code
 }
 
