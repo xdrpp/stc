@@ -59,7 +59,7 @@ func MkAssetCode(code string) stx.AssetCode {
 		ret.Type = stx.ASSET_TYPE_CREDIT_ALPHANUM12
 		copy(ret.AssetCode12()[:], code)
 	} else {
-		xdr.XdrPanic("MkAllowTrustAsset: %q exceeds 12 characters", code)
+		xdr.XdrPanic("MkAssetCode: %q exceeds 12 characters", code)
 	}
 	return ret
 }
