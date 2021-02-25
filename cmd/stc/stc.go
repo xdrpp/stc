@@ -512,6 +512,7 @@ func main() {
 	opt_print_default_config := flag.Bool("builtin-config", false,
 		"Print the built-in stc.conf file used when none is found")
 	opt_zerosig := flag.Bool("z", false, "Zero out the signatures vector")
+	opt_opid := flag.Bool("opid", false, "Calculate a balance entry ID")
 	if pos := strings.LastIndexByte(os.Args[0], '/'); pos >= 0 {
 		progname = os.Args[0][pos+1:]
 	} else {
@@ -540,6 +541,7 @@ func main() {
        %[1]s -hint PUBKEY
        %[1]s -mux ACCT U64
        %[1]s -demux ACCT
+       %[1]s -opid ACCT SEQNO OPNO
        %[1]s -builtin-config
 `, progname)
 		flag.PrintDefaults()
@@ -555,11 +557,12 @@ func main() {
 		return
 	}
 
-	nmode := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit, *opt_keygen,
-		*opt_date, *opt_sec2pub, *opt_import_key, *opt_export_key,
-		*opt_acctinfo, *opt_txinfo, *opt_txacct, *opt_friendbot,
-		*opt_list_keys, *opt_fee_stats, *opt_ledger_header,
-		*opt_print_default_config, *opt_mux, *opt_demux, *opt_hint)
+	nmode := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit,
+		*opt_keygen, *opt_date, *opt_sec2pub, *opt_import_key,
+		*opt_export_key, *opt_acctinfo, *opt_txinfo, *opt_txacct,
+		*opt_friendbot, *opt_list_keys, *opt_fee_stats,
+		*opt_ledger_header, *opt_print_default_config, *opt_mux,
+		*opt_demux, *opt_opid, *opt_hint)
 
 	argsMin, argsMax := 1, 1
 	switch {
@@ -570,6 +573,8 @@ func main() {
 		argsMin = 0
 	case *opt_mux:
 		argsMin, argsMax = 2, 2
+	case *opt_opid:
+		argsMax, argsMax = 3, 3
 	}
 
 	if na := len(flag.Args()); nmode > 1 || na < argsMin || na > argsMax {
@@ -643,6 +648,28 @@ func main() {
 		}
 		fmt.Printf("%x\n", pk.Hint())
 		os.Exit(0)
+	case *opt_opid:
+		var opid stx.OperationID
+		opid.Type = stx.ENVELOPE_TYPE_OP_ID
+		if _, err := fmt.Sscan(arg, &opid.Id().SourceAccount); err != nil {
+			fmt.Fprintf(os.Stderr, "invalid account ID %s\n", arg)
+			os.Exit(2)
+		}
+		arg = flag.Args()[1]
+		if _, err := fmt.Sscan(arg, &opid.Id().SeqNum); err != nil {
+			fmt.Fprintf(os.Stderr, "invalid SequenceNumber %q (%s)\n",
+				arg, err)
+			os.Exit(2)
+		}
+		arg = flag.Args()[2]
+		if _, err := fmt.Sscan(arg, &opid.Id().OpNum); err != nil {
+			fmt.Fprintf(os.Stderr, "invalid operation number %q (%s)\n",
+				arg, err)
+			os.Exit(2)
+		}
+		hash := stcdetail.XdrSHA256(&opid)
+		fmt.Printf("%x\n", hash)
+		return
 	case *opt_mux:
 		var pk AccountID
 		var id uint64

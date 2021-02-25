@@ -27,6 +27,7 @@ stc -list-keys \
 stc -hint _PublicKey_ \
 stc -mux _accountID_ _uint64_ \
 stc -demux _muxedAccount_ \
+stc -opid _muxedAccount_ _sequenceNumber_ _operationIndex_
 stc -date YYYY-MM-DDThh:mm:ss[Z] \
 stc -builtin-config
 
@@ -219,6 +220,9 @@ behave the same as the underlying accounts, but contain an unsigned
 64-bit integer that acts as a kind of comment.  This allows a single
 account holder to give out multiple addresses that point the same
 underlying account.
+
+The `-opid` option calculates an operation ID for use in a
+`CLAIM_CLAIMABLE_BALANCE` operation.
 
 If no `stc.conf` configuration file exists, stc will use a built-in
 one.  To see the contents of the built-in file, you can print it with
