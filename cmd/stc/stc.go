@@ -667,8 +667,10 @@ func main() {
 				arg, err)
 			os.Exit(2)
 		}
-		hash := stcdetail.XdrSHA256(&opid)
-		fmt.Printf("%x\n", hash)
+		var cbid stx.ClaimableBalanceID
+		cbid.Type = stx.CLAIMABLE_BALANCE_ID_TYPE_V0
+		*cbid.V0() = stcdetail.XdrSHA256(&opid)
+		fmt.Printf("%x\n", []byte(stcdetail.XdrToBin(&cbid)))
 		return
 	case *opt_mux:
 		var pk AccountID
