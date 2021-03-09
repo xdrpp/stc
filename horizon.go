@@ -898,7 +898,7 @@ func (net *StellarNet) Post(e *TransactionEnvelope) (
 		return nil, badHorizonURL
 	}
 	tx := stcdetail.XdrToBase64(e)
-	resp, err := http.PostForm(net.Horizon+"/transactions",
+	resp, err := http.PostForm(net.Horizon + "transactions/",
 		url.Values{"tx": {tx}})
 	if err != nil {
 		return nil, err
