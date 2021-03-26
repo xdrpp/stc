@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,6 +29,7 @@ const (
 	fmt_compiled = format(iota)
 	fmt_txrep
 	fmt_json
+	fmt_compiledURL
 )
 
 type isSignerKey interface {
@@ -200,6 +202,15 @@ func guessFormat(content string) format {
 			return fmt_compiled
 		}
 	}
+	if strings.IndexAny(content, "%") == -1 {
+		us, err := url.QueryUnescape(content)
+		if err == nil {
+			bs, err := base64.StdEncoding.DecodeString(us)
+			if err == nil && len(bs) > 0 {
+				return fmt_compiledURL
+			}
+		}
+	}
 	if content[0] == '{' {
 		return fmt_json
 	}
@@ -238,6 +249,12 @@ func readTx(infile string) (
 		}
 	case fmt_compiled:
 		txe, err = TxFromBase64(sinput)
+	case fmt_compiledURL:
+		var uinput string
+		uinput, err = url.QueryUnescape(sinput)
+		if err == nil {
+			txe, err = TxFromBase64(uinput)
+		}
 	case fmt_json:
 		e := NewTransactionEnvelope()
 		if err = stcdetail.JsonToXdr(e, input); err == nil {
@@ -262,6 +279,8 @@ func writeTx(outfile string, e *TransactionEnvelope, net *StellarNet,
 	switch f {
 	case fmt_compiled:
 		output = TxToBase64(e) + "\n"
+	case fmt_compiledURL:
+		output = url.QueryEscape(TxToBase64(e)) + "\n"
 	case fmt_txrep:
 		output = net.TxToRep(e)
 	case fmt_json:
@@ -460,6 +479,7 @@ var dateFormats = []string {
 
 func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to base64 XDR")
+	opt_compileURL := flag.Bool("cu", false, "Compile output to base64 XDR URL encoded")
 	opt_json := flag.Bool("json", false, "Output transaction in JSON format")
 	opt_keygen := flag.Bool("keygen", false, "Create a new signing keypair")
 	opt_sec2pub := flag.Bool("pub", false, "Get public key from private")
@@ -582,15 +602,23 @@ func main() {
 		os.Exit(2)
 	}
 
+	outfmtCount := 0
 	outfmt := fmt_txrep
 	if *opt_compile {
 		outfmt = fmt_compiled
-		if *opt_json {
-			fmt.Fprintln(os.Stderr, "-json and -c are mutually exclusive")
-			os.Exit(2)
-		}
-	} else if *opt_json {
+		outfmtCount ++;
+	}
+	if *opt_json {
 		outfmt = fmt_json
+		outfmtCount ++;
+	}
+	if *opt_compileURL {
+		outfmt = fmt_compiledURL
+		outfmtCount ++;
+	}
+	if outfmtCount > 1 {
+		fmt.Fprintln(os.Stderr, "-json, -c, and -u are mutually exclusive")
+		os.Exit(2)
 	}
 
 	if nmode > 0 {
