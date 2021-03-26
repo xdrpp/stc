@@ -29,6 +29,7 @@ go.mod: $(MAKEFILE_LIST)
 	    export GOPRIVATE='*'; \
 	    go get -u github.com/xdrpp/goxdr/cmd/goxdr; \
 	fi
+	go mod tidy
 
 $(XDRS): xdr
 
