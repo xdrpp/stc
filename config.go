@@ -31,6 +31,9 @@ native-asset = XLM
 horizon = https://horizon-testnet.stellar.org/
 native-asset = TestXLM
 
+[net "standalone"]
+network-id = "Standalone Network ; February 2017"
+
 `)
 
 var globalConfigContents []byte
