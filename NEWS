@@ -1,4 +1,7 @@
+
 * Changes in version v0.1.4
+
+Update -mux and -demux options for new version of SEP-0023.
 
 Added -opid option.
 

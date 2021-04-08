@@ -110,13 +110,15 @@ func FromStrKey(in []byte) ([]byte, StrKeyVersionByte) {
 	return bin[1 : len(bin)-2], StrKeyVersionByte(bin[0])
 }
 
-func XdrToBytes(t xdr.XdrType) []byte {
-        out := bytes.Buffer{}
-        t.XdrMarshal(&xdr.XdrOut{&out}, "")
-        return out.Bytes()
+func XdrToBytes(ts...xdr.XdrType) []byte {
+	out := bytes.Buffer{}
+	for _, t := range ts {
+		t.XdrMarshal(&xdr.XdrOut{&out}, "")
+	}
+	return out.Bytes()
 }
 
-func XdrFromBytes(t xdr.XdrType, input []byte) (err error) {
+func XdrFromBytes(input []byte, ts...xdr.XdrType) (err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			if xe, ok := i.(error); ok {
@@ -127,7 +129,9 @@ func XdrFromBytes(t xdr.XdrType, input []byte) (err error) {
 		}
 	}()
 	in := bytes.NewReader(input)
-	t.XdrMarshal(&xdr.XdrIn{in}, "")
+	for _, t := range ts {
+		t.XdrMarshal(&xdr.XdrIn{in}, "")
+	}
 	return
 }
 
@@ -148,7 +152,8 @@ func (pk MuxedAccount) String() string {
 		return ToStrKey(STRKEY_PUBKEY|STRKEY_ALG_ED25519, pk.Ed25519()[:])
 	case KEY_TYPE_MUXED_ED25519:
 		return ToStrKey(STRKEY_MUXED|STRKEY_ALG_ED25519,
-			XdrToBytes(pk.Med25519()))
+			XdrToBytes(XDR_Uint256(&pk.Med25519().Ed25519),
+				XDR_Uint64(&pk.Med25519().Id)))
 	default:
 		return fmt.Sprintf("MuxedAccount.Type#%d", int32(pk.Type))
 	}
@@ -361,7 +366,9 @@ func (pk *MuxedAccount) UnmarshalText(bs []byte) error {
 		return nil
 	case STRKEY_MUXED|STRKEY_ALG_ED25519:
 		pk.Type = KEY_TYPE_MUXED_ED25519
-		if err := XdrFromBytes(pk.Med25519(), key); err != nil {
+		if err := XdrFromBytes(key, 
+			XDR_Uint256(&pk.Med25519().Ed25519),
+			XDR_Uint64(&pk.Med25519().Id)); err != nil {
 			return err
 		}
 		return nil
