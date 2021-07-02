@@ -34,6 +34,7 @@ native-asset = TestXLM
 [net "standalone"]
 network-id = "Standalone Network ; February 2017"
 horizon = http://localhost:8000/
+native-asset = StandaloneXLM
 
 `)
 
