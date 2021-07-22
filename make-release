@@ -44,7 +44,7 @@ elif ! git rev-parse "$last_release" -- >/dev/null; then
     exit 1
 fi
 
-./make-go1
+make go1
 
 parent=$(git rev-parse go1^)
 tree=$(git rev-parse go1^{tree})
