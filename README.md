@@ -39,7 +39,9 @@ available on the `master` branch.  Do so by running:
 
 # Using `stc`
 
-See the [stc(1)][stc.1] man page for the command-line tool.
+See the [stc(1)][stc.1] man page for the command-line tool.  There's
+also a [video][stc-presentation] of a presentation and demo of stc at
+the 2020 Stellar Meridian conference.
 
 See the [godoc documentation][gh-pages] for the library.  Because
 `stc` contains auto-generated source files that are not on the
@@ -102,3 +104,4 @@ party has been advised of the possibility of such damages.
 [gh-pages]: https://xdrpp.github.io/stc/pkg/github.com/xdrpp/stc/
 [stc.1]: https://xdrpp.github.io/stc/pkg/github.com/xdrpp/stc/cmd/stc/stc.1.html
 [txrep]: https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0011.md
+[stc-presentation]: https://www.youtube.com/watch?v=re5NQvdFfew
