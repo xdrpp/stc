@@ -306,7 +306,7 @@ func signTx(net *StellarNet, key string, e *TransactionEnvelope) error {
 	return nil
 }
 
-func editor(args ...string) {
+func editor(path string, line int) {
 	ed, ok := os.LookupEnv("STCEDITOR")
 	if !ok {
 		ed, ok = os.LookupEnv("EDITOR")
@@ -314,12 +314,18 @@ func editor(args ...string) {
 	if !ok {
 		ed = "vi"
 	}
-	if path, err := exec.LookPath(ed); err == nil {
-		ed = path
+	edArgv := strings.Split(ed, " ")
+	var argv []string
+	switch edArgv[0] {
+	case "vi", "vim":
+		argv = append(edArgv, fmt.Sprintf("+%d", line), path)
+	default:
+		argv = append(edArgv, path)
 	}
-
-	argv := append([]string{ed}, args...)
-	proc, err := os.StartProcess(ed, argv, &os.ProcAttr{
+	if path, err := exec.LookPath(argv[0]); err == nil {
+		argv[0] = path
+	}
+	proc, err := os.StartProcess(argv[0], argv, &os.ProcAttr{
 		Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
 	})
 	if err != nil {
@@ -407,7 +413,7 @@ func doEdit(net *StellarNet, arg string) {
 				line = pe.TxrepError[0].Line
 			}
 		}
-		editor(fmt.Sprintf("+%d", line), path)
+		editor(path, line)
 
 		if err == nil {
 			fi2, staterr := os.Stat(path)
