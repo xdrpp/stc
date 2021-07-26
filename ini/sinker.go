@@ -18,7 +18,7 @@ type GenericIniSink struct {
 }
 
 // NewGenericSink([section [, subsection])
-func NewGenericSink(args...string) *GenericIniSink {
+func NewGenericSink(args ...string) *GenericIniSink {
 	var sec *IniSection
 	switch len(args) {
 	case 0:
@@ -29,7 +29,7 @@ func NewGenericSink(args...string) *GenericIniSink {
 		}
 	case 2:
 		sec = &IniSection{
-			Section: args[0],
+			Section:    args[0],
 			Subsection: &args[1],
 		}
 	default:
@@ -37,7 +37,7 @@ func NewGenericSink(args...string) *GenericIniSink {
 			len(args)))
 	}
 	return &GenericIniSink{
-		Sec: sec,
+		Sec:    sec,
 		Fields: make(map[string]interface{}),
 	}
 }
@@ -81,7 +81,7 @@ func (s *GenericIniSink) AddStruct(i interface{}) {
 // ones with non-default values are saved.
 func (s *GenericIniSink) SaveAll(ies *IniEdits, includeZero bool) {
 	for name, i := range s.Fields {
-		*ies = append(*ies, func(ie *IniEditor){
+		*ies = append(*ies, func(ie *IniEditor) {
 			v := reflect.ValueOf(i).Elem()
 			if includeZero || !v.IsZero() {
 				ie.Set(s.Sec, name, fmt.Sprint(v.Interface()))

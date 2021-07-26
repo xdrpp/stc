@@ -19,7 +19,7 @@ var ErrInvalidSection = fmt.Errorf("syntactically invalid section")
 // cannot be the empty string and must consist only of alphanumeric
 // characters and '-'.
 func ValidIniSection(s string) bool {
-	return len(s) > 0 && -1 == strings.IndexFunc(s, func(r rune)bool {
+	return len(s) > 0 && -1 == strings.IndexFunc(s, func(r rune) bool {
 		return !isKeyChar(r)
 	})
 }
@@ -127,7 +127,7 @@ type IniRange struct {
 
 type IniItem struct {
 	*IniSection
-	Key string
+	Key   string
 	Value *string
 	IniRange
 }
@@ -338,9 +338,9 @@ func isKeyChar(c rune) bool {
 // characters.
 func ValidIniKey(s string) bool {
 	return s != "" && isAlpha(rune(s[0])) &&
-		-1 == strings.IndexFunc(s, func(r rune)bool {
-		return !isKeyChar(r)
-	})
+		-1 == strings.IndexFunc(s, func(r rune) bool {
+			return !isKeyChar(r)
+		})
 }
 
 func (l *iniParse) getKey() string {
@@ -497,10 +497,10 @@ func (l *iniParse) getRange(startIdx int) IniRange {
 	prev := l.prevEnd
 	l.prevEnd = l.index
 	return IniRange{
-		StartIndex: startIdx,
-		EndIndex: l.index,
+		StartIndex:   startIdx,
+		EndIndex:     l.index,
 		PrevEndIndex: prev,
-		Input: l.input,
+		Input:        l.input,
 	}
 }
 
@@ -524,7 +524,7 @@ func (l *iniParse) do1() (err *ParseError) {
 		l.sec = sec
 		if err := l.Section(IniSecStart{
 			IniSection: *sec,
-			IniRange: l.getRange(startindex),
+			IniRange:   l.getRange(startindex),
 		}); err != nil {
 			l.throwAt(keypos, err.Error())
 		}
@@ -553,7 +553,7 @@ func (l *iniParse) do1() (err *ParseError) {
 			Key:        k,
 			Value:      v,
 			IniRange:   l.getRange(startindex),
-			}); err != nil {
+		}); err != nil {
 			if ke, ok := err.(BadKey); ok {
 				l.throwAt(keypos, string(ke))
 			} else {
@@ -588,7 +588,7 @@ func newParser(sink IniSink, path string, input []byte) *iniParse {
 	ret.file = path
 	ret.input = input
 	ret.Value = sink.Item
-	if iss, ok := sink.(interface{Section(IniSecStart)error}); ok {
+	if iss, ok := sink.(interface{ Section(IniSecStart) error }); ok {
 		ret.Section = iss.Section
 	} else {
 		ret.Section = func(IniSecStart) error { return nil }
@@ -596,7 +596,7 @@ func newParser(sink IniSink, path string, input []byte) *iniParse {
 	if done, ok := sink.(interface{ Done(IniRange) }); ok {
 		ret.done = done.Done
 	} else {
-		ret.done = func(IniRange){}
+		ret.done = func(IniRange) {}
 	}
 	if init, ok := sink.(interface{ Init() }); ok {
 		init.Init()

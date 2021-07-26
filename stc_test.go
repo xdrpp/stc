@@ -79,10 +79,10 @@ func TestBadStrKeys(t *testing.T) {
 func TestStrkeyVectors(t *testing.T) {
 	type tvec struct {
 		strkey string
-		bin []byte
+		bin    []byte
 	}
 	tvecs := [...]tvec{
-		tvec{
+		{
 			"GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ",
 			[]byte{
 				0x00, 0x00, 0x00, 0x00, 0x3f, 0x0c, 0x34, 0xbf,
@@ -92,7 +92,7 @@ func TestStrkeyVectors(t *testing.T) {
 				0xfc, 0x7f, 0xe8, 0x9a,
 			},
 		},
-		tvec{
+		{
 			"MA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJUAAAAAAAAAAAACJUQ",
 			[]byte{
 				0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -103,7 +103,7 @@ func TestStrkeyVectors(t *testing.T) {
 				0xfc, 0x7f, 0xe8, 0x9a,
 			},
 		},
-		tvec{
+		{
 			"MA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVAAAAAAAAAAAAAJLK",
 			[]byte{
 				0x00, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0x00,

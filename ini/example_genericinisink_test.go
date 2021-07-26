@@ -2,16 +2,16 @@ package ini_test
 
 import (
 	"fmt"
-	"strings"
 	"github.com/xdrpp/stc/ini"
+	"strings"
 )
 
 type Foo struct {
-	A_field int
-	AnotherField string `ini:"the-field"`
+	A_field           int
+	AnotherField      string `ini:"the-field"`
 	StillAnotherField bool
-	StrVec []string
-	IntVec []int
+	StrVec            []string
+	IntVec            []int
 }
 
 func trimSpace(i interface{}) string {
@@ -59,5 +59,5 @@ func ExampleGenericIniSink() {
 	//	StrVec = a string
 	//	StrVec = another string
 	//	IntVec = 100
-	// 
+	//
 }

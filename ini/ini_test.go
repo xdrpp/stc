@@ -7,7 +7,7 @@ import (
 
 func ExampleIniEdit() {
 	bini := []byte(
-`; Here's a comment
+		`; Here's a comment
 [sec1]
 	key1 = val1
 	key2 = val2

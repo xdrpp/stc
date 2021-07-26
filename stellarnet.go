@@ -37,7 +37,7 @@ type StellarNet struct {
 	Edits ini.IniEdits
 
 	// Cache of fee stats
-	FeeCache *FeeStats
+	FeeCache     *FeeStats
 	FeeCacheTime time.Time
 }
 
@@ -197,7 +197,7 @@ func (c SignerCache) Del(strkey string) error {
 	}
 	for i := 0; i < len(skis); i++ {
 		if strkey == skis[i].Key.String() {
-			if i == len(skis) - 1 {
+			if i == len(skis)-1 {
 				skis = skis[:i]
 			} else {
 				skis = append(skis[:i], skis[i+1:]...)

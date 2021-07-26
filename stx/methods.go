@@ -1,4 +1,3 @@
-
 package stx
 
 import "github.com/xdrpp/goxdr/xdr"
@@ -31,13 +30,13 @@ func (pk SignerKey) ToSignerKey() SignerKey {
 }
 
 func (pk PublicKey) ToSignerKey() SignerKey {
-       switch pk.Type {
-       case PUBLIC_KEY_TYPE_ED25519:
-               ret := SignerKey { Type: SIGNER_KEY_TYPE_ED25519 }
-               *ret.Ed25519() = *pk.Ed25519()
-               return ret
-       }
-       panic(StrKeyError("Invalid public key type"))
+	switch pk.Type {
+	case PUBLIC_KEY_TYPE_ED25519:
+		ret := SignerKey{Type: SIGNER_KEY_TYPE_ED25519}
+		*ret.Ed25519() = *pk.Ed25519()
+		return ret
+	}
+	panic(StrKeyError("Invalid public key type"))
 }
 
 func (ma MuxedAccount) ToSignerKey() (ret SignerKey) {
@@ -72,24 +71,24 @@ func (code AssetCode) ToAssetCode() AssetCode {
 
 // Types that can be hashed
 type Signable interface {
-    // Writes the signature payload *without* the network ID.  Be sure
-    // to write the SHA256 hash of the network ID before calling this.
+	// Writes the signature payload *without* the network ID.  Be sure
+	// to write the SHA256 hash of the network ID before calling this.
 	WriteTaggedTx(io.Writer)
 }
 
 func (t *TransactionSignaturePayload) WriteTaggedTx(w io.Writer) {
-	t.XdrMarshal(&xdr.XdrOut{ Out: w }, "")
+	t.XdrMarshal(&xdr.XdrOut{Out: w}, "")
 }
 
 func (tx *Transaction) WriteTaggedTx(w io.Writer) {
-	out := xdr.XdrOut{ Out: w }
+	out := xdr.XdrOut{Out: w}
 	tp := ENVELOPE_TYPE_TX
 	tp.XdrMarshal(out, "")
 	tx.XdrMarshal(out, "")
 }
 
 func (tx *TransactionV0) WriteTaggedTx(w io.Writer) {
-	out := xdr.XdrOut{ Out: w }
+	out := xdr.XdrOut{Out: w}
 	tp := ENVELOPE_TYPE_TX
 	tp.XdrMarshal(out, "")
 	ktp := KEY_TYPE_ED25519
@@ -98,7 +97,7 @@ func (tx *TransactionV0) WriteTaggedTx(w io.Writer) {
 }
 
 func (tx *FeeBumpTransaction) WriteTaggedTx(w io.Writer) {
-	out := xdr.XdrOut{ Out: w }
+	out := xdr.XdrOut{Out: w}
 	tp := ENVELOPE_TYPE_TX_FEE_BUMP
 	tp.XdrMarshal(out, "")
 	tx.XdrMarshal(out, "")
@@ -125,7 +124,7 @@ func (tx *TransactionEnvelope) WriteTaggedTx(w io.Writer) {
 }
 
 func (tx *TransactionEnvelope) Signatures() *[]DecoratedSignature {
-	switch (tx.Type) {
+	switch tx.Type {
 	case ENVELOPE_TYPE_TX_V0:
 		return &tx.V0().Signatures
 	case ENVELOPE_TYPE_TX:
@@ -137,7 +136,7 @@ func (tx *TransactionEnvelope) Signatures() *[]DecoratedSignature {
 }
 
 func (tx *TransactionEnvelope) Operations() *[]Operation {
-	switch (tx.Type) {
+	switch tx.Type {
 	case ENVELOPE_TYPE_TX_V0:
 		return &tx.V0().Tx.Operations
 	case ENVELOPE_TYPE_TX:

@@ -20,7 +20,7 @@ const configFileName = "stc.conf"
 // of those paths exists, then it uses the built-in contents specified
 // by this variable.
 var DefaultGlobalConfigContents = []byte(
-`# Default Stellar network configurations for stc.
+	`# Default Stellar network configurations for stc.
 
 [net "main"]
 network-id = "Public Global Stellar Network ; September 2015"
@@ -80,8 +80,8 @@ func getConfigDir(create bool) string {
 		os.MkdirAll(stcDir, 0777) == nil {
 		if _, err = LoadStellarNet("main",
 			path.Join(stcDir, "main.net")); err == nil {
-				os.Symlink("main.net", path.Join(stcDir, "default.net"))
-			}
+			os.Symlink("main.net", path.Join(stcDir, "default.net"))
+		}
 	}
 	return stcDir
 }
@@ -94,13 +94,13 @@ func getConfigDir(create bool) string {
 // the environment variable exists.  If the configuration directory
 // doesn't exist, it gets created, but the underlying path requested
 // will not be created.
-func ConfigPath(components...string) string {
+func ConfigPath(components ...string) string {
 	return path.Join(append([]string{getConfigDir(true)}, components...)...)
 }
 
 // Parse a series of INI configuration files specified by paths,
 // followed by the global or built-in stc.conf file.
-func ParseConfigFiles(sink ini.IniSink, paths...string) error {
+func ParseConfigFiles(sink ini.IniSink, paths ...string) error {
 	for _, path := range paths {
 		contents, _, err := stcdetail.ReadFile(path)
 		if err == nil {
@@ -129,7 +129,7 @@ type stellarNetParser struct {
 	*StellarNet
 
 	// How to handle items in the current section
-	itemCB func(ini.IniItem)error
+	itemCB func(ini.IniItem) error
 
 	// This is intended to be initialized to true, and then gets set
 	// to false whenever Name gets set on StellarNet.  The reason is
@@ -234,7 +234,7 @@ func (net *StellarNet) Validate() error {
 	if !ValidNetName(net.Name) {
 		return ErrInvalidNetName
 	}
-	if net.GetNetworkId()  == "" {
+	if net.GetNetworkId() == "" {
 		return ErrNoNetworkId
 	}
 	return nil
@@ -249,7 +249,7 @@ func (net *StellarNet) IniSink() ini.IniSink {
 	}
 	return &stellarNetParser{
 		StellarNet: net,
-		setName: true,
+		setName:    true,
 	}
 }
 
@@ -259,8 +259,8 @@ func (net *StellarNet) IniSink() ini.IniSink {
 // files in paths are parsed, the global stc.conf file will be parsed.
 // After that, there must be a valid NetworkId or the function will
 // return nil.
-func LoadStellarNet(name string, paths...string) (*StellarNet, error) {
-	ret := StellarNet{ Name: name }
+func LoadStellarNet(name string, paths ...string) (*StellarNet, error) {
+	ret := StellarNet{Name: name}
 	if len(paths) > 0 {
 		ret.SavePath = paths[0]
 	}
@@ -296,7 +296,7 @@ func DefaultStellarNet(name string) *StellarNet {
 	} else if net, ok := netCache[name]; ok {
 		return net
 	}
-	ret, err := LoadStellarNet(name, ConfigPath(name + ".net"),
+	ret, err := LoadStellarNet(name, ConfigPath(name+".net"),
 		ConfigPath("global.conf"))
 	if ret == nil {
 		fmt.Fprintln(os.Stderr, err)

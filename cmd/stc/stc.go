@@ -17,13 +17,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/xdrpp/goxdr/xdr"
 	. "github.com/xdrpp/stc"
 	"github.com/xdrpp/stc/stcdetail"
 	"github.com/xdrpp/stc/stx"
-	"github.com/xdrpp/goxdr/xdr"
 )
 
 type format int
+
 const (
 	fmt_compiled = format(iota)
 	fmt_txrep
@@ -154,6 +155,7 @@ func doSec2pub(file string) {
 }
 
 var u256zero stx.Uint256
+
 func isZeroAccount(ac isSignerKey) bool {
 	k := ac.ToSignerKey()
 	return k.Type == stx.SIGNER_KEY_TYPE_ED25519 &&
@@ -175,8 +177,7 @@ func fixTx(net *StellarNet, e *TransactionEnvelope) {
 		go func() {
 			defer wg.Done()
 			if a, _ := net.GetAccountEntry(
-				e.SourceAccount().ToSignerKey().String());
-			a != nil {
+				e.SourceAccount().ToSignerKey().String()); a != nil {
 				switch e.Type {
 				case stx.ENVELOPE_TYPE_TX:
 					e.V1().Tx.SeqNum = a.NextSeq()
@@ -399,8 +400,7 @@ func doEdit(net *StellarNet, arg string) {
 			fmt.Fprint(os.Stderr, err.Error())
 			fmt.Printf("Press return to run editor.")
 			b := make([]byte, 1)
-			for n, err := os.Stdin.Read(b);
-			err != nil && n > 0 && b[0] != '\n'; {
+			for n, err := os.Stdin.Read(b); err != nil && n > 0 && b[0] != '\n'; {
 				fmt.Printf("Read %c\n", b)
 			}
 			if pe, ok := err.(ParseError); ok {
@@ -448,7 +448,7 @@ func b2i(bs ...bool) int {
 
 var progname string
 
-var dateFormats = []string {
+var dateFormats = []string{
 	time.RFC3339,
 	"2006-01-02T15:04:05",
 	"2006-01-02T15:04",
@@ -520,7 +520,7 @@ func main() {
 	}
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
-`Usage: %[1]s [-net=ID] [-z] [-sign] [-c|-json] [-l] [-u] \
+			`Usage: %[1]s [-net=ID] [-z] [-sign] [-c|-json] [-l] [-u] \
            [-i | -o OUTPUT-FILE] INPUT-FILE
        %[1]s -edit [-net=ID] FILE
        %[1]s -post [-net=ID] INPUT-FILE
@@ -806,7 +806,7 @@ func main() {
 		}
 
 		nl := false
-		err := net.IterateJSON(nil, "accounts/" + arg +
+		err := net.IterateJSON(nil, "accounts/"+arg+
 			"/transactions?order=desc&limit=200",
 			func(r *HorizonTxResult) {
 				if *opt_verbose {
