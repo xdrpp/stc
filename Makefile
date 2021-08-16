@@ -18,7 +18,7 @@ stx/xdr_generated.go: goxdr $(XDRS)
 	cmp $@~ $@ 2> /dev/null || mv -f $@~ $@
 
 uhelper.go: stx/xdr_generated.go uniontool/uniontool.go go.mod
-	go run uniontool/uniontool.go > $@~
+	go run uniontool/uniontool.go | gofmt -s > $@~
 	mv -f $@~ $@
 
 go.mod: $(MAKEFILE_LIST)
