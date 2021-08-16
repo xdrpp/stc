@@ -12,7 +12,7 @@ build: $(BUILT_SOURCES) always go.mod
 	cd cmd/stc && $(MAKE)
 
 stx/xdr_generated.go: goxdr $(XDRS)
-	./goxdr -p stx -enum-comments -o $@~ $(XDRS)
+	./goxdr -fmt -p stx -enum-comments -o $@~ $(XDRS)
 	printf "\nvar StellarCommit = \"%s\"\n" \
 	    `cat xdr/Stellar-version` >> $@~
 	cmp $@~ $@ 2> /dev/null || mv -f $@~ $@
