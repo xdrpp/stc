@@ -317,10 +317,10 @@ func editor(path string, line int) {
 	edArgv := strings.Split(ed, " ")
 	var argv []string
 	switch edArgv[0] {
-	case "vi", "vim":
-		argv = append(edArgv, fmt.Sprintf("+%d", line), path)
-	default:
+	case "code": // Visual Studio Code
 		argv = append(edArgv, path)
+	default: // Vi, vim, emacs, ex, etc
+		argv = append(edArgv, fmt.Sprintf("+%d", line), path)
 	}
 	if path, err := exec.LookPath(argv[0]); err == nil {
 		argv[0] = path
