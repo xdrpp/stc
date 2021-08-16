@@ -1,4 +1,9 @@
 
+* Changes in version v0.1.6
+
+Break STCEDITOR into multiple arguments if it contains spaces.  Don't
+include line numbers for visual studio code.
+
 * Changes in version v0.1.5
 
 Fixed ./make-release to avoid putting an unreleased goxdr in go.mod.
