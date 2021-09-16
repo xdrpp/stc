@@ -1,6 +1,8 @@
 
 * Changes in version v0.1.6
 
+Run generated code through gofmt -s and add CI helper files.
+
 Break STCEDITOR into multiple arguments if it contains spaces.  Don't
 include line numbers for visual studio code.
 
