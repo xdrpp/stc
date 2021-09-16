@@ -16,31 +16,32 @@ import (
 )
 
 type StrKeyError string
+
 func (e StrKeyError) Error() string { return string(e) }
 
 type StrKeyVersionByte byte
 
-var b32	= base32.StdEncoding.WithPadding(base32.NoPadding)
+var b32 = base32.StdEncoding.WithPadding(base32.NoPadding)
 
 const (
 	STRKEY_ALG_ED25519 = 0
 )
 
 const (
-	STRKEY_PUBKEY         StrKeyVersionByte = 6<<3  // 'G'
-	STRKEY_MUXED          StrKeyVersionByte = 12<<3 // 'M'
-	STRKEY_PRIVKEY        StrKeyVersionByte = 18<<3 // 'S'
-	STRKEY_PRE_AUTH_TX    StrKeyVersionByte = 19<<3 // 'T',
-	STRKEY_HASH_X         StrKeyVersionByte = 23<<3 // 'X'
-	STRKEY_ERROR          StrKeyVersionByte = 255
+	STRKEY_PUBKEY      StrKeyVersionByte = 6 << 3  // 'G'
+	STRKEY_MUXED       StrKeyVersionByte = 12 << 3 // 'M'
+	STRKEY_PRIVKEY     StrKeyVersionByte = 18 << 3 // 'S'
+	STRKEY_PRE_AUTH_TX StrKeyVersionByte = 19 << 3 // 'T',
+	STRKEY_HASH_X      StrKeyVersionByte = 23 << 3 // 'X'
+	STRKEY_ERROR       StrKeyVersionByte = 255
 )
 
-var payloadLen = map[StrKeyVersionByte]int {
-	STRKEY_PUBKEY|STRKEY_ALG_ED25519: 32,
-	STRKEY_MUXED|STRKEY_ALG_ED25519: 40,
-	STRKEY_PRIVKEY|STRKEY_ALG_ED25519: 32,
-	STRKEY_PRE_AUTH_TX: 32,
-	STRKEY_HASH_X: 32,
+var payloadLen = map[StrKeyVersionByte]int{
+	STRKEY_PUBKEY | STRKEY_ALG_ED25519:  32,
+	STRKEY_MUXED | STRKEY_ALG_ED25519:   40,
+	STRKEY_PRIVKEY | STRKEY_ALG_ED25519: 32,
+	STRKEY_PRE_AUTH_TX:                  32,
+	STRKEY_HASH_X:                       32,
 }
 
 var crc16table [256]uint16
@@ -92,14 +93,14 @@ func FromStrKey(in []byte) ([]byte, StrKeyVersionByte) {
 		return nil, STRKEY_ERROR
 	}
 	if targetlen, ok := payloadLen[StrKeyVersionByte(bin[0])]; !ok ||
-		targetlen != n - 3 {
+		targetlen != n-3 {
 		return nil, STRKEY_ERROR
 	}
 	want := uint16(bin[len(bin)-2]) | uint16(bin[len(bin)-1])<<8
 	if want != crc16(bin[:len(bin)-2]) {
 		return nil, STRKEY_ERROR
 	}
-	if len(bin) % 5 != 0 {
+	if len(bin)%5 != 0 {
 		// XXX - only really need to re-encode the last n - (n%5) bytes
 		check := make([]byte, len(in))
 		b32.Encode(check, bin)
@@ -110,7 +111,7 @@ func FromStrKey(in []byte) ([]byte, StrKeyVersionByte) {
 	return bin[1 : len(bin)-2], StrKeyVersionByte(bin[0])
 }
 
-func XdrToBytes(ts...xdr.XdrType) []byte {
+func XdrToBytes(ts ...xdr.XdrType) []byte {
 	out := bytes.Buffer{}
 	for _, t := range ts {
 		t.XdrMarshal(&xdr.XdrOut{&out}, "")
@@ -118,7 +119,7 @@ func XdrToBytes(ts...xdr.XdrType) []byte {
 	return out.Bytes()
 }
 
-func XdrFromBytes(input []byte, ts...xdr.XdrType) (err error) {
+func XdrFromBytes(input []byte, ts ...xdr.XdrType) (err error) {
 	defer func() {
 		if i := recover(); i != nil {
 			if xe, ok := i.(error); ok {
@@ -347,7 +348,7 @@ func (pk *SignerKey) Scan(ss fmt.ScanState, _ rune) error {
 func (pk *PublicKey) UnmarshalText(bs []byte) error {
 	key, vers := FromStrKey(bs)
 	switch vers {
-	case STRKEY_PUBKEY|STRKEY_ALG_ED25519:
+	case STRKEY_PUBKEY | STRKEY_ALG_ED25519:
 		pk.Type = PUBLIC_KEY_TYPE_ED25519
 		copy(pk.Ed25519()[:], key)
 		return nil
@@ -360,13 +361,13 @@ func (pk *PublicKey) UnmarshalText(bs []byte) error {
 func (pk *MuxedAccount) UnmarshalText(bs []byte) error {
 	key, vers := FromStrKey(bs)
 	switch vers {
-	case STRKEY_PUBKEY|STRKEY_ALG_ED25519:
+	case STRKEY_PUBKEY | STRKEY_ALG_ED25519:
 		pk.Type = KEY_TYPE_ED25519
 		copy(pk.Ed25519()[:], key)
 		return nil
-	case STRKEY_MUXED|STRKEY_ALG_ED25519:
+	case STRKEY_MUXED | STRKEY_ALG_ED25519:
 		pk.Type = KEY_TYPE_MUXED_ED25519
-		if err := XdrFromBytes(key, 
+		if err := XdrFromBytes(key,
 			XDR_Uint256(&pk.Med25519().Ed25519),
 			XDR_Uint64(&pk.Med25519().Id)); err != nil {
 			return err
@@ -381,7 +382,7 @@ func (pk *MuxedAccount) UnmarshalText(bs []byte) error {
 func (pk *SignerKey) UnmarshalText(bs []byte) error {
 	key, vers := FromStrKey(bs)
 	switch vers {
-	case STRKEY_PUBKEY|STRKEY_ALG_ED25519:
+	case STRKEY_PUBKEY | STRKEY_ALG_ED25519:
 		pk.Type = SIGNER_KEY_TYPE_ED25519
 		copy(pk.Ed25519()[:], key)
 	case STRKEY_PRE_AUTH_TX:

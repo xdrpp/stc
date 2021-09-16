@@ -33,7 +33,7 @@ import (
 func IsTemporary(err error) bool {
 	dial_not_dns := false
 	for ; err != nil; err = errors.Unwrap(err) {
-		if t, ok := err.(interface{ Temporary()bool }); ok && t.Temporary() {
+		if t, ok := err.(interface{ Temporary() bool }); ok && t.Temporary() {
 			return true
 		} else if operr, ok := err.(*net.OpError); ok && operr.Op == "dial" {
 			dial_not_dns = true
@@ -90,6 +90,7 @@ var badCb error = errors.New(
 	"StreamJSON cb argument must be of type func(*T) or func(*T)error")
 
 type ErrEventStream string
+
 func (e ErrEventStream) Error() string {
 	return string(e)
 }
@@ -155,6 +156,7 @@ func (net *StellarNet) StreamJSON(
 type jsonInterface struct {
 	i interface{}
 }
+
 func (ji *jsonInterface) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, ji.i)
 }
@@ -280,8 +282,8 @@ type HorizonBalance struct {
 func (hb *HorizonBalance) UnmarshalJSON(data []byte) error {
 	type jhb HorizonBalance
 	var jasset struct {
-		Asset_type string
-		Asset_code string
+		Asset_type   string
+		Asset_code   string
 		Asset_issuer AccountID
 	}
 	if err := json.Unmarshal(data, (*jhb)(hb)); err != nil {
@@ -389,7 +391,7 @@ func (ae *HorizonAccountEntry) UnmarshalJSON(data []byte) error {
 // network.
 func (net *StellarNet) GetAccountEntry(acct string) (
 	*HorizonAccountEntry, error) {
-	ret := HorizonAccountEntry{ Net: net }
+	ret := HorizonAccountEntry{Net: net}
 	if err := net.GetJSON("accounts/"+acct, &ret); err != nil {
 		return nil, err
 	}
@@ -451,8 +453,8 @@ func (net *StellarNet) AccountDelta(
 		if mds[i].Old != nil && mds[i].New != nil {
 			fmt.Fprintf(out, "%supdated %s\n%s", prefix, ks,
 				stcdetail.RepDiff(pprefix,
-				net.ToRep(mds[i].Old.Data.XdrUnionBody().(xdr.XdrType)),
-				net.ToRep(mds[i].New.Data.XdrUnionBody().(xdr.XdrType))))
+					net.ToRep(mds[i].Old.Data.XdrUnionBody().(xdr.XdrType)),
+					net.ToRep(mds[i].New.Data.XdrUnionBody().(xdr.XdrType))))
 		} else if mds[i].New != nil {
 			fmt.Fprintf(out, "%screated %s\n%s", prefix, ks, stcdetail.RepDiff(
 				pprefix, "",
@@ -460,8 +462,8 @@ func (net *StellarNet) AccountDelta(
 		} else {
 			fmt.Fprintf(out, "%sdeleted %s\n%s", prefix, ks,
 				stcdetail.RepDiff(pprefix,
-				net.ToRep(mds[i].Old.Data.XdrUnionBody().(xdr.XdrType)),
-				""))
+					net.ToRep(mds[i].Old.Data.XdrUnionBody().(xdr.XdrType)),
+					""))
 		}
 	}
 	return out.String()
@@ -469,16 +471,16 @@ func (net *StellarNet) AccountDelta(
 
 // Ledger entries changed by a transaction.
 type StellarMetas struct {
-	FeeMeta stx.LedgerEntryChanges
+	FeeMeta    stx.LedgerEntryChanges
 	ResultMeta stx.TransactionMeta
 }
 
 type HorizonTxResult struct {
-	Net *StellarNet
+	Net    *StellarNet
 	Txhash stx.Hash
 	Ledger uint32
-	Time time.Time
-	Env stx.TransactionEnvelope
+	Time   time.Time
+	Env    stx.TransactionEnvelope
 	Result stx.TransactionResult
 	StellarMetas
 	PagingToken string
@@ -504,14 +506,14 @@ func (r HorizonTxResult) String() string {
 
 func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 	var j struct {
-		Envelope_xdr string
-		Result_xdr string
+		Envelope_xdr    string
+		Result_xdr      string
 		Result_meta_xdr string
-		Fee_meta_xdr string
-		Paging_token string
-		Hash string
-		Ledger uint32
-		Created_at string
+		Fee_meta_xdr    string
+		Paging_token    string
+		Hash            string
+		Ledger          uint32
+		Created_at      string
 	}
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
@@ -523,16 +525,16 @@ func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 		return err
 	} else if err = stcdetail.XdrFromBase64(
 		stx.XDR_LedgerEntryChanges(&r.FeeMeta), j.Fee_meta_xdr); err != nil {
-			return err
+		return err
 	} else if err = stcdetail.XdrFromBase64(&r.ResultMeta,
 		j.Result_meta_xdr); err != nil {
-			return err
+		return err
 	} else if _, err := fmt.Sscanf(j.Hash, "%v",
 		stx.XDR_Hash(&r.Txhash)); err != nil {
 		return err
 	} else if r.Time, err = time.ParseInLocation("2006-01-02T15:04:05Z",
 		j.Created_at, time.UTC); err != nil {
-			return err
+		return err
 	}
 	r.Time = r.Time.Local()
 	r.Ledger = j.Ledger
@@ -541,7 +543,7 @@ func (r *HorizonTxResult) UnmarshalJSON(data []byte) error {
 }
 
 func (net *StellarNet) GetTxResult(txid string) (*HorizonTxResult, error) {
-	ret := HorizonTxResult{ Net: net }
+	ret := HorizonTxResult{Net: net}
 	if err := net.GetJSON("transactions/"+txid, &ret); err != nil {
 		return nil, err
 	}
@@ -551,6 +553,7 @@ func (net *StellarNet) GetTxResult(txid string) (*HorizonTxResult, error) {
 // A Fee Value is currently 32 bits, but could become 64 bits if
 // CAP-0015 is adopted.
 type FeeVal = uint32
+
 const feeValSize = 32
 
 func parseFeeVal(i interface{}) (FeeVal, error) {
@@ -564,14 +567,14 @@ func parseFeeVal(i interface{}) (FeeVal, error) {
 
 type FeePercentile = struct {
 	Percentile int
-	Fee FeeVal
+	Fee        FeeVal
 }
 
 // Distribution of offered or charged fees.
 type FeeDist struct {
-	Max FeeVal
-	Min FeeVal
-	Mode FeeVal
+	Max         FeeVal
+	Min         FeeVal
+	Mode        FeeVal
 	Percentiles []FeePercentile
 }
 
@@ -584,7 +587,7 @@ func getPercentage(k string) (bool, int) {
 		if k[i] < '0' || k[i] > '9' {
 			return false, -1
 		}
-		r = r * 10 + int(k[i]-'0')
+		r = r*10 + int(k[i]-'0')
 	}
 	return true, r
 }
@@ -626,15 +629,15 @@ func (fd *FeeDist) UnmarshalJSON(data []byte) error {
 		if ok, p := getPercentage(k); ok {
 			if fee, err := parseFeeVal(obj[k]); err == nil {
 				fd.Percentiles = append(fd.Percentiles, FeePercentile{
-						Percentile: int(p),
-						Fee: fee,
+					Percentile: int(p),
+					Fee:        fee,
 				})
 				continue
 			}
 		}
 		capk := capitalize(k)
 		if capk == "Percentiles" {
-			continue			// Server is trolling us
+			continue // Server is trolling us
 		}
 		setVal(rv.FieldByName(capk), fmt.Sprint(obj[k]))
 	}
@@ -686,9 +689,9 @@ func printFsField(out io.Writer, field string, v interface{}) {
 }
 
 func (fd *FeeDist) withPrefix(out io.Writer, prefix string) {
-	printFsField(out, prefix + "max", fd.Max)
-	printFsField(out, prefix + "min", fd.Min)
-	printFsField(out, prefix + "mode", fd.Mode)
+	printFsField(out, prefix+"max", fd.Max)
+	printFsField(out, prefix+"min", fd.Min)
+	printFsField(out, prefix+"mode", fd.Mode)
 	for i := range fd.Percentiles {
 		printFsField(out,
 			fmt.Sprintf("%sp%d", prefix, fd.Percentiles[i].Percentile),
@@ -701,20 +704,20 @@ func (fd *FeeDist) withPrefix(out io.Writer, prefix string) {
 // are documented here:
 // https://www.stellar.org/developers/horizon/reference/endpoints/fee-stats.html
 type FeeStats struct {
-	Last_ledger uint64
-	Last_ledger_base_fee uint32
+	Last_ledger           uint64
+	Last_ledger_base_fee  uint32
 	Ledger_capacity_usage float64
-	Charged FeeDist
-	Offered FeeDist
+	Charged               FeeDist
+	Offered               FeeDist
 }
 
 func (fs *FeeStats) UnmarshalJSON(data []byte) error {
 	type feeNumbers struct {
-		Last_ledger json.Number
-		Last_ledger_base_fee json.Number
+		Last_ledger           json.Number
+		Last_ledger_base_fee  json.Number
 		Ledger_capacity_usage json.Number
-		Fee_charged FeeDist
-		Max_fee FeeDist
+		Fee_charged           FeeDist
+		Max_fee               FeeDist
 	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()
@@ -840,6 +843,7 @@ type TxFailure struct {
 type codeExtractor struct {
 	msg string
 }
+
 func (x *codeExtractor) Sprintf(string, ...interface{}) string {
 	return ""
 }
@@ -898,7 +902,7 @@ func (net *StellarNet) Post(e *TransactionEnvelope) (
 		return nil, badHorizonURL
 	}
 	tx := stcdetail.XdrToBase64(e)
-	resp, err := http.PostForm(net.Horizon + "transactions/",
+	resp, err := http.PostForm(net.Horizon+"transactions/",
 		url.Values{"tx": {tx}})
 	if err != nil {
 		return nil, err

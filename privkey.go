@@ -32,7 +32,7 @@ func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error {
 	}
 	key, vers := stx.FromStrKey(bs)
 	switch vers {
-	case stx.STRKEY_PRIVKEY|stx.STRKEY_ALG_ED25519:
+	case stx.STRKEY_PRIVKEY | stx.STRKEY_ALG_ED25519:
 		sec.PrivateKeyInterface =
 			stcdetail.Ed25519Priv(ed25519.NewKeyFromSeed(key))
 		return nil

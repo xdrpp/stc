@@ -55,7 +55,7 @@ func (ie *IniEditor) newItem(is *IniSection, key, value string) *list.Element {
 	e, ok := ie.secEnd[ss]
 	if !ok {
 		e = ie.fragments.Back()
-		if ssb := []byte(ss+"\n"); e != nil && len(e.Value.([]byte)) == 0 {
+		if ssb := []byte(ss + "\n"); e != nil && len(e.Value.([]byte)) == 0 {
 			e.Value = ssb
 		} else {
 			e = ie.fragments.PushBack(ssb)
@@ -154,8 +154,8 @@ func NewIniEdit(filename string, contents []byte) (*IniEditor, error) {
 type IniEdits []func(*IniEditor)
 
 // Delete a key.  Invoke as Del(sec, subsec, key) or Del(sec, key).
-func (ie *IniEdits) Del(sec string, args...string) error {
-	s, k := &IniSection{Section:sec}, ""
+func (ie *IniEdits) Del(sec string, args ...string) error {
+	s, k := &IniSection{Section: sec}, ""
 	switch len(args) {
 	case 1:
 		k = args[0]
@@ -168,14 +168,14 @@ func (ie *IniEdits) Del(sec string, args...string) error {
 	if !s.Valid() {
 		return ErrInvalidSection
 	}
-	*ie = append(*ie, func(ie *IniEditor){ie.Del(s, k)})
+	*ie = append(*ie, func(ie *IniEditor) { ie.Del(s, k) })
 	return nil
 }
 
 // Add a key, value pair.  Invoke as Add(sec, subsec, key, value) or
 // Add(sec, key, value).
-func (ie *IniEdits) Add(sec string, args...string) error {
-	s, k, v := &IniSection{Section:sec}, "", ""
+func (ie *IniEdits) Add(sec string, args ...string) error {
+	s, k, v := &IniSection{Section: sec}, "", ""
 	switch len(args) {
 	case 2:
 		k = args[0]
@@ -190,14 +190,14 @@ func (ie *IniEdits) Add(sec string, args...string) error {
 	if !s.Valid() {
 		return ErrInvalidSection
 	}
-	*ie = append(*ie, func(ie *IniEditor){ie.Add(s, k, v)})
+	*ie = append(*ie, func(ie *IniEditor) { ie.Add(s, k, v) })
 	return nil
 }
 
 // Add a key, value pair.  Invoke as Set(sec, subsec, key, value) or
 // Set(sec, key, value).
-func (ie *IniEdits) Set(sec string, args...string) error {
-	s, k, v := &IniSection{Section:sec}, "", ""
+func (ie *IniEdits) Set(sec string, args ...string) error {
+	s, k, v := &IniSection{Section: sec}, "", ""
 	switch len(args) {
 	case 2:
 		k = args[0]
@@ -212,7 +212,7 @@ func (ie *IniEdits) Set(sec string, args...string) error {
 	if !s.Valid() {
 		return ErrInvalidSection
 	}
-	*ie = append(*ie, func(ie *IniEditor){ie.Set(s, k, v)})
+	*ie = append(*ie, func(ie *IniEditor) { ie.Set(s, k, v) })
 	return nil
 }
 
@@ -223,4 +223,3 @@ func (ie *IniEdits) Apply(target *IniEditor) {
 	}
 	*ie = nil
 }
-

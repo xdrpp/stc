@@ -95,11 +95,11 @@ func dotJoin(a string, b string) string {
 }
 
 type xdrHolder struct {
-	field string
-	name string
-	obj xdr.XdrType
+	field    string
+	name     string
+	obj      xdr.XdrType
 	ptrDepth int
-	next *xdrHolder
+	next     *xdrHolder
 }
 
 func xparentUnion(h *xdrHolder) xdr.XdrUnion {
@@ -118,7 +118,7 @@ func xparentUnion(h *xdrHolder) xdr.XdrUnion {
 
 type txrState struct {
 	front *xdrHolder
-	err XdrBadValue
+	err   XdrBadValue
 }
 
 func (xs *txrState) validTags() map[int32]bool {
@@ -133,10 +133,10 @@ func (xs *txrState) validTags() map[int32]bool {
 
 func (xs *txrState) push(field string, obj xdr.XdrType) {
 	parent := xs.front
-	h := &xdrHolder {
+	h := &xdrHolder{
 		field: field,
-		obj: obj,
-		next: parent,
+		obj:   obj,
+		next:  parent,
 	}
 	xs.front = h
 
@@ -178,7 +178,7 @@ func (xs *txrState) name() string {
 
 func (xs *txrState) present() string {
 	return dotJoin(xs.name(),
-		strings.Repeat("_inner", xs.front.ptrDepth-1) + ps_present)
+		strings.Repeat("_inner", xs.front.ptrDepth-1)+ps_present)
 }
 
 func (xs *txrState) length() string {
@@ -269,7 +269,7 @@ func (xp *txStringCtx) Marshal(field string, i xdr.XdrType) {
 			xp.err = append(xp.err, struct {
 				Field string
 				Msg   string
-			}{ name, v.Error() })
+			}{name, v.Error()})
 		default:
 			panic(v)
 		}
@@ -278,7 +278,7 @@ func (xp *txStringCtx) Marshal(field string, i xdr.XdrType) {
 	if k, ok := i.(xdr.XdrArrayOpaque); ok && k.XdrArraySize() == 32 &&
 		field == "sourceAccountEd25519" {
 		name = name[:len(name)-len(field)] + "sourceAccount"
-		pk := &stx.AccountID { Type: stx.PUBLIC_KEY_TYPE_ED25519 }
+		pk := &stx.AccountID{Type: stx.PUBLIC_KEY_TYPE_ED25519}
 		copy(pk.Ed25519()[:], k.GetByteSlice())
 		i = pk
 	}
@@ -374,7 +374,7 @@ func (xp *txStringCtx) Marshal(field string, i xdr.XdrType) {
 func XdrToTxrep(out io.Writer, name string, t xdr.XdrType) XdrBadValue {
 	ctx := txStringCtx{
 		accountIDNote: func(string) string { return "" },
-		signerNote: func(*stx.SignerKey) string { return "" },
+		signerNote:    func(*stx.SignerKey) string { return "" },
 		sigNote: func(*stx.TransactionEnvelope,
 			*stx.DecoratedSignature) string {
 			return ""
@@ -457,7 +457,7 @@ type xdrScan struct {
 	err     TxrepError
 	setHelp func(string)
 	native  *string
-	lastlv *lineval
+	lastlv  *lineval
 }
 
 func (*xdrScan) Sprintf(f string, args ...interface{}) string {
@@ -491,7 +491,7 @@ func (xs *xdrScan) Marshal(field string, i xdr.XdrType) {
 				xs.report(lv.line,
 					"V0 transaction only supports Ed25519 sourceAccount")
 			} else {
-				copy(k.GetByteSlice(),pk.Ed25519()[:])
+				copy(k.GetByteSlice(), pk.Ed25519()[:])
 			}
 		}()
 		i = pk
@@ -505,7 +505,7 @@ func (xs *xdrScan) Marshal(field string, i xdr.XdrType) {
 		switch e := recover().(type) {
 		case xdr.XdrError:
 			xs.report(xs.lastlv.line, "%s", e.Error())
-			lv.line = -1		// flag that error was reported
+			lv.line = -1 // flag that error was reported
 		case interface{}:
 			panic(e)
 		}
@@ -565,8 +565,7 @@ func (xs *xdrScan) Marshal(field string, i xdr.XdrType) {
 		}
 	case xdr.XdrPtr:
 		val = "false"
-		if _, err := fmt.Sscanf(xs.kvs[xs.present()].val, "%s", &val);
-		err != nil {
+		if _, err := fmt.Sscanf(xs.kvs[xs.present()].val, "%s", &val); err != nil {
 			if ok {
 				val = "true"
 			} else {
@@ -714,7 +713,7 @@ func (xe *xdrExtractor) Marshal(field string, i xdr.XdrType) {
 // pointer-to-pointer type that is guaranteed not to be nil even if
 // the pointer is nil.
 func GetTxrepField(t xdr.XdrType, field string) (ret xdr.XdrType) {
-	xe := xdrExtractor{ target: field }
+	xe := xdrExtractor{target: field}
 	t.XdrMarshal(&xe, "")
 	return xe.result
 }

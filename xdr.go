@@ -112,11 +112,11 @@ func MuxAcct(acct *AccountID, id *uint64) *MuxedAccount {
 	switch acct.Type {
 	case stx.PUBLIC_KEY_TYPE_ED25519:
 		if id == nil {
-			ret := &MuxedAccount { Type: stx.KEY_TYPE_ED25519 }
+			ret := &MuxedAccount{Type: stx.KEY_TYPE_ED25519}
 			*ret.Ed25519() = *acct.Ed25519()
 			return ret
 		} else {
-			ret := &MuxedAccount { Type: stx.KEY_TYPE_MUXED_ED25519 }
+			ret := &MuxedAccount{Type: stx.KEY_TYPE_MUXED_ED25519}
 			ret.Med25519().Ed25519 = *acct.Ed25519()
 			ret.Med25519().Id = *id
 			return ret
@@ -131,11 +131,11 @@ func MuxAcct(acct *AccountID, id *uint64) *MuxedAccount {
 func DemuxAcct(macct *MuxedAccount) (*AccountID, *uint64) {
 	switch macct.Type {
 	case stx.KEY_TYPE_ED25519:
-		ret := &AccountID { Type: stx.PUBLIC_KEY_TYPE_ED25519 }
+		ret := &AccountID{Type: stx.PUBLIC_KEY_TYPE_ED25519}
 		*ret.Ed25519() = *macct.Ed25519()
 		return ret, nil
 	case stx.KEY_TYPE_MUXED_ED25519:
-		ret := &AccountID { Type: stx.PUBLIC_KEY_TYPE_ED25519 }
+		ret := &AccountID{Type: stx.PUBLIC_KEY_TYPE_ED25519}
 		*ret.Ed25519() = macct.Med25519().Ed25519
 		return ret, &macct.Med25519().Id
 	}
@@ -252,7 +252,7 @@ func (txe *TransactionEnvelope) SetFee(baseFee uint32) {
 func (txe *TransactionEnvelope) SourceAccount() *stx.MuxedAccount {
 	switch txe.Type {
 	case stx.ENVELOPE_TYPE_TX_V0:
-		ret := stx.MuxedAccount{ Type: stx.KEY_TYPE_ED25519 }
+		ret := stx.MuxedAccount{Type: stx.KEY_TYPE_ED25519}
 		*ret.Ed25519() = txe.V0().Tx.SourceAccountEd25519
 		return &ret
 	case stx.ENVELOPE_TYPE_TX:
@@ -289,7 +289,7 @@ func (txe *TransactionEnvelope) GetHelp(name string) bool {
 
 func (txe *TransactionEnvelope) SetHelp(name string) {
 	if txe.Help == nil {
-		txe.Help = map[string]struct{}{name: struct{}{}}
+		txe.Help = map[string]struct{}{name: {}}
 	} else {
 		txe.Help[name] = struct{}{}
 	}
