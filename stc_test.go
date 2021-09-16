@@ -19,7 +19,7 @@ func failUnlessPanic(t *testing.T) {
 
 func TestShortStrKey(t *testing.T) {
 	mykey := "GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G"
-	for i := 1; i < i; i++ {
+	for i := 1; i < len(mykey); i++ {
 		var pk PublicKey
 		var sgk SignerKey
 		if n, err := fmt.Sscan(mykey[:len(mykey)-i], &pk); err == nil ||
@@ -38,18 +38,19 @@ func TestShortStrKey(t *testing.T) {
 func TestLongStrKey(t *testing.T) {
 	mykey := "GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G"
 	mykey += mykey
-	for i := 1; i < i; i++ {
+	for i := 1; i < 8; i++ {
 		var pk PublicKey
 		var sgk SignerKey
-		if n, err := fmt.Sscan(mykey[:len(mykey)-i], &pk); err == nil ||
+		var input = mykey + strings.Repeat("A", i)
+		if n, err := fmt.Sscan(input, &pk); err == nil ||
 			n >= 1 {
 			t.Errorf("incorrectly accepted PubKey strkey of length %d",
-				len(mykey)-1)
+				len(input))
 		}
-		if n, err := fmt.Sscan(mykey[:len(mykey)-i], &sgk); err == nil ||
+		if n, err := fmt.Sscan(input, &sgk); err == nil ||
 			n >= 1 {
 			t.Errorf("incorrectly accepted SignerKey strkey of length %d",
-				len(mykey)-1)
+				len(input))
 		}
 	}
 }
