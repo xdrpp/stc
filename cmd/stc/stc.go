@@ -655,20 +655,21 @@ func main() {
 		fmt.Printf("%x\n", pk.Hint())
 		os.Exit(0)
 	case *opt_opid:
-		var opid stx.OperationID
+		var opid stx.HashIDPreimage
 		opid.Type = stx.ENVELOPE_TYPE_OP_ID
-		if _, err := fmt.Sscan(arg, &opid.Id().SourceAccount); err != nil {
+		if _, err := fmt.Sscan(arg, &opid.OperationID().SourceAccount);
+		err != nil {
 			fmt.Fprintf(os.Stderr, "invalid account ID %s\n", arg)
 			os.Exit(2)
 		}
 		arg = flag.Args()[1]
-		if _, err := fmt.Sscan(arg, &opid.Id().SeqNum); err != nil {
+		if _, err := fmt.Sscan(arg, &opid.OperationID().SeqNum); err != nil {
 			fmt.Fprintf(os.Stderr, "invalid SequenceNumber %q (%s)\n",
 				arg, err)
 			os.Exit(2)
 		}
 		arg = flag.Args()[2]
-		if _, err := fmt.Sscan(arg, &opid.Id().OpNum); err != nil {
+		if _, err := fmt.Sscan(arg, &opid.OperationID().OpNum); err != nil {
 			fmt.Fprintf(os.Stderr, "invalid operation number %q (%s)\n",
 				arg, err)
 			os.Exit(2)
