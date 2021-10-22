@@ -216,6 +216,27 @@ func (a Asset) String() string {
 	return fmt.Sprintf("%s:%s", RenderAssetCode(code), issuer.String())
 }
 
+// Renders a TrustLineAsset as Code:AccountID or hexid:lp.
+func (a TrustLineAsset) String() string {
+	var code []byte
+	var issuer *AccountID
+	switch a.Type {
+	case ASSET_TYPE_NATIVE:
+		return "native"
+	case ASSET_TYPE_CREDIT_ALPHANUM4:
+		code = a.AlphaNum4().AssetCode[:]
+		issuer = &a.AlphaNum4().Issuer
+	case ASSET_TYPE_CREDIT_ALPHANUM12:
+		code = a.AlphaNum12().AssetCode[:]
+		issuer = &a.AlphaNum12().Issuer
+	case ASSET_TYPE_POOL_SHARE:
+		return fmt.Sprintf("%x:lp", a.LiquidityPoolID()[:])
+	default:
+		return fmt.Sprintf("Asset.Type#%d", int32(a.Type))
+	}
+	return fmt.Sprintf("%s:%s", RenderAssetCode(code), issuer.String())
+}
+
 func (a AssetCode) String() string {
 	switch a.Type {
 	case ASSET_TYPE_CREDIT_ALPHANUM4:
@@ -263,6 +284,13 @@ func ScanAssetCode(input []byte) ([]byte, error) {
 	return out, nil
 }
 
+type unexpectedLiquidityPoolId struct {
+	id PoolID
+}
+func (e unexpectedLiquidityPoolId) Error() string {
+	return fmt.Sprintf("unexpected LiquidityPoolID %x for Asset", e.id[:])
+}
+
 func (a *Asset) Scan(ss fmt.ScanState, _ rune) error {
 	bs, err := ss.Token(true, nil)
 	if err != nil {
@@ -275,6 +303,13 @@ func (a *Asset) Scan(ss fmt.ScanState, _ rune) error {
 		}
 		a.Type = ASSET_TYPE_NATIVE
 		return nil
+	}
+	if string(bs[colon+1:]) == "lp" {
+		var ulpid unexpectedLiquidityPoolId
+		if _, err = fmt.Sscan(string(bs[:colon]),
+			XDR_PoolID(&ulpid.id)); err == nil {
+			return ulpid
+		}
 	}
 	var issuer AccountID
 	if _, err = fmt.Fscan(bytes.NewReader(bs[colon+1:]), &issuer); err != nil {
@@ -292,6 +327,21 @@ func (a *Asset) Scan(ss fmt.ScanState, _ rune) error {
 		a.Type = ASSET_TYPE_CREDIT_ALPHANUM12
 		copy(a.AlphaNum12().AssetCode[:], code)
 		a.AlphaNum12().Issuer = issuer
+	}
+	return nil
+}
+
+func (a *TrustLineAsset) Scan(ss fmt.ScanState, r rune) error {
+	var aa Asset
+	switch v := aa.Scan(ss, r).(type) {
+	case unexpectedLiquidityPoolId:
+		a.Type = ASSET_TYPE_POOL_SHARE
+		*a.LiquidityPoolID() = v.id
+	case nil:
+		a.Type = aa.Type
+		a._u = aa._u
+	default:
+		return v
 	}
 	return nil
 }

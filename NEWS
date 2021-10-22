@@ -1,6 +1,9 @@
 
 * Changes in version v0.1.6
 
+Show/Parse liquidity pool TrustLineAsset as hex string followed by
+":lp".
+
 Change OperationID to new HashIDPreimage.
 
 Run generated code through gofmt -s and add CI helper files.

@@ -171,6 +171,21 @@ func TestSetOverflowVector(t *testing.T) {
 	Set(&op, asset, int64(0), macct, asset, int64(0), make([]stx.Asset, 6))
 }
 
+func TestLiquidityPoolID(t *testing.T) {
+	var tla stx.TrustLineAsset
+	tla.Type = stx.ASSET_TYPE_POOL_SHARE
+	tla.LiquidityPoolID()[0] = 0x80
+	tla.LiquidityPoolID()[31] = 0xff
+	s := tla.String()
+	var tla2 stx.TrustLineAsset
+	if _, err := fmt.Sscan(s, &tla2); err != nil {
+		t.Error(err)
+	}
+	if stcdetail.XdrToBin(&tla) != stcdetail.XdrToBin(&tla2) {
+		t.Error("TrustLineAsset String/Scan round trip failure")
+	}
+}
+
 func TestInvalidDefault(t *testing.T) {
 	net := DefaultStellarNet("test")
 	if net == nil {
