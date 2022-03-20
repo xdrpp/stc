@@ -64,6 +64,43 @@ func getAccountID(a xdr.XdrAggregate) (ret *stx.AccountID) {
 	return
 }
 
+type acctChecker struct {
+	target string
+	result bool
+}
+
+func (_ acctChecker) Sprintf(f string, args ...interface{}) string {
+	return fmt.Sprintf(f, args...)
+}
+
+func (x *acctChecker) Marshal(name string, t xdr.XdrType) {
+	if x.result {
+		return
+	}
+	switch v := t.XdrPointer().(type) {
+	case *stx.AccountID:
+		if XdrToBin(v) == x.target {
+			x.result = true
+		}
+	case *stx.Asset, *stx.TrustLineAsset:
+	default:
+		if ag, ok := t.(xdr.XdrAggregate); ok {
+			ag.XdrRecurse(x, name)
+		}
+	}
+}
+
+// Returns true if structure contains AccountID in something other
+// than an Asset issuer field.
+func HasAccountID(a *stx.AccountID, t xdr.XdrType) bool {
+	if a == nil {
+		return false
+	}
+	x := acctChecker{target: XdrToBin(a)}
+	t.XdrMarshal(&x, "")
+	return x.result
+}
+
 func changeInfo(c *stx.LedgerEntryChange) (key stx.LedgerKey,
 	entry *stx.LedgerEntry) {
 	switch v := c.XdrUnionBody().(type) {

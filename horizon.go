@@ -430,6 +430,13 @@ func showLedgerKey(k stx.LedgerKey) string {
 		return fmt.Sprintf("offer %d", k.Offer().OfferID)
 	case stx.DATA:
 		return fmt.Sprintf("data %s[%q]", k.Data().AccountID, k.Data().DataName)
+	case stx.CLAIMABLE_BALANCE:
+		return fmt.Sprintf("claimable_balance %v %v",
+			k.ClaimableBalance().BalanceID.Type,
+			k.ClaimableBalance().BalanceID.XdrUnionBody())
+	case stx.LIQUIDITY_POOL:
+		return fmt.Sprintf("liquidity_pool %v",
+			k.LiquidityPool().LiquidityPoolID)
 	default:
 		return stcdetail.XdrToBase64(&k)
 	}
@@ -446,8 +453,17 @@ func (net *StellarNet) AccountDelta(
 		target = stcdetail.XdrToBin(acct)
 	}
 	for i := range mds {
-		if target != "" && stcdetail.XdrToBin(mds[i].AccountID()) != target {
+			// Note AccountID will return nil for LedgerKeys of type
+			// CLAIMABLE_BALANCE and LIQUIDITY_POOL
+		if acct != nil {
+			if k := mds[i].AccountID(); (k == nil ||
+				stcdetail.XdrToBin(k) != target) &&
+				(mds[i].Old == nil ||
+					!stcdetail.HasAccountID(acct, mds[i].Old)) &&
+				(mds[i].New == nil ||
+					!stcdetail.HasAccountID(acct, mds[i].New)) {
 			continue
+			}
 		}
 		ks := showLedgerKey(mds[i].Key)
 		if mds[i].Old != nil && mds[i].New != nil {
