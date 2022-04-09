@@ -34,10 +34,7 @@ go.mod: $(MAKEFILE_LIST)
 $(XDRS): xdr
 
 xdr:
-	git fetch --depth=1 https://github.com/stellar/stellar-core.git master
-	rm -f xdr/Stellar-version
-	git archive --prefix=xdr/ FETCH_HEAD:src/xdr | tar xf -
-	git rev-parse FETCH_HEAD > xdr/Stellar-version
+	./make-xdr
 
 goxdr: always
 	@set -e; if test -d cmd/goxdr; then \

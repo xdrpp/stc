@@ -80,6 +80,23 @@ Once you have `goxdr`, you can build `stc` by running:
 To install `stc`, you will also need [pandoc](https://pandoc.org/) to
 format the man page.
 
+## Building `stc` for experimental protocol versions
+
+To build a version of `stc` supporting changes to the transaction
+format that have not yet been merged into `stellar-core`, you can
+fetch alternate XDR files with either of the commands:
+
+> `./make-xdr` _BRANCH_
+
+> `./make-xdr` _REPO_ _BRANCH_
+
+Here _REPO_ is the git repository from which to pull the non-standard
+version of `stellar-core` (default
+<https://github.com/stellar/stellar-core.git>), and _BRANCH_ is either
+a branch name in the remote repository or a github pull request
+number.  To revert to the standard XDR, simply run `./make-xdr` with
+no arguments.
+
 # Disclaimer
 
 There is no warranty for the program, to the extent permitted by

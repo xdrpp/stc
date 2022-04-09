@@ -1,0 +1,35 @@
+#!/bin/sh -e
+
+# usage: make-xdr [[REPO] {BRANCH | PR-NUMBER}]
+
+REPO=https://github.com/stellar/stellar-core.git
+COMMIT=master
+
+case "$#" in
+    2)
+	REPO="$1"
+	COMMIT="$2"
+	;;
+    1)
+	COMMIT="$1"
+	;;
+    0)
+	;;
+    *)
+	echo "usage: make-xdr [[REPO] {BRANCH | PR-NUMBER}]" >&2
+
+
+	exit 1
+	;;
+esac
+
+# If the branch is just numbers, treat it as a pull request number
+if expr "$COMMIT" : '[1-9][0-9]*$' > /dev/null; then
+    COMMIT="refs/pull/$COMMIT/head"
+fi
+
+set -x
+git fetch --depth=1 "$REPO" "$COMMIT"
+rm -f xdr/Stellar-version
+git archive --prefix=xdr/ FETCH_HEAD:src/xdr | tar xf -
+git rev-parse FETCH_HEAD > xdr/Stellar-version
