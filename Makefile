@@ -81,6 +81,7 @@ built_sources: $(BUILT_SOURCES)
 depend: always
 	rm -f go.mod
 	$(MAKE) go.mod
+	go install github.com/xdrpp/goxdr/cmd/goxdr@latest
 
 go1: always
 	rm -f go.sum go.mod
