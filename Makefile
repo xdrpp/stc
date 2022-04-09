@@ -19,7 +19,7 @@ stx/xdr_generated.go: goxdr $(XDRS)
 
 uhelper.go: stx/xdr_generated.go uniontool/uniontool.go go.mod
 	go run uniontool/uniontool.go | gofmt -s > $@~
-	mv -f $@~ $@
+	test -s $@~ && mv -f $@~ $@
 
 go.mod: $(MAKEFILE_LIST)
 	echo 'module github.com/xdrpp/stc' > go.mod
@@ -34,7 +34,9 @@ go.mod: $(MAKEFILE_LIST)
 $(XDRS): xdr
 
 xdr:
-	./make-xdr
+	#./make-xdr
+	# XXX only while protocol19 is exclusively on PR 3377
+	./make-xdr 3377
 
 goxdr: always
 	@set -e; if test -d cmd/goxdr; then \

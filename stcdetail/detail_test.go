@@ -97,7 +97,9 @@ func ExampleXdrToJson() {
 	//         "sourceAccount": "GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G",
 	//         "fee": 100,
 	//         "seqNum": "3319833626148865",
-	//         "timeBounds": null,
+	//         "cond": {
+    //             "type": "PRECOND_NONE"
+    //         },
 	//         "memo": {
 	//             "type": "MEMO_TEXT",
 	//             "text": "Hello"
@@ -313,7 +315,7 @@ func ExampleGetTxrepField() {
 	// tx.sourceAccount: GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L
 	// tx.fee: 0
 	// tx.seqNum: 0
-	// tx.timeBounds._present: false
+	// tx.cond.type: PRECOND_NONE
 	// tx.memo.type: MEMO_NONE
 	// tx.operations.len: 1
 	// tx.operations[0].sourceAccount._present: true
