@@ -95,7 +95,7 @@ func FromStrKey(in []byte) ([]byte, StrKeyVersionByte) {
 		return nil, STRKEY_ERROR
 	}
 	if targetlen, ok := payloadLen[StrKeyVersionByte(bin[0])]; !ok ||
-		targetlen != n-3 {
+		(targetlen != -1 && targetlen != n-3) {
 		return nil, STRKEY_ERROR
 	}
 	want := uint16(bin[len(bin)-2]) | uint16(bin[len(bin)-1])<<8

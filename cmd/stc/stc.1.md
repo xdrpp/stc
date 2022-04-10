@@ -27,6 +27,8 @@ stc -list-keys \
 stc -hint _PublicKey_ \
 stc -mux _accountID_ _uint64_ \
 stc -demux _muxedAccount_ \
+stc -pack-payload _PublicKey_ _hex-payload_ \
+stc -unpack-payload _payload-signer_ \
 stc -opid _muxedAccount_ _sequenceNumber_ _operationIndex_
 stc -date YYYY-MM-DDThh:mm:ss[Z] \
 stc -builtin-config
@@ -220,6 +222,10 @@ behave the same as the underlying accounts, but contain an unsigned
 64-bit integer that acts as a kind of comment.  This allows a single
 account holder to give out multiple addresses that point the same
 underlying account.
+
+The `-pack-payload` and `-unpack-payload` options construct and
+deconstruct a payload signer (i.e., a signer starting with `P`) based
+on an Ed25519 signer (which starts with `G`) and a payload in hex.
 
 The `-opid` option calculates an operation ID for use in a
 `CLAIM_CLAIMABLE_BALANCE` operation.

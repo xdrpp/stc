@@ -507,6 +507,10 @@ func main() {
 		"Created a MuxedAccount from an AccountID and uint64")
 	opt_demux := flag.Bool("demux", false,
 		"Split a MuxedAccount into an AccountID and a uint64")
+	opt_pack := flag.Bool("pack-payload", false,
+		"Pack a public key and payload into a payload signer")
+	opt_unpack := flag.Bool("unpack-payload", false,
+		"Unpack a payload signer into a public key and payload")
 	opt_friendbot := flag.Bool("create", false,
 		"Create and fund account (on testnet only)")
 	opt_date := flag.Bool("date", false,
@@ -531,7 +535,7 @@ func main() {
        %[1]s -edit [-net=ID] FILE
        %[1]s -post [-net=ID] INPUT-FILE
        %[1]s -preauth [-net=ID] INPUT-FILE
-       %[1]s -txhash [-net=ID] _INPUT-FILE
+       %[1]s -txhash [-net=ID] INPUT-FILE
        %[1]s -fee-stats
        %[1]s -ledger-header
        %[1]s -qa [-net=ID] ACCT
@@ -547,6 +551,8 @@ func main() {
        %[1]s -hint PUBKEY
        %[1]s -mux ACCT U64
        %[1]s -demux ACCT
+       %[1]s -pack-payload KEY PAYLOAD
+       %[1]s -unpack-payload PAYLOAD
        %[1]s -opid ACCT SEQNO OPNO
        %[1]s -builtin-config
 `, progname)
@@ -568,7 +574,7 @@ func main() {
 		*opt_export_key, *opt_acctinfo, *opt_txinfo, *opt_txacct,
 		*opt_friendbot, *opt_list_keys, *opt_fee_stats,
 		*opt_ledger_header, *opt_print_default_config, *opt_mux,
-		*opt_demux, *opt_opid, *opt_hint)
+		*opt_demux, *opt_pack, *opt_unpack, *opt_opid, *opt_hint)
 
 	argsMin, argsMax := 1, 1
 	switch {
@@ -577,7 +583,7 @@ func main() {
 		argsMin, argsMax = 0, 0
 	case *opt_keygen || *opt_sec2pub:
 		argsMin = 0
-	case *opt_mux:
+	case *opt_mux, *opt_pack:
 		argsMin, argsMax = 2, 2
 	case *opt_opid:
 		argsMax, argsMax = 3, 3
@@ -714,6 +720,37 @@ func main() {
 			fmt.Print(" ", *id)
 		}
 		fmt.Println()
+		return
+	case *opt_pack:
+		s := SignerKey { Type: stx.SIGNER_KEY_TYPE_ED25519_SIGNED_PAYLOAD }
+		spl := s.Ed25519SignedPayload()
+		var pk PublicKey
+		if _, err := fmt.Sscan(arg, &pk); err != nil ||
+			pk.Type != stx.PUBLIC_KEY_TYPE_ED25519 {
+			fmt.Fprintf(os.Stderr, "invalid public key %s\n", arg)
+			os.Exit(2)
+		}
+		copy(spl.Ed25519[:], pk.Ed25519()[:])
+		arg1 := flag.Args()[1]
+		if arg1 != "" {
+			if _, err := fmt.Sscanf(arg1, "%x", &spl.Payload); err != nil {
+				fmt.Fprintf(os.Stderr, "invalid hex payload %s\n", arg1)
+				os.Exit(2)
+			}
+		}
+		fmt.Println(s)
+		return
+	case *opt_unpack:
+		var s SignerKey
+		if _, err := fmt.Sscan(arg, &s); err != nil ||
+			s.Type != stx.SIGNER_KEY_TYPE_ED25519_SIGNED_PAYLOAD {
+			fmt.Fprintf(os.Stderr, "invalid payload signer %s\n", arg)
+			os.Exit(2)
+		}
+		spl := s.Ed25519SignedPayload()
+		pk := PublicKey { Type: stx.PUBLIC_KEY_TYPE_ED25519 }
+		*pk.Ed25519() = spl.Ed25519
+		fmt.Printf("%s\n%x\n", pk, spl.Payload)
 		return
 	case *opt_date:
 		for _, f := range dateFormats {
