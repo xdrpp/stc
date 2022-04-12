@@ -496,9 +496,12 @@ func (pk SignerKey) Hint() SignatureHint {
 		return signerHint(pk.HashX()[:])
 	case SIGNER_KEY_TYPE_ED25519_SIGNED_PAYLOAD:
 		hint := signerHint(pk.Ed25519SignedPayload().Ed25519[:])
-		for i := 0; i < len(hint) &&
-			i < len(pk.Ed25519SignedPayload().Payload); i++ {
-			hint[i] ^= pk.Ed25519SignedPayload().Payload[i]
+		pl := pk.Ed25519SignedPayload().Payload
+		if len(pl) > 4 {
+			pl = pl[len(pl)-4:]
+		}
+		for i, b := range pl {
+			hint[i] ^= b
 		}
 		return hint
 	default:
