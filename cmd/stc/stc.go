@@ -307,6 +307,43 @@ func signTx(net *StellarNet, key string, e *TransactionEnvelope) error {
 	return nil
 }
 
+var bad_payload_pk_type error =
+	fmt.Errorf("invalid public key type for signed payload")
+
+func signPayload(net *StellarNet, key string, e *TransactionEnvelope,
+	hexpayload string) error {
+	signer := SignerKey { Type: stx.SIGNER_KEY_TYPE_ED25519_SIGNED_PAYLOAD }
+	if hexpayload != "" {
+		if _, err := fmt.Sscanf(hexpayload, "%x",
+			&signer.Ed25519SignedPayload().Payload); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return err
+		}
+	}
+	if key != "" {
+		key = AdjustKeyName(key)
+	}
+	sk, err := getSecKey(key)
+	if err != nil {
+		return err
+	}
+	pk := sk.Public()
+	if pk.Type != stx.PUBLIC_KEY_TYPE_ED25519 {
+		return bad_payload_pk_type
+	}
+	signer.Ed25519SignedPayload().Ed25519 = *pk.Ed25519()
+	net.AddSigner(pk.String(), "")
+	sig, err := sk.Sign(signer.Ed25519SignedPayload().Payload)
+	if err != nil {
+		return err
+	}
+	*e.Signatures() = append(*e.Signatures(), stx.DecoratedSignature{
+		Hint: signer.Hint(),
+		Signature: sig,
+	})
+	return nil
+}
+
 func editor(path string, line int) {
 	ed, ok := os.LookupEnv("STCEDITOR")
 	if !ok {
@@ -475,6 +512,8 @@ func main() {
 	opt_txhash := flag.Bool("txhash", false, "Hash transaction to hex format")
 	opt_inplace := flag.Bool("i", false, "Edit the input file in place")
 	opt_sign := flag.Bool("sign", false, "Sign the transaction")
+	opt_payload := flag.String("payload", "false",
+		"Add signature on raw `HEX-STRING` instead of on this transaction")
 	opt_key := flag.String("key", "", "Use secret signing key in `FILE`")
 	opt_netname := flag.String("net", "",
 		"Use Network `NET` (e.g., test); default: $STCNET or \"default\"")
@@ -551,6 +590,7 @@ func main() {
        %[1]s -hint PUBKEY
        %[1]s -mux ACCT U64
        %[1]s -demux ACCT
+       %[1]s -payload HEX-PAYLOAD
        %[1]s -pack-payload KEY PAYLOAD
        %[1]s -unpack-payload PAYLOAD
        %[1]s -opid ACCT SEQNO OPNO
@@ -567,6 +607,9 @@ func main() {
 	if *opt_print_default_config {
 		os.Stdout.Write(DefaultGlobalConfigContents)
 		return
+	}
+	if *opt_payload != "false" {
+		*opt_sign = true
 	}
 
 	nmode := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit,
@@ -609,7 +652,7 @@ func main() {
 		bail := false
 		if *opt_sign || *opt_key != "" {
 			fmt.Fprintln(os.Stderr,
-				"--sign and --key only availble in default mode")
+				"--sign, --key, and --payload only availble in default mode")
 			bail = true
 		}
 		if *opt_learn || *opt_update {
@@ -937,7 +980,13 @@ func main() {
 			fixTx(net, e)
 		}
 		if *opt_sign || *opt_key != "" {
-			if err := signTx(net, *opt_key, e); err != nil {
+			var err error
+			if *opt_payload == "false" {
+				err = signTx(net, *opt_key, e)
+			} else {
+				err = signPayload(net, *opt_key, e, *opt_payload)
+			}
+			if err != nil {
 				os.Exit(1)
 			}
 		}

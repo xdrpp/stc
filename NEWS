@@ -1,4 +1,7 @@
 
+Add support for new CAP-0040 ed25519 signed payloads in protocol 19.
+New options -payload, -pack-payload, and -unpack-payload.
+
 * Changes in version v0.1.6
 
 Show/Parse liquidity pool TrustLineAsset as hex string followed by

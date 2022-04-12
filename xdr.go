@@ -265,38 +265,6 @@ func (txe *TransactionEnvelope) SourceAccount() *stx.MuxedAccount {
 	return nil
 }
 
-// Return the Transaciton in a V1 envelope or the inner Transaction a
-// fee bump transaction.  For a V0 Transaction, the result will be the
-// TransactionV0 translated into a Transaction, so updates (to fields
-// other than the Operations) will not be reflected in the original
-// envelope.
-func ExtractTransaction(txe *stx.TransactionEnvelope) *stx.Transaction {
-	switch txe.Type {
-	case stx.ENVELOPE_TYPE_TX_V0:
-		tx0 := &txe.V0().Tx
-		ret := stx.Transaction {
-			Fee: tx0.Fee,
-			SeqNum: tx0.SeqNum,
-			Memo: tx0.Memo,
-			Operations: tx0.Operations,
-		}
-		ret.SourceAccount.Type = stx.KEY_TYPE_ED25519
-		*ret.SourceAccount.Ed25519() = tx0.SourceAccountEd25519
-		if (tx0.TimeBounds != nil) {
-			ret.Cond.Type = stx.PRECOND_TIME
-			*ret.Cond.TimeBounds() = *tx0.TimeBounds
-		}
-		return &ret
-	case stx.ENVELOPE_TYPE_TX:
-		return &txe.V1().Tx
-	case stx.ENVELOPE_TYPE_TX_FEE_BUMP:
-		if txe.FeeBump().Tx.InnerTx.Type == stx.ENVELOPE_TYPE_TX {
-			return &txe.FeeBump().Tx.InnerTx.V1().Tx
-		}
-	}
-	return nil
-}
-
 func (txe *TransactionEnvelope) SetSourceAccount(m0 stx.IsAccount) {
 	m := m0.ToMuxedAccount()
 	switch txe.Type {
@@ -331,26 +299,8 @@ func (net *StellarNet) SigNote(txe *stx.TransactionEnvelope,
 	sig *stx.DecoratedSignature) string {
 	if txe == nil {
 		return ""
-	} else if ski := net.Signers.Lookup(
-		net.GetNetworkId(), txe, sig); ski != nil {
+	} else if ski := net.Signers.Lookup(net.GetNetworkId(), txe, sig); ski != nil {
 		return ski.String()
-	} else if cond := &ExtractTransaction(txe).Cond; cond.Type ==
-		stx.PRECOND_V2 {
-		es := cond.V2().ExtraSigners
-		for i := range es {
-			if es[i].Type == stx.SIGNER_KEY_TYPE_ED25519_SIGNED_PAYLOAD {
-				k := stx.PublicKey { Type: stx.PUBLIC_KEY_TYPE_ED25519 }
-				*k.Ed25519() = es[i].Ed25519SignedPayload().Ed25519
-				if stcdetail.Verify(&k, es[i].Ed25519SignedPayload().Payload,
-					sig.Signature) {
-					if h := es[i].Hint(); h != sig.Hint {
-						return fmt.Sprintf("payload %s bad hint should be 0x%x",
-							es[i], h)
-					}
-					return fmt.Sprintf("payload %s", es[i])
-				}
-			}
-		}
 	}
 	return fmt.Sprintf("bad signature/unknown key/%s is wrong network",
 		net.Name)

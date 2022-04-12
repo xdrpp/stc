@@ -64,6 +64,9 @@ func VerifyTx(pk *stx.SignerKey, network string, tx stx.Signable,
 	case stx.SIGNER_KEY_TYPE_HASH_X:
 		x := sha256.Sum256(sig)
 		return bytes.Equal(x[:], pk.HashX()[:])
+	case stx.SIGNER_KEY_TYPE_ED25519_SIGNED_PAYLOAD:
+		spl := pk.Ed25519SignedPayload()
+		return ed25519.Verify(spl.Ed25519[:], spl.Payload, sig)
 	default:
 		return false
 	}
