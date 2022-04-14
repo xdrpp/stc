@@ -1,0 +1,1867 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#375EAB">
+
+  <title>stcdetail - Go Documentation Server</title>
+
+<link type="text/css" rel="stylesheet" href="../../../../../lib/godoc/style.css">
+
+<script>window.initFuncs = [];</script>
+<script src="../../../../../lib/godoc/jquery.js" defer></script>
+
+
+
+<script>var goVersion = "go1.17.8";</script>
+<script src="../../../../../lib/godoc/godocs.js" defer></script>
+</head>
+<body>
+
+<div id='lowframe' style="position: fixed; bottom: 0; left: 0; height: 0; width: 100%; border-top: thin solid grey; background-color: white; overflow: auto;">
+...
+</div><!-- #lowframe -->
+
+<div id="topbar" class="wide"><div class="container">
+<div class="top-heading" id="heading-wide"><a href="../../../../index.html">Go Documentation Server</a></div>
+<div class="top-heading" id="heading-narrow"><a href="../../../../index.html">GoDoc</a></div>
+<a href="index.html#" id="menu-button"><span id="menu-button-arrow">&#9661;</span></a>
+<form method="GET" action="http://localhost:6666/search">
+<div id="menu">
+
+<span class="search-box"><input type="search" id="search" name="q" placeholder="Search" aria-label="Search" required><button type="submit"><span><!-- magnifying glass: --><svg width="24" height="24" viewBox="0 0 24 24"><title>submit search</title><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/><path d="M0 0h24v24H0z" fill="none"/></svg></span></button></span>
+</div>
+</form>
+
+</div></div>
+
+
+
+<div id="page" class="wide">
+<div class="container">
+
+
+  <h1>
+    Package stcdetail
+    <span class="text-muted"></span>
+  </h1>
+
+
+
+
+
+
+
+<div id="nav"></div>
+
+
+<!--
+	Copyright 2009 The Go Authors. All rights reserved.
+	Use of this source code is governed by a BSD-style
+	license that can be found in the LICENSE file.
+-->
+<!--
+	Note: Static (i.e., not template-generated) href and id
+	attributes start with "pkg-" to make it impossible for
+	them to conflict with generated attributes (some of which
+	correspond to Go identifiers).
+-->
+
+	<script>
+	document.ANALYSIS_DATA = null;
+	document.CALLGRAPH = null;
+	</script>
+
+	
+		
+		<div id="short-nav">
+			<dl>
+			<dd><code>import "github.com/xdrpp/stc/stcdetail"</code></dd>
+			</dl>
+			<dl>
+			<dd><a href="index.html#pkg-overview" class="overviewLink">Overview</a></dd>
+			<dd><a href="index.html#pkg-index" class="indexLink">Index</a></dd>
+			
+				<dd><a href="index.html#pkg-examples" class="examplesLink">Examples</a></dd>
+			
+			
+			</dl>
+		</div>
+		<!-- The package's Name is printed as title by the top-level template -->
+		<div id="pkg-overview" class="toggleVisible">
+			<div class="collapsed">
+				<h2 class="toggleButton" title="Click to show Overview section">Overview ▹</h2>
+			</div>
+			<div class="expanded">
+				<h2 class="toggleButton" title="Click to hide Overview section">Overview ▾</h2>
+				<p>
+Internal functions for the stc library.  These functions are
+exported because they may be useful to application code, but
+relegated to a separate package to avoid cluttering the main stc
+documentation.
+</p>
+
+				
+			</div>
+		</div>
+
+		<div id="pkg-index" class="toggleVisible">
+		<div class="collapsed">
+			<h2 class="toggleButton" title="Click to show Index section">Index ▹</h2>
+		</div>
+		<div class="expanded">
+			<h2 class="toggleButton" title="Click to hide Index section">Index ▾</h2>
+
+		<!-- Table of contents for API; must be named manual-nav to turn off auto nav. -->
+			<div id="manual-nav">
+			<dl>
+			
+			
+				<dd><a href="index.html#pkg-variables">Variables</a></dd>
+			
+			
+				
+				<dd><a href="index.html#FileChanged">func FileChanged(a, b os.FileInfo) bool</a></dd>
+			
+				
+				<dd><a href="index.html#ForEachXdr">func ForEachXdr(t xdr.XdrType, fn func(xdr.XdrType) bool)</a></dd>
+			
+				
+				<dd><a href="index.html#ForEachXdrType">func ForEachXdrType(a xdr.XdrType, fn interface{})</a></dd>
+			
+				
+				<dd><a href="index.html#GetLedgerEntryKey">func GetLedgerEntryKey(e *stx.LedgerEntry) stx.LedgerKey</a></dd>
+			
+				
+				<dd><a href="index.html#GetPass">func GetPass(prompt string) []byte</a></dd>
+			
+				
+				<dd><a href="index.html#GetPass2">func GetPass2(prompt string) []byte</a></dd>
+			
+				
+				<dd><a href="index.html#GetTxrepField">func GetTxrepField(t xdr.XdrType, field string) (ret xdr.XdrType)</a></dd>
+			
+				
+				<dd><a href="index.html#HasAccountID">func HasAccountID(a *stx.AccountID, t xdr.XdrType) bool</a></dd>
+			
+				
+				<dd><a href="index.html#HideFieldName">func HideFieldName(field string, t xdr.XdrType) bool</a></dd>
+			
+				
+				<dd><a href="index.html#JsonNumberToI64">func JsonNumberToI64(n json.Number) (int64, error)</a></dd>
+			
+				
+				<dd><a href="index.html#JsonToXdr">func JsonToXdr(dst xdr.XdrAggregate, src []byte) (err error)</a></dd>
+			
+				
+				<dd><a href="index.html#PrettyPrint">func PrettyPrint(arg interface{}) string</a></dd>
+			
+				
+				<dd><a href="index.html#PrettyPrintAux">func PrettyPrintAux(aux func(interface{}) (string, bool), arg interface{}) string</a></dd>
+			
+				
+				<dd><a href="index.html#PrintVecOpaque">func PrintVecOpaque(bs []byte) string</a></dd>
+			
+				
+				<dd><a href="index.html#ReadFile">func ReadFile(path string) ([]byte, os.FileInfo, error)</a></dd>
+			
+				
+				<dd><a href="index.html#ReadTextLine">func ReadTextLine(r io.Reader) ([]byte, error)</a></dd>
+			
+				
+				<dd><a href="index.html#RepDiff">func RepDiff(prefix, arep, brep string) string</a></dd>
+			
+				
+				<dd><a href="index.html#SafeCreateFile">func SafeCreateFile(path string, data string, perm os.FileMode) error</a></dd>
+			
+				
+				<dd><a href="index.html#SafeWriteFile">func SafeWriteFile(path string, data string, perm os.FileMode) error</a></dd>
+			
+				
+				<dd><a href="index.html#ScaleFmt">func ScaleFmt(val int64, exp int) string</a></dd>
+			
+				
+				<dd><a href="index.html#Stream">func Stream(ctx context.Context, url string, cb func(eventType string, data []byte) error) error</a></dd>
+			
+				
+				<dd><a href="index.html#TxPayloadHash">func TxPayloadHash(network string, tx stx.Signable) *stx.Hash</a></dd>
+			
+				
+				<dd><a href="index.html#Verify">func Verify(pk *stx.PublicKey, message []byte, sig []byte) bool</a></dd>
+			
+				
+				<dd><a href="index.html#VerifyTx">func VerifyTx(pk *stx.SignerKey, network string, tx stx.Signable, sig []byte) bool</a></dd>
+			
+				
+				<dd><a href="index.html#XdrExtract">func XdrExtract(t xdr.XdrType, out interface{}) bool</a></dd>
+			
+				
+				<dd><a href="index.html#XdrFromBase64">func XdrFromBase64(e xdr.XdrType, input string) (err error)</a></dd>
+			
+				
+				<dd><a href="index.html#XdrFromBin">func XdrFromBin(t xdr.XdrType, input string) (err error)</a></dd>
+			
+				
+				<dd><a href="index.html#XdrSHA256">func XdrSHA256(ts ...xdr.XdrType) (ret stx.Hash)</a></dd>
+			
+				
+				<dd><a href="index.html#XdrToBase64">func XdrToBase64(es ...xdr.XdrType) string</a></dd>
+			
+				
+				<dd><a href="index.html#XdrToBin">func XdrToBin(t xdr.XdrType) string</a></dd>
+			
+				
+				<dd><a href="index.html#XdrToJson">func XdrToJson(src xdr.XdrAggregate) (json []byte, err error)</a></dd>
+			
+			
+				
+				<dd><a href="index.html#Ed25519Priv">type Ed25519Priv</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#NewEd25519Priv">func NewEd25519Priv() Ed25519Priv</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#Ed25519Priv.Public">func (sk Ed25519Priv) Public() (ret stx.PublicKey)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#Ed25519Priv.Sign">func (sk Ed25519Priv) Sign(msg []byte) ([]byte, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#Ed25519Priv.String">func (sk Ed25519Priv) String() string</a></dd>
+				
+			
+				
+				<dd><a href="index.html#ErrFileHasChanged">type ErrFileHasChanged</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#ErrFileHasChanged.Error">func (e ErrFileHasChanged) Error() string</a></dd>
+				
+			
+				
+				<dd><a href="index.html#ErrIsDirectory">type ErrIsDirectory</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#ErrIsDirectory.Error">func (e ErrIsDirectory) Error() string</a></dd>
+				
+			
+				
+				<dd><a href="index.html#HTTPerror">type HTTPerror</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#NewHTTPerror">func NewHTTPerror(resp *http.Response) *HTTPerror</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#HTTPerror.Error">func (e *HTTPerror) Error() string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#HTTPerror.Temporary">func (e *HTTPerror) Temporary() bool</a></dd>
+				
+			
+				
+				<dd><a href="index.html#JsonInt64">type JsonInt64</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#JsonInt64.MarshalText">func (i JsonInt64) MarshalText() ([]byte, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#JsonInt64.UnmarshalText">func (i *JsonInt64) UnmarshalText(text []byte) error</a></dd>
+				
+			
+				
+				<dd><a href="index.html#JsonInt64e7">type JsonInt64e7</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#JsonInt64e7.MarshalText">func (i JsonInt64e7) MarshalText() ([]byte, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#JsonInt64e7.String">func (i JsonInt64e7) String() string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#JsonInt64e7.UnmarshalText">func (i *JsonInt64e7) UnmarshalText(text []byte) error</a></dd>
+				
+			
+				
+				<dd><a href="index.html#LockedFile">type LockedFile</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#LockFile">func LockFile(path string, perm os.FileMode) (LockedFile, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#LockFileIfUnchanged">func LockFileIfUnchanged(path string, fi os.FileInfo) (LockedFile, error)</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#MetaDelta">type MetaDelta</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#GetMetaDeltas">func GetMetaDeltas(ms ...xdr.XdrType) (ret []MetaDelta)</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#MetaDelta.AccountID">func (md MetaDelta) AccountID() *stx.AccountID</a></dd>
+				
+			
+				
+				<dd><a href="index.html#PrivateKeyInterface">type PrivateKeyInterface</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#TxrepError">type TxrepError</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#XdrFromTxrep">func XdrFromTxrep(in io.Reader, name string, t xdr.XdrType) TxrepError</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#TxrepError.Error">func (e TxrepError) Error() string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#TxrepError.FileError">func (e TxrepError) FileError(filename string) string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#TxrepError.Is">func (TxrepError) Is(e error) bool</a></dd>
+				
+			
+				
+				<dd><a href="index.html#XdrBadValue">type XdrBadValue</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#XdrToTxrep">func XdrToTxrep(out io.Writer, name string, t xdr.XdrType) XdrBadValue</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#XdrBadValue.Error">func (e XdrBadValue) Error() string</a></dd>
+				
+			
+			
+			</dl>
+			</div><!-- #manual-nav -->
+
+		
+		<div id="pkg-examples">
+			<h3>Examples</h3>
+			<div class="js-expandAll expandAll collapsed">(Expand All)</div>
+			<dl>
+			
+			<dd><a class="exampleLink" href="index.html#example_GetTxrepField">GetTxrepField</a></dd>
+			
+			<dd><a class="exampleLink" href="index.html#example_LockFile">LockFile</a></dd>
+			
+			<dd><a class="exampleLink" href="index.html#example_ScaleFmt">ScaleFmt</a></dd>
+			
+			<dd><a class="exampleLink" href="index.html#example_XdrToJson">XdrToJson</a></dd>
+			
+			</dl>
+		</div>
+		
+
+		
+			<h3>Package files</h3>
+			<p>
+			<span style="font-size:90%">
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/base64.go">base64.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/crypto.go">crypto.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/json.go">json.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/json_xdr.go">json_xdr.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/ledger.go">ledger.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/lockfile.go">lockfile.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/pretty.go">pretty.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/stream.go">stream.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go">txrep.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/xdrmisc.go">xdrmisc.go</a>
+			
+			</span>
+			</p>
+		
+		</div><!-- .expanded -->
+		</div><!-- #pkg-index -->
+
+		
+
+		
+		
+			<h2 id="pkg-variables">Variables</h2>
+			
+				<p>
+PassphraseFile is the io.Reader from which passphrases should be
+read.  If set to a terminal, then a prompt will be displayed and
+echo will be disabled while the user types the passphrase.  The
+default is os.Stdin.  If set to nil, then GetPass will attempt to
+open /dev/tty.  Set it to io.MultiReader() (i.e., an io.Reader that
+always returns EOF) to assume an empty passphrase every time
+GetPass is called.
+</p>
+
+				<pre>var <span id="PassphraseFile">PassphraseFile</span> <a href="http://localhost:6666/pkg/io/">io</a>.<a href="http://localhost:6666/pkg/io/#Reader">Reader</a> = <a href="http://localhost:6666/pkg/os/">os</a>.<a href="http://localhost:6666/pkg/os/#Stdin">Stdin</a></pre>
+			
+				<p>
+If PassphraseFile is a terminal, then the user will be prompted for
+a password, and this is the terminal to which the prompt should be
+written.  The default is os.Stderr.
+</p>
+
+				<pre>var <span id="PassphrasePrompt">PassphrasePrompt</span> <a href="http://localhost:6666/pkg/io/">io</a>.<a href="http://localhost:6666/pkg/io/#Writer">Writer</a> = <a href="http://localhost:6666/pkg/os/">os</a>.<a href="http://localhost:6666/pkg/os/#Stderr">Stderr</a></pre>
+			
+		
+		
+			
+			
+			<h2 id="FileChanged">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/lockfile.go?s=1046:1085#L39">FileChanged</a>
+				<a class="permalink" href="index.html#FileChanged">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func FileChanged(a, b <a href="http://localhost:6666/pkg/os/">os</a>.<a href="http://localhost:6666/pkg/os/#FileInfo">FileInfo</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+			<p>
+Return true if a file may have been changed between the times that
+the two FileInfo structures were read.  Note that it modifies the
+two arguments to set the atimes to zero before doing a deep compare
+of all fields.  (This ensures files will be considered changed if
+their ctimes differ, even if the mtimes are the same.)
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="ForEachXdr">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/xdrmisc.go?s=1327:1384#L48">ForEachXdr</a>
+				<a class="permalink" href="index.html#ForEachXdr">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func ForEachXdr(t <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>, fn func(<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a>)</pre>
+			<p>
+Calls fn, recursively, on every value inside an XdrType.  Prunes
+the recursion if fn returns true.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="ForEachXdrType">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/xdrmisc.go?s=1849:1899#L59">ForEachXdrType</a>
+				<a class="permalink" href="index.html#ForEachXdrType">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func ForEachXdrType(a <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>, fn interface{})</pre>
+			<p>
+Calls fn on each instance of a type encountered while traversing a
+data structure.  fn should be of type func(*T) or func(*T)bool
+where T is an XDR structure.  By default, the traversal does not
+recurse into T.  In the case that T is part of a linked list (or
+otherwise contains a pointer to T internally), if the function
+returns false then fields within T will continue to be examined
+recursively.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="GetLedgerEntryKey">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/ledger.go?s=952:1008#L32">GetLedgerEntryKey</a>
+				<a class="permalink" href="index.html#GetLedgerEntryKey">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func GetLedgerEntryKey(e *<a href="../stx/index.html">stx</a>.<a href="../stx/index.html#LedgerEntry">LedgerEntry</a>) <a href="../stx/index.html">stx</a>.<a href="../stx/index.html#LedgerKey">LedgerKey</a></pre>
+			
+			
+			
+
+		
+			
+			
+			<h2 id="GetPass">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/crypto.go?s=3857:3891#L121">GetPass</a>
+				<a class="permalink" href="index.html#GetPass">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func GetPass(prompt <a href="http://localhost:6666/pkg/builtin/#string">string</a>) []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a></pre>
+			<p>
+Read a passphrase from PassphraseFile and return it as a byte
+array.  If PassphraseFile is nil, attempt to open &#34;/dev/tty&#34;.  If
+PassphraseFile is a terminal, then write prompt to PassphrasePrompt
+before reading the passphrase and disable echo.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="GetPass2">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/crypto.go?s=4649:4684#L149">GetPass2</a>
+				<a class="permalink" href="index.html#GetPass2">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func GetPass2(prompt <a href="http://localhost:6666/pkg/builtin/#string">string</a>) []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a></pre>
+			<p>
+Call GetPass twice until the user enters the same passphrase twice.
+Intended for when the user is selecting a new passphrase, to reduce
+the chances of the user mistyping the passphrase.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="GetTxrepField">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go?s=16225:16290#L705">GetTxrepField</a>
+				<a class="permalink" href="index.html#GetTxrepField">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func GetTxrepField(t <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>, field <a href="http://localhost:6666/pkg/builtin/#string">string</a>) (ret <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>)</pre>
+			<p>
+Extract and return a field with a particular txrep name from an XDR
+data structure.  Returns nil if the field name doesn&#39;t exist,
+either because it is invalid or because a containing pointer is nil
+or because a union has a different active case.
+</p>
+<p>
+Note that for pointer fields this functionreturns the pointer, not
+the underlying value.  Hence the XdrPointer() method returns a
+pointer-to-pointer type that is guaranteed not to be nil even if
+the pointer is nil.
+</p>
+
+			<div id="example_GetTxrepField" class="toggle">
+	<div class="collapsed">
+		<p class="exampleHeading toggleButton">▹ <span class="text">Example</span></p>
+	</div>
+	<div class="expanded">
+		<p class="exampleHeading toggleButton">▾ <span class="text">Example</span></p>
+		
+		
+		
+			<p>Code:</p>
+			<pre class="code">var a1, a2 stx.MuxedAccount
+fmt.Sscan(&#34;GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L&#34;, &amp;a1)
+fmt.Sscan(&#34;GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G&#34;, &amp;a2)
+txe := stc.NewTransactionEnvelope()
+txe.Append(nil, stc.Payment{
+    Destination: a1,
+    Asset:       stc.NativeAsset(),
+    Amount:      10000000,
+})
+
+<span class="comment">// The sourceAccount field of a transaction is an AccountID</span>
+*GetTxrepField(txe, &#34;tx.sourceAccount&#34;).XdrPointer().(*stx.MuxedAccount) =
+    a1
+
+<span class="comment">// The sourceAccount field of an operation is a *AccountID, so the</span>
+<span class="comment">// field we get back is of type **AccountID</span>
+op0src := &#34;tx.operations[0].sourceAccount&#34;
+*GetTxrepField(txe, op0src).XdrPointer().(**stx.MuxedAccount) = &amp;a2
+
+XdrToTxrep(os.Stdout, &#34;&#34;, txe)
+<span class="comment"></pre>
+			
+			<p>Output:</p>
+			<pre class="output">type: ENVELOPE_TYPE_TX
+tx.sourceAccount: GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L
+tx.fee: 0
+tx.seqNum: 0
+tx.cond.type: PRECOND_NONE
+tx.memo.type: MEMO_NONE
+tx.operations.len: 1
+tx.operations[0].sourceAccount._present: true
+tx.operations[0].sourceAccount: GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G
+tx.operations[0].body.type: PAYMENT
+tx.operations[0].body.paymentOp.destination: GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L
+tx.operations[0].body.paymentOp.asset: native
+tx.operations[0].body.paymentOp.amount: 10000000 (1e7)
+tx.ext.v: 0
+signatures.len: 0
+</pre>
+			
+		
+	</div>
+</div>
+
+			
+
+		
+			
+			
+			<h2 id="HasAccountID">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/ledger.go?s=2268:2323#L85">HasAccountID</a>
+				<a class="permalink" href="index.html#HasAccountID">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func HasAccountID(a *<a href="../stx/index.html">stx</a>.<a href="../stx/index.html#AccountID">AccountID</a>, t <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+			<p>
+Returns true if structure contains AccountID in something other
+than an Asset issuer field.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="HideFieldName">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go?s=1714:1766#L66">HideFieldName</a>
+				<a class="permalink" href="index.html#HideFieldName">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func HideFieldName(field <a href="http://localhost:6666/pkg/builtin/#string">string</a>, t <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+			<p>
+Returns true for types whose field names should be hidden when the
+field name is of the form v[0-9]+.  This if for backwards
+compatibility, as fields of this type are intended to be used as
+versions of the same structure in a version union, and eliding the
+field names (v0, v1, ...) allows one to change the version without
+invalidating the rest of the fields.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="JsonNumberToI64">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/json.go?s=246:296#L3">JsonNumberToI64</a>
+				<a class="permalink" href="index.html#JsonNumberToI64">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func JsonNumberToI64(n <a href="http://localhost:6666/pkg/encoding/json/">json</a>.<a href="http://localhost:6666/pkg/encoding/json/#Number">Number</a>) (<a href="http://localhost:6666/pkg/builtin/#int64">int64</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+			<p>
+Convert a json.Number to an int64 by scanning the textual
+representation of the number.  (The simpler approach of going
+through a double risks losing precision.)
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="JsonToXdr">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/json_xdr.go?s=2157:2217#L75">JsonToXdr</a>
+				<a class="permalink" href="index.html#JsonToXdr">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func JsonToXdr(dst <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrAggregate">XdrAggregate</a>, src []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) (err <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+			<p>
+Parse JSON into an XDR structure.  This function assumes that dst
+is in a pristine state--for example, it won&#39;t reset pointers to nil
+if the corresponding JSON is null.  Moreover, it is somewhat strict
+in expecting the JSON to conform to the XDR.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="PrettyPrint">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/pretty.go?s=1873:1913#L86">PrettyPrint</a>
+				<a class="permalink" href="index.html#PrettyPrint">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func PrettyPrint(arg interface{}) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+			
+			
+			
+
+		
+			
+			
+			<h2 id="PrettyPrintAux">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/pretty.go?s=1630:1712#L75">PrettyPrintAux</a>
+				<a class="permalink" href="index.html#PrettyPrintAux">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func PrettyPrintAux(aux func(interface{}) (<a href="http://localhost:6666/pkg/builtin/#string">string</a>, <a href="http://localhost:6666/pkg/builtin/#bool">bool</a>),
+    arg interface{}) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+			
+			
+			
+
+		
+			
+			
+			<h2 id="PrintVecOpaque">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go?s=5185:5222#L243">PrintVecOpaque</a>
+				<a class="permalink" href="index.html#PrintVecOpaque">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func PrintVecOpaque(bs []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+			<p>
+Convert an array of bytes into a string of hex digits.  Show an
+empty vector as &#34;0 bytes&#34;, since we need to show it as something.
+(Note the bytes is a comment, but just &#34;0&#34; might be unintuitive.)
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="ReadFile">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/lockfile.go?s=1691:1746#L56">ReadFile</a>
+				<a class="permalink" href="index.html#ReadFile">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func ReadFile(path <a href="http://localhost:6666/pkg/builtin/#string">string</a>) ([]<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>, <a href="http://localhost:6666/pkg/os/">os</a>.<a href="http://localhost:6666/pkg/os/#FileInfo">FileInfo</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+			<p>
+Read the contents of a file and also return the FileInfo at the
+time the file is read.  The returned FileInfo can be checked with
+FileChanged to see if the file has changed since it was last read,
+and the result will be guaranteed not to miss modifications (at
+least on Unix where setting the mtime to something in the past
+increases the ctime).
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="ReadTextLine">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go?s=13799:13845#L603">ReadTextLine</a>
+				<a class="permalink" href="index.html#ReadTextLine">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func ReadTextLine(r <a href="http://localhost:6666/pkg/io/">io</a>.<a href="http://localhost:6666/pkg/io/#Reader">Reader</a>) ([]<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+			<p>
+Read a line of text without using bufio.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="RepDiff">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/ledger.go?s=365:411#L7">RepDiff</a>
+				<a class="permalink" href="index.html#RepDiff">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func RepDiff(prefix, arep, brep <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+			<p>
+Takes two inputs in txrep format, and returns a string describing
+all the lines that have changed in the form:
+</p>
+<pre>field: old_value -&gt; new_value
+</pre>
+<p>
+Either old_value or new_value may be empty for a field that appears
+only in a or only in b.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="SafeCreateFile">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/lockfile.go?s=7268:7337#L263">SafeCreateFile</a>
+				<a class="permalink" href="index.html#SafeCreateFile">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func SafeCreateFile(path <a href="http://localhost:6666/pkg/builtin/#string">string</a>, data <a href="http://localhost:6666/pkg/builtin/#string">string</a>, perm <a href="http://localhost:6666/pkg/os/">os</a>.<a href="http://localhost:6666/pkg/os/#FileMode">FileMode</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+			<p>
+Like SafeWriteFile, but fails if the file already exists after the
+lock is acquired.  Does not exclusively create the target file, but
+rather uses a lockfile to ensure that if the file is created it
+will have data as its contents.  (Exclusively creating the target
+file could lead to the file existing but being empty after a
+crash.)
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="SafeWriteFile">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/lockfile.go?s=6716:6784#L247">SafeWriteFile</a>
+				<a class="permalink" href="index.html#SafeWriteFile">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func SafeWriteFile(path <a href="http://localhost:6666/pkg/builtin/#string">string</a>, data <a href="http://localhost:6666/pkg/builtin/#string">string</a>, perm <a href="http://localhost:6666/pkg/os/">os</a>.<a href="http://localhost:6666/pkg/os/#FileMode">FileMode</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+			<p>
+Writes data to file path in a safe way.  If path is &#34;foo&#34;, then
+data is first written to a file called &#34;foo.lock&#34; and that file is
+flushed to disk.  Then, if a file called &#34;foo&#34; already exists,
+&#34;foo&#34; is linked to &#34;foo~&#34; to keep a backup.  Finally, &#34;foo.lock&#34; is
+renamed to &#34;foo&#34;.  Fails if &#34;foo.lock&#34; already exists.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="ScaleFmt">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go?s=4315:4355#L203">ScaleFmt</a>
+				<a class="permalink" href="index.html#ScaleFmt">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func ScaleFmt(val <a href="http://localhost:6666/pkg/builtin/#int64">int64</a>, exp <a href="http://localhost:6666/pkg/builtin/#int">int</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+			<p>
+Print a number divided by 10^exp, appending the exponent.
+</p>
+
+			<div id="example_ScaleFmt" class="toggle">
+	<div class="collapsed">
+		<p class="exampleHeading toggleButton">▹ <span class="text">Example</span></p>
+	</div>
+	<div class="expanded">
+		<p class="exampleHeading toggleButton">▾ <span class="text">Example</span></p>
+		
+		
+		
+			<p>Code:</p>
+			<pre class="code">fmt.Println(ScaleFmt(987654321, 7))
+<span class="comment"></pre>
+			
+			<p>Output:</p>
+			<pre class="output">98.7654321e7
+</pre>
+			
+		
+	</div>
+</div>
+
+			
+
+		
+			
+			
+			<h2 id="Stream">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/stream.go?s=2526:2623#L107">Stream</a>
+				<a class="permalink" href="index.html#Stream">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func Stream(ctx <a href="http://localhost:6666/pkg/context/">context</a>.<a href="http://localhost:6666/pkg/context/#Context">Context</a>, url <a href="http://localhost:6666/pkg/builtin/#string">string</a>,
+    cb func(eventType <a href="http://localhost:6666/pkg/builtin/#string">string</a>, data []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+			<p>
+Stream results from a URL that returns a body of type
+text/event-stream, as described in <a href="https://www.w3.org/TR/eventsource/">https://www.w3.org/TR/eventsource/</a>
+</p>
+<p>
+The callback function, cb, gets called with a series of event types
+and data payloads.  The event type will generally be one of &#34;message&#34;,
+&#34;error&#34;, &#34;open&#34;, or &#34;close&#34; (where you will typically ignore events of
+type open and close).
+</p>
+<p>
+Stream does not spawn a new goroutine.  It loops until the Context ctx
+is canceled or there is a non-nil error.  Hence, the cb can make
+Stream return by returning a non-nil error.  You will generally want
+to spawn Stream in a new goroutine, and may wish to wrap it in a loop
+to keep trying in the face of errors.
+</p>
+<p>
+In keeping with the Stellar Horizon REST API, if url does not contain
+a cursor parameter, Stream adds cursor=now to the query.  It
+furthermore updates the cursor to the latest event ID whenever it
+needs to reconnect.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="TxPayloadHash">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/crypto.go?s=676:737#L22">TxPayloadHash</a>
+				<a class="permalink" href="index.html#TxPayloadHash">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func TxPayloadHash(network <a href="http://localhost:6666/pkg/builtin/#string">string</a>, tx <a href="../stx/index.html">stx</a>.<a href="../stx/index.html#Signable">Signable</a>) *<a href="../stx/index.html">stx</a>.<a href="../stx/index.html#Hash">Hash</a></pre>
+			<p>
+Returns the transaction hash for a transaction.  The first
+argument, network, is the network name, since the transaction hash
+depends on the particular instantiation of the Stellar network.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="Verify">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/crypto.go?s=1162:1225#L36">Verify</a>
+				<a class="permalink" href="index.html#Verify">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func Verify(pk *<a href="../stx/index.html">stx</a>.<a href="../stx/index.html#PublicKey">PublicKey</a>, message []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>, sig []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+			<p>
+Verify a signature on an arbitrary raw message.  Stellar messages
+should be hashed with the NetworkID before signing or verifying, so
+you probably don&#39;t want to use this function.  See VerifyTx and the
+ToSignerKey() method of PublicKey, instead.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="VerifyTx">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/crypto.go?s=1409:1492#L46">VerifyTx</a>
+				<a class="permalink" href="index.html#VerifyTx">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func VerifyTx(pk *<a href="../stx/index.html">stx</a>.<a href="../stx/index.html#SignerKey">SignerKey</a>, network <a href="http://localhost:6666/pkg/builtin/#string">string</a>, tx <a href="../stx/index.html">stx</a>.<a href="../stx/index.html#Signable">Signable</a>,
+    sig []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+			<p>
+Verify the signature on a transaction.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="XdrExtract">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/xdrmisc.go?s=2957:3009#L103">XdrExtract</a>
+				<a class="permalink" href="index.html#XdrExtract">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func XdrExtract(t <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>, out interface{}) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+			<p>
+If out is of type **T, then *out is set to point to the first
+instance of T found when traversing t.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="XdrFromBase64">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/base64.go?s=610:669#L14">XdrFromBase64</a>
+				<a class="permalink" href="index.html#XdrFromBase64">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func XdrFromBase64(e <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>, input <a href="http://localhost:6666/pkg/builtin/#string">string</a>) (err <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+			<p>
+Parse base64-encoded binary XDR into an XDR aggregate structure.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="XdrFromBin">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/xdrmisc.go?s=723:779#L18">XdrFromBin</a>
+				<a class="permalink" href="index.html#XdrFromBin">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func XdrFromBin(t <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>, input <a href="http://localhost:6666/pkg/builtin/#string">string</a>) (err <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+			<p>
+Unmarshal an XDR type from the raw binary bytes defined in RFC4506.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="XdrSHA256">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/crypto.go?s=291:339#L9">XdrSHA256</a>
+				<a class="permalink" href="index.html#XdrSHA256">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func XdrSHA256(ts ...<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>) (ret <a href="../stx/index.html">stx</a>.<a href="../stx/index.html#Hash">Hash</a>)</pre>
+			<p>
+Computes the SHA-256 hash of an arbitrary XDR data structure.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="XdrToBase64">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/base64.go?s=314:356#L3">XdrToBase64</a>
+				<a class="permalink" href="index.html#XdrToBase64">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func XdrToBase64(es ...<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+			<p>
+Convert an XDR aggregate to base64-encoded binary format.  Calls
+panic() with an XdrError if any field contains illegal values
+(e.g., if a slice exceeds its bounds or a union discriminant has an
+invalid value).
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="XdrToBin">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/xdrmisc.go?s=527:562#L11">XdrToBin</a>
+				<a class="permalink" href="index.html#XdrToBin">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func XdrToBin(t <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+			<p>
+Marshal an XDR type to the raw binary bytes defined in RFC4506.
+The return value is binary, not UTF-8.  For most marshaling
+purposes you might prefer a []byte (so see XdrOut), but this
+function is handy if you want to convert the contents of an XDR
+structure into a map key or compare two XDR structures for
+equality.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="XdrToJson">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/json_xdr.go?s=4470:4531#L173">XdrToJson</a>
+				<a class="permalink" href="index.html#XdrToJson">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func XdrToJson(src <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrAggregate">XdrAggregate</a>) (json []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>, err <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+			<p>
+Format an XDR structure as JSON.
+</p>
+
+			<div id="example_XdrToJson" class="toggle">
+	<div class="collapsed">
+		<p class="exampleHeading toggleButton">▹ <span class="text">Example</span></p>
+	</div>
+	<div class="expanded">
+		<p class="exampleHeading toggleButton">▾ <span class="text">Example</span></p>
+		
+		
+		
+			<p>Code:</p>
+			<pre class="code">var mykey stc.PrivateKey
+fmt.Sscan(&#34;SDWHLWL24OTENLATXABXY5RXBG6QFPLQU7VMKFH4RZ7EWZD2B7YRAYFS&#34;,
+    &amp;mykey)
+
+var yourkey stc.PublicKey
+fmt.Sscan(&#34;GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L&#34;,
+    &amp;yourkey)
+
+<span class="comment">// Build a transaction</span>
+txe := stc.NewTransactionEnvelope()
+txe.SetSourceAccount(mykey.Public())
+txe.V1().Tx.SeqNum = 3319833626148865
+txe.V1().Tx.Memo = stc.MemoText(&#34;Hello&#34;)
+txe.Append(nil, stc.Payment{
+    Destination: *yourkey.ToMuxedAccount(),
+    Asset:       stc.NativeAsset(),
+    Amount:      20000000,
+})
+<span class="comment">// ... Can keep appending operations with txe.Append</span>
+txe.SetFee(100)
+
+<span class="comment">// Sign the transaction</span>
+stc.DefaultStellarNet(&#34;main&#34;).SignTx(&amp;mykey, txe)
+
+<span class="comment">// Print the transaction in JSON</span>
+j, _ := XdrToJson(txe)
+fmt.Print(string(j))
+
+<span class="comment"></pre>
+			
+			<p>Output:</p>
+			<pre class="output">{
+    &#34;type&#34;: &#34;ENVELOPE_TYPE_TX&#34;,
+    &#34;tx&#34;: {
+        &#34;sourceAccount&#34;: &#34;GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G&#34;,
+        &#34;fee&#34;: 100,
+        &#34;seqNum&#34;: &#34;3319833626148865&#34;,
+        &#34;cond&#34;: {
+            &#34;type&#34;: &#34;PRECOND_NONE&#34;
+        },
+        &#34;memo&#34;: {
+            &#34;type&#34;: &#34;MEMO_TEXT&#34;,
+            &#34;text&#34;: &#34;Hello&#34;
+        },
+        &#34;operations&#34;: [
+            {
+                &#34;sourceAccount&#34;: null,
+                &#34;body&#34;: {
+                    &#34;type&#34;: &#34;PAYMENT&#34;,
+                    &#34;paymentOp&#34;: {
+                        &#34;destination&#34;: &#34;GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L&#34;,
+                        &#34;asset&#34;: &#34;native&#34;,
+                        &#34;amount&#34;: &#34;20000000&#34;
+                    }
+                }
+            }
+        ],
+        &#34;ext&#34;: {
+            &#34;v&#34;: 0
+        }
+    },
+    &#34;signatures&#34;: [
+        {
+            &#34;hint&#34;: &#34;4TdHQQ==&#34;,
+            &#34;signature&#34;: &#34;O/lsKauVcwd1YStamg7GMNd5hGqzGy4H3o0k3pJ5YfhmdgQJGjlC51bg3BTdlEZeK2EyiASB5AMFXsM5BUKVAg==&#34;
+        }
+    ]
+}
+</pre>
+			
+		
+	</div>
+</div>
+
+			
+
+		
+		
+			
+			
+			<h2 id="Ed25519Priv">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/crypto.go?s=2125:2160#L71">Ed25519Priv</a>
+				<a class="permalink" href="index.html#Ed25519Priv">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type Ed25519Priv <a href="http://localhost:6666/pkg/crypto/ed25519/">ed25519</a>.<a href="http://localhost:6666/pkg/crypto/ed25519/#PrivateKey">PrivateKey</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="NewEd25519Priv">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/crypto.go?s=2613:2646#L88">NewEd25519Priv</a>
+					<a class="permalink" href="index.html#NewEd25519Priv">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func NewEd25519Priv() <a href="index.html#Ed25519Priv">Ed25519Priv</a></pre>
+				
+				
+				
+			
+
+			
+				
+				<h3 id="Ed25519Priv.Public">func (Ed25519Priv) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/crypto.go?s=2432:2482#L82">Public</a>
+					<a class="permalink" href="index.html#Ed25519Priv.Public">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (sk <a href="index.html#Ed25519Priv">Ed25519Priv</a>) Public() (ret <a href="../stx/index.html">stx</a>.<a href="../stx/index.html#PublicKey">PublicKey</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Ed25519Priv.Sign">func (Ed25519Priv) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/crypto.go?s=2302:2356#L78">Sign</a>
+					<a class="permalink" href="index.html#Ed25519Priv.Sign">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (sk <a href="index.html#Ed25519Priv">Ed25519Priv</a>) Sign(msg []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) ([]<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Ed25519Priv.String">func (Ed25519Priv) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/crypto.go?s=2162:2199#L73">String</a>
+					<a class="permalink" href="index.html#Ed25519Priv.String">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (sk <a href="index.html#Ed25519Priv">Ed25519Priv</a>) String() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ErrFileHasChanged">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/lockfile.go?s=222:251#L10">ErrFileHasChanged</a>
+				<a class="permalink" href="index.html#ErrFileHasChanged">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type ErrFileHasChanged <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="ErrFileHasChanged.Error">func (ErrFileHasChanged) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/lockfile.go?s=253:294#L12">Error</a>
+					<a class="permalink" href="index.html#ErrFileHasChanged.Error">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (e <a href="index.html#ErrFileHasChanged">ErrFileHasChanged</a>) Error() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ErrIsDirectory">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/lockfile.go?s=111:137#L4">ErrIsDirectory</a>
+				<a class="permalink" href="index.html#ErrIsDirectory">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type ErrIsDirectory <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="ErrIsDirectory.Error">func (ErrIsDirectory) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/lockfile.go?s=139:177#L6">Error</a>
+					<a class="permalink" href="index.html#ErrIsDirectory.Error">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (e <a href="index.html#ErrIsDirectory">ErrIsDirectory</a>) Error() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="HTTPerror">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/stream.go?s=149:208#L4">HTTPerror</a>
+				<a class="permalink" href="index.html#HTTPerror">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+A status line for a non-200 HTTP response
+</p>
+
+			<pre>type HTTPerror struct {
+<span id="HTTPerror.Resp"></span>    Resp *<a href="http://localhost:6666/pkg/net/http/">http</a>.<a href="http://localhost:6666/pkg/net/http/#Response">Response</a>
+<span id="HTTPerror.Body"></span>    Body []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="NewHTTPerror">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/stream.go?s=210:259#L9">NewHTTPerror</a>
+					<a class="permalink" href="index.html#NewHTTPerror">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func NewHTTPerror(resp *<a href="http://localhost:6666/pkg/net/http/">http</a>.<a href="http://localhost:6666/pkg/net/http/#Response">Response</a>) *<a href="index.html#HTTPerror">HTTPerror</a></pre>
+				
+				
+				
+			
+
+			
+				
+				<h3 id="HTTPerror.Error">func (*HTTPerror) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/stream.go?s=397:431#L20">Error</a>
+					<a class="permalink" href="index.html#HTTPerror.Error">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (e *<a href="index.html#HTTPerror">HTTPerror</a>) Error() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="HTTPerror.Temporary">func (*HTTPerror) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/stream.go?s=607:643#L27">Temporary</a>
+					<a class="permalink" href="index.html#HTTPerror.Temporary">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (e *<a href="index.html#HTTPerror">HTTPerror</a>) Temporary() <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+				<p>
+Returns true for 503, false otherwise.  Should examine the result
+more carefully to distinguish between transient or permanent 500
+errors.
+</p>
+
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="JsonInt64">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/json.go?s=545:565#L13">JsonInt64</a>
+				<a class="permalink" href="index.html#JsonInt64">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+An int64 that marshals and unmarshals as a string in JSON to avoid
+loss of precision (since JSON numbers are floating point).
+</p>
+
+			<pre>type JsonInt64 <a href="http://localhost:6666/pkg/builtin/#int64">int64</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="JsonInt64.MarshalText">func (JsonInt64) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/json.go?s=567:615#L15">MarshalText</a>
+					<a class="permalink" href="index.html#JsonInt64.MarshalText">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (i <a href="index.html#JsonInt64">JsonInt64</a>) MarshalText() ([]<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="JsonInt64.UnmarshalText">func (*JsonInt64) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/json.go?s=671:723#L19">UnmarshalText</a>
+					<a class="permalink" href="index.html#JsonInt64.UnmarshalText">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (i *<a href="index.html#JsonInt64">JsonInt64</a>) UnmarshalText(text []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="JsonInt64e7">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/json.go?s=937:959#L27">JsonInt64e7</a>
+				<a class="permalink" href="index.html#JsonInt64e7">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+An int64 that marshals and unmarshals to a string in JSON
+containing a fixed-point number 10^{-7} times the value.
+</p>
+
+			<pre>type JsonInt64e7 <a href="http://localhost:6666/pkg/builtin/#int64">int64</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="JsonInt64e7.MarshalText">func (JsonInt64e7) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/json.go?s=1062:1112#L36">MarshalText</a>
+					<a class="permalink" href="index.html#JsonInt64e7.MarshalText">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (i <a href="index.html#JsonInt64e7">JsonInt64e7</a>) MarshalText() ([]<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="JsonInt64e7.String">func (JsonInt64e7) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/json.go?s=961:997#L29">String</a>
+					<a class="permalink" href="index.html#JsonInt64e7.String">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (i <a href="index.html#JsonInt64e7">JsonInt64e7</a>) String() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="JsonInt64e7.UnmarshalText">func (*JsonInt64e7) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/json.go?s=1321:1375#L46">UnmarshalText</a>
+					<a class="permalink" href="index.html#JsonInt64e7.UnmarshalText">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (i *<a href="index.html#JsonInt64e7">JsonInt64e7</a>) UnmarshalText(text []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="LockedFile">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/lockfile.go?s=3691:4688#L160">LockedFile</a>
+				<a class="permalink" href="index.html#LockedFile">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+An interface to update a file atomically.  Acts as a Writer, and
+when you call Commit() atomically renames the lockfile you just
+wrote to the target filename.
+</p>
+
+			<pre>type LockedFile interface {
+    <a href="http://localhost:6666/pkg/io/">io</a>.<a href="http://localhost:6666/pkg/io/#Writer">Writer</a>
+    <a href="http://localhost:6666/pkg/io/">io</a>.<a href="http://localhost:6666/pkg/io/#StringWriter">StringWriter</a>
+
+    <span class="comment">// Call when you wish to replace the locked file with what you</span>
+    <span class="comment">// have written to this Writer and then release the lock.</span>
+    Commit() <a href="http://localhost:6666/pkg/builtin/#error">error</a>
+
+    <span class="comment">// Returns the contents of the locked file.  (This is not the</span>
+    <span class="comment">// contents of the lockfile itself, which is initially empty and</span>
+    <span class="comment">// to which you must write the new contents that you want to swap</span>
+    <span class="comment">// in atomically.)  Also checks the file modification time, so as</span>
+    <span class="comment">// to cause an abort if anyone else changes the file after you&#39;ve</span>
+    <span class="comment">// locked it and before you&#39;ve called Commit().</span>
+    ReadFile() ([]<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)
+
+    <span class="comment">// Return the file info at the time the lock was taken (or nil if</span>
+    <span class="comment">// the file did not exist).</span>
+    Status() <a href="http://localhost:6666/pkg/os/">os</a>.<a href="http://localhost:6666/pkg/os/#FileInfo">FileInfo</a>
+
+    <span class="comment">// You must call Abort() to clean up the lockfile, unless you have</span>
+    <span class="comment">// called Commit().  However, it is safe to call Abort() multiple</span>
+    <span class="comment">// times, or to call Abort() after Commit(), so the best use is to</span>
+    <span class="comment">// call defer lf.Abort() as soon as you have a LockedFile.</span>
+    Abort()
+}</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="LockFile">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/lockfile.go?s=5915:5979#L227">LockFile</a>
+					<a class="permalink" href="index.html#LockFile">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func LockFile(path <a href="http://localhost:6666/pkg/builtin/#string">string</a>, perm <a href="http://localhost:6666/pkg/os/">os</a>.<a href="http://localhost:6666/pkg/os/#FileMode">FileMode</a>) (<a href="index.html#LockedFile">LockedFile</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Locks a file for updating.  Exclusively creates a file with name
+path + &#34;.lock&#34;, returns a writer that lets you write into this
+lockfile, and then when you call Commit() replaces path with what
+you have just written.  You must call Abort() or Commit() on the
+returned interface.  Since it is safe to call both, best practice
+is to defer a call to Abort() immediately.
+</p>
+
+				<div id="example_LockFile" class="toggle">
+	<div class="collapsed">
+		<p class="exampleHeading toggleButton">▹ <span class="text">Example</span></p>
+	</div>
+	<div class="expanded">
+		<p class="exampleHeading toggleButton">▾ <span class="text">Example</span></p>
+		
+		
+		
+			<p>Code:</p>
+			<pre class="code">
+lf, err := LockFile(&#34;testfile&#34;, 0666)
+if err != nil {
+    return err
+}
+defer lf.Abort()
+
+fmt.Fprintf(lf, &#34;New file contents\n&#34;)
+
+return lf.Commit()
+</pre>
+			
+		
+	</div>
+</div>
+
+				
+			
+				
+				<h3 id="LockFileIfUnchanged">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/lockfile.go?s=6186:6259#L234">LockFileIfUnchanged</a>
+					<a class="permalink" href="index.html#LockFileIfUnchanged">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func LockFileIfUnchanged(path <a href="http://localhost:6666/pkg/builtin/#string">string</a>, fi <a href="http://localhost:6666/pkg/os/">os</a>.<a href="http://localhost:6666/pkg/os/#FileInfo">FileInfo</a>) (<a href="index.html#LockedFile">LockedFile</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Like LockFile, but fails if file&#39;s stat information (other than
+atime) does not exactly match fi.  If fi is nil, then acts like
+LockFile with perm of 0666.
+</p>
+
+				
+				
+			
+
+			
+		
+			
+			
+			<h2 id="MetaDelta">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/ledger.go?s=2849:2925#L109">MetaDelta</a>
+				<a class="permalink" href="index.html#MetaDelta">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Structure representing the value of a specific ledger entry before
+and after execution of a transaction.
+</p>
+
+			<pre>type MetaDelta struct {
+<span id="MetaDelta.Key"></span>    Key      <a href="../stx/index.html">stx</a>.<a href="../stx/index.html#LedgerKey">LedgerKey</a>
+<span id="MetaDelta.Old"></span>    Old, New *<a href="../stx/index.html">stx</a>.<a href="../stx/index.html#LedgerEntry">LedgerEntry</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="GetMetaDeltas">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/ledger.go?s=3154:3209#L121">GetMetaDeltas</a>
+					<a class="permalink" href="index.html#GetMetaDeltas">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func GetMetaDeltas(ms ...<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>) (ret []<a href="index.html#MetaDelta">MetaDelta</a>)</pre>
+				<p>
+Extract the before/after ledger entry values from XDR structures
+containing LedgerEntryChanges.
+</p>
+
+				
+				
+			
+
+			
+				
+				<h3 id="MetaDelta.AccountID">func (MetaDelta) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/ledger.go?s=2970:3016#L115">AccountID</a>
+					<a class="permalink" href="index.html#MetaDelta.AccountID">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (md <a href="index.html#MetaDelta">MetaDelta</a>) AccountID() *<a href="../stx/index.html">stx</a>.<a href="../stx/index.html#AccountID">AccountID</a></pre>
+				<p>
+The account that owns the ledger entry.
+</p>
+
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="PrivateKeyInterface">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/crypto.go?s=2014:2123#L65">PrivateKeyInterface</a>
+				<a class="permalink" href="index.html#PrivateKeyInterface">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type PrivateKeyInterface interface {
+    String() <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+    Sign([]<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) ([]<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)
+    Public() <a href="../stx/index.html">stx</a>.<a href="../stx/index.html#PublicKey">PublicKey</a>
+}</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="TxrepError">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go?s=9702:9753#L410">TxrepError</a>
+				<a class="permalink" href="index.html#TxrepError">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Represents errors encountered when parsing textual Txrep into XDR
+structures.
+</p>
+
+			<pre>type TxrepError []struct {
+    Line <a href="http://localhost:6666/pkg/builtin/#int">int</a>
+    Msg  <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+}</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="XdrFromTxrep">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go?s=14759:14829#L645">XdrFromTxrep</a>
+					<a class="permalink" href="index.html#XdrFromTxrep">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func XdrFromTxrep(in <a href="http://localhost:6666/pkg/io/">io</a>.<a href="http://localhost:6666/pkg/io/#Reader">Reader</a>, name <a href="http://localhost:6666/pkg/builtin/#string">string</a>, t <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>) <a href="index.html#TxrepError">TxrepError</a></pre>
+				<p>
+Parse input in Txrep format into an XdrType type.  If the XdrType
+has a method named SetHelp(string), then it is called for field
+names when the value ends with &#39;?&#39;.
+</p>
+
+				
+				
+			
+
+			
+				
+				<h3 id="TxrepError.Error">func (TxrepError) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go?s=9942:9976#L423">Error</a>
+					<a class="permalink" href="index.html#TxrepError.Error">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (e <a href="index.html#TxrepError">TxrepError</a>) Error() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="TxrepError.FileError">func (TxrepError) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go?s=10167:10220#L430">FileError</a>
+					<a class="permalink" href="index.html#TxrepError.FileError">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (e <a href="index.html#TxrepError">TxrepError</a>) FileError(filename <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				<p>
+Convert TxrepError to string, but placing filename and a colon
+before each line, so as to render messages in the conventional
+&#34;file:line: message&#34; format.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="TxrepError.Is">func (TxrepError) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go?s=10259:10293#L434">Is</a>
+					<a class="permalink" href="index.html#TxrepError.Is">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (<a href="index.html#TxrepError">TxrepError</a>) Is(e <a href="http://localhost:6666/pkg/builtin/#error">error</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="XdrBadValue">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go?s=485:542#L17">XdrBadValue</a>
+				<a class="permalink" href="index.html#XdrBadValue">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Reports illegal values in an XDR structure.
+</p>
+
+			<pre>type XdrBadValue []struct {
+    Field <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+    Msg   <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+}</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="XdrToTxrep">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go?s=8560:8630#L364">XdrToTxrep</a>
+					<a class="permalink" href="index.html#XdrToTxrep">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func XdrToTxrep(out <a href="http://localhost:6666/pkg/io/">io</a>.<a href="http://localhost:6666/pkg/io/#Writer">Writer</a>, name <a href="http://localhost:6666/pkg/builtin/#string">string</a>, t <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>) <a href="index.html#XdrBadValue">XdrBadValue</a></pre>
+				<p>
+Writes a human-readable version of a transaction or other XdrType
+structure to out in txrep format.  The following methods on t can
+be used to add comments into the output
+</p>
+<p>
+Comment for AccountID:
+</p>
+<pre>AccountIDNote(string) string
+</pre>
+<p>
+Comment for SignerKey:
+</p>
+<pre>SignerNote(*SignerKey) string
+</pre>
+<p>
+Comment for Signature:
+</p>
+<pre>SigNote(*TransactionEnvelope, *DecoratedSignature) string
+</pre>
+<p>
+Help comment for field fieldname:
+</p>
+<pre>GetHelp(fieldname string) bool
+</pre>
+
+				
+				
+			
+
+			
+				
+				<h3 id="XdrBadValue.Error">func (XdrBadValue) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stcdetail/txrep.go?s=544:579#L22">Error</a>
+					<a class="permalink" href="index.html#XdrBadValue.Error">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (e <a href="index.html#XdrBadValue">XdrBadValue</a>) Error() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+	
+
+	
+
+
+
+
+
+
+
+<div id="footer">
+Build version go1.17.8.<br>
+Except as <a href="https://developers.google.com/site-policies#restrictions">noted</a>,
+the content of this page is licensed under the
+Creative Commons Attribution 3.0 License,
+and code is licensed under a <a href="http://localhost:6666/LICENSE">BSD license</a>.<br>
+<a href="https://golang.org/doc/tos.html">Terms of Service</a> |
+<a href="https://www.google.com/intl/en/policies/privacy/">Privacy Policy</a>
+</div>
+
+</div><!-- .container -->
+</div><!-- #page -->
+</body>
+</html>

@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="David Mazières" />
+  <title>stc(1)</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <style type="text/css">body {
+margin: 0;
+font-family: Arial, sans-serif;
+background-color: #fff;
+line-height: 1.3;
+text-align: center;
+color: #222;
+}
+textarea {
+
+color: inherit;
+}
+pre,
+code {
+font-family: Menlo, monospace;
+font-size: 0.875rem;
+}
+pre {
+line-height: 1.4;
+overflow-x: auto;
+}
+pre .comment {
+color: #006600;
+}
+pre .highlight,
+pre .highlight-comment,
+pre .selection-highlight,
+pre .selection-highlight-comment {
+background: #ffff00;
+}
+pre .selection,
+pre .selection-comment {
+background: #ff9632;
+}
+pre .ln {
+color: #999;
+background: #efefef;
+}
+.ln {
+-webkit-user-select: none;
+-moz-user-select: none;
+-ms-user-select: none;
+user-select: none;
+
+display: inline-block;
+width: 8ch;
+}
+.search-nav {
+margin-left: 1.25rem;
+font-size: 0.875rem;
+column-gap: 1.25rem;
+column-fill: auto;
+column-width: 14rem;
+}
+.search-nav .indent {
+margin-left: 1.25rem;
+}
+a,
+.exampleHeading .text,
+.expandAll {
+color: #375eab;
+text-decoration: none;
+}
+a:hover,
+.exampleHeading .text:hover,
+.expandAll:hover {
+text-decoration: underline;
+}
+.article a {
+text-decoration: underline;
+}
+.article .title a {
+text-decoration: none;
+}
+.permalink {
+display: none;
+}
+:hover > .permalink {
+display: inline;
+}
+p,
+li {
+max-width: 50rem;
+word-wrap: break-word;
+}
+p,
+pre,
+ul,
+ol {
+margin: 1.25rem;
+}
+pre {
+background: #efefef;
+padding: 0.625rem;
+border-radius: 0.3125rem;
+}
+h1,
+h2,
+h3,
+h4,
+.rootHeading {
+margin: 1.25rem 0 1.25rem;
+padding: 0;
+color: #375eab;
+font-weight: bold;
+}
+h1 {
+font-size: 1.75rem;
+line-height: 1;
+}
+h1 .text-muted {
+color: #777;
+}
+h2 {
+font-size: 1.25rem;
+background: #e0ebf5;
+padding: 0.5rem;
+line-height: 1.25;
+font-weight: normal;
+overflow: auto;
+overflow-wrap: break-word;
+}
+h2 a {
+font-weight: bold;
+}
+h3 {
+font-size: 1.25rem;
+line-height: 1.25;
+overflow: auto;
+overflow-wrap: break-word;
+}
+h3,
+h4 {
+margin: 1.25rem 0.3125rem;
+}
+h4 {
+font-size: 1rem;
+}
+.rootHeading {
+font-size: 1.25rem;
+margin: 0;
+}
+h2 > span,
+h3 > span {
+float: right;
+margin: 0 25px 0 0;
+font-weight: normal;
+color: #5279c7;
+}
+dl {
+margin: 1.25rem;
+}
+dd {
+margin: 0 0 0 1.25rem;
+}
+dl,
+dd {
+font-size: 0.875rem;
+}
+div#nav table td {
+vertical-align: top;
+}
+#pkg-index h3 {
+font-size: 1rem;
+}
+.pkg-dir {
+padding: 0 0.625rem;
+}
+.pkg-dir table {
+border-collapse: collapse;
+border-spacing: 0;
+}
+.pkg-name {
+padding-right: 0.625rem;
+}
+.alert {
+color: #aa0000;
+}
+.top-heading {
+float: left;
+padding: 1.313rem 0;
+font-size: 1.25rem;
+font-weight: normal;
+}
+.top-heading a {
+color: #222;
+text-decoration: none;
+}
+#pkg-examples h3 {
+float: left;
+}
+#pkg-examples dl {
+clear: both;
+}
+.expandAll {
+cursor: pointer;
+float: left;
+margin: 1.25rem 0;
+}
+div#topbar {
+background: #e0ebf5;
+height: 4rem;
+overflow: hidden;
+}
+div#page {
+width: 100%;
+}
+div#page > .container,
+div#topbar > .container {
+text-align: left;
+margin-left: auto;
+margin-right: auto;
+padding: 0 1.25rem;
+}
+div#topbar > .container,
+div#page > .container {
+max-width: 59.38rem;
+}
+div#page.wide > .container,
+div#topbar.wide > .container {
+max-width: none;
+}
+div#plusone {
+float: right;
+clear: right;
+margin-top: 0.3125rem;
+}
+div#footer {
+text-align: center;
+color: #666;
+font-size: 0.875rem;
+margin: 2.5rem 0;
+}
+div#menu > a,
+input#search,
+div#learn .buttons a,
+div.play .buttons a,
+div#blog .read a,
+#menu-button {
+padding: 0.625rem;
+text-decoration: none;
+font-size: 1rem;
+border-radius: 0.3125rem;
+}
+div#playground .buttons a,
+div#menu > a,
+input#search,
+#menu-button {
+border: 0.0625rem solid #375eab;
+}
+div#playground .buttons a,
+div#menu > a,
+#menu-button {
+color: white;
+background: #375eab;
+}
+#playgroundButton.active {
+background: white;
+color: #375eab;
+}
+a#start,
+div#learn .buttons a,
+div.play .buttons a,
+div#blog .read a {
+color: #222;
+border: 0.0625rem solid #375eab;
+background: #e0ebf5;
+}
+.download {
+width: 9.375rem;
+}
+div#menu {
+text-align: right;
+padding: 0.625rem;
+white-space: nowrap;
+max-height: 0;
+-moz-transition: max-height 0.25s linear;
+transition: max-height 0.25s linear;
+width: 100%;
+}
+div#menu.menu-visible {
+max-height: 31.25rem;
+}
+div#menu > a,
+#menu-button {
+margin: 0.625rem 0.125rem;
+padding: 0.625rem;
+}
+::-webkit-input-placeholder {
+color: #7f7f7f;
+opacity: 1;
+}
+::placeholder {
+color: #7f7f7f;
+opacity: 1;
+}
+#menu .search-box {
+display: inline-flex;
+width: 8.75rem;
+}
+input#search {
+background: white;
+color: #222;
+box-sizing: border-box;
+-webkit-appearance: none;
+border-top-right-radius: 0;
+border-bottom-right-radius: 0;
+border-right: 0;
+margin-right: 0;
+flex-grow: 1;
+max-width: 100%;
+min-width: 5.625rem;
+}
+input#search:-webkit-search-decoration {
+-webkit-appearance: none;
+}
+input#search:-moz-ui-invalid {
+box-shadow: unset;
+}
+input#search + button {
+display: inline;
+font-size: 1em;
+background-color: #375eab;
+color: white;
+border: 0.0625rem solid #375eab;
+border-top-left-radius: 0;
+border-top-right-radius: 0.3125rem;
+border-bottom-left-radius: 0;
+border-bottom-right-radius: 0.3125rem;
+margin-left: 0;
+cursor: pointer;
+}
+input#search + button span {
+display: flex;
+}
+input#search + button svg {
+fill: white;
+}
+#menu-button {
+display: none;
+position: absolute;
+right: 0.3125rem;
+top: 0;
+margin-right: 0.3125rem;
+}
+#menu-button-arrow {
+display: inline-block;
+}
+.vertical-flip {
+transform: rotate(-180deg);
+}
+div.left {
+float: left;
+clear: left;
+margin-right: 2.5%;
+}
+div.right {
+float: right;
+clear: right;
+margin-left: 2.5%;
+}
+div.left,
+div.right {
+width: 45%;
+}
+div#learn,
+div#about {
+padding-top: 1.25rem;
+}
+div#learn h2,
+div#about {
+margin: 0;
+}
+div#about {
+font-size: 1.25rem;
+margin: 0 auto 1.875rem;
+}
+a#start {
+display: block;
+padding: 0.625rem;
+text-align: center;
+text-decoration: none;
+border-radius: 0.3125rem;
+}
+a#start .big {
+display: block;
+font-weight: bold;
+font-size: 1.25rem;
+}
+a#start .desc {
+display: block;
+font-size: 0.875rem;
+font-weight: normal;
+margin-top: 0.3125rem;
+}
+div#learn .popout {
+float: right;
+display: block;
+cursor: pointer;
+font-size: 0.75rem;
+background: url(data:text/html; charset=utf-8;charset=utf-8,%3C%21DOCTYPE%20html%3E%0A%3Chtml%3E%0A%3Chead%3E%0A%3Cmeta%20http%2Dequiv%3D%22Content%2DType%22%20content%3D%22text%2Fhtml%3B%20charset%3Dutf%2D8%22%3E%0A%3Cmeta%20name%3D%22viewport%22%20content%3D%22width%3Ddevice%2Dwidth%2C%20initial%2Dscale%3D1%22%3E%0A%3Cmeta%20name%3D%22theme%2Dcolor%22%20content%3D%22%23375EAB%22%3E%0A%0A%20%20%3Ctitle%3EFile%20doc%2Fshare%2Epng%20%2D%20Go%20Documentation%20Server%3C%2Ftitle%3E%0A%0A%3Clink%20type%3D%22text%2Fcss%22%20rel%3D%22stylesheet%22%20href%3D%22%2Flib%2Fgodoc%2Fstyle%2Ecss%22%3E%0A%0A%3Cscript%3Ewindow%2EinitFuncs%20%3D%20%5B%5D%3B%3C%2Fscript%3E%0A%3Cscript%20src%3D%22%2Flib%2Fgodoc%2Fjquery%2Ejs%22%20defer%3E%3C%2Fscript%3E%0A%0A%0A%0A%3Cscript%3Evar%20goVersion%20%3D%20%22go1%2E17%2E8%22%3B%3C%2Fscript%3E%0A%3Cscript%20src%3D%22%2Flib%2Fgodoc%2Fgodocs%2Ejs%22%20defer%3E%3C%2Fscript%3E%0A%3C%2Fhead%3E%0A%3Cbody%3E%0A%0A%3Cdiv%20id%3D%27lowframe%27%20style%3D%22position%3A%20fixed%3B%20bottom%3A%200%3B%20left%3A%200%3B%20height%3A%200%3B%20width%3A%20100%25%3B%20border%2Dtop%3A%20thin%20solid%20grey%3B%20background%2Dcolor%3A%20white%3B%20overflow%3A%20auto%3B%22%3E%0A%2E%2E%2E%0A%3C%2Fdiv%3E%3C%21%2D%2D%20%23lowframe%20%2D%2D%3E%0A%0A%3Cdiv%20id%3D%22topbar%22%20class%3D%22wide%22%3E%3Cdiv%20class%3D%22container%22%3E%0A%3Cdiv%20class%3D%22top%2Dheading%22%20id%3D%22heading%2Dwide%22%3E%3Ca%20href%3D%22%2Fpkg%2F%22%3EGo%20Documentation%20Server%3C%2Fa%3E%3C%2Fdiv%3E%0A%3Cdiv%20class%3D%22top%2Dheading%22%20id%3D%22heading%2Dnarrow%22%3E%3Ca%20href%3D%22%2Fpkg%2F%22%3EGoDoc%3C%2Fa%3E%3C%2Fdiv%3E%0A%3Ca%20href%3D%22%23%22%20id%3D%22menu%2Dbutton%22%3E%3Cspan%20id%3D%22menu%2Dbutton%2Darrow%22%3E%26%239661%3B%3C%2Fspan%3E%3C%2Fa%3E%0A%3Cform%20method%3D%22GET%22%20action%3D%22%2Fsearch%22%3E%0A%3Cdiv%20id%3D%22menu%22%3E%0A%0A%3Cspan%20class%3D%22search%2Dbox%22%3E%3Cinput%20type%3D%22search%22%20id%3D%22search%22%20name%3D%22q%22%20placeholder%3D%22Search%22%20aria%2Dlabel%3D%22Search%22%20required%3E%3Cbutton%20type%3D%22submit%22%3E%3Cspan%3E%3C%21%2D%2D%20magnifying%20glass%3A%20%2D%2D%3E%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%3E%3Ctitle%3Esubmit%20search%3C%2Ftitle%3E%3Cpath%20d%3D%22M15%2E5%2014h%2D%2E79l%2D%2E28%2D%2E27C15%2E41%2012%2E59%2016%2011%2E11%2016%209%2E5%2016%205%2E91%2013%2E09%203%209%2E5%203S3%205%2E91%203%209%2E5%205%2E91%2016%209%2E5%2016c1%2E61%200%203%2E09%2D%2E59%204%2E23%2D1%2E57l%2E27%2E28v%2E79l5%204%2E99L20%2E49%2019l%2D4%2E99%2D5zm%2D6%200C7%2E01%2014%205%2011%2E99%205%209%2E5S7%2E01%205%209%2E5%205%2014%207%2E01%2014%209%2E5%2011%2E99%2014%209%2E5%2014z%22%2F%3E%3Cpath%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3C%2Fsvg%3E%3C%2Fspan%3E%3C%2Fbutton%3E%3C%2Fspan%3E%0A%3C%2Fdiv%3E%0A%3C%2Fform%3E%0A%0A%3C%2Fdiv%3E%3C%2Fdiv%3E%0A%0A%0A%0A%3Cdiv%20id%3D%22page%22%20class%3D%22wide%22%3E%0A%3Cdiv%20class%3D%22container%22%3E%0A%0A%0A%20%20%3Ch1%3E%0A%20%20%20%20File%20doc%2Fshare%2Epng%0A%20%20%20%20%3Cspan%20class%3D%22text%2Dmuted%22%3E%3C%2Fspan%3E%0A%20%20%3C%2Fh1%3E%0A%0A%0A%0A%20%20%3Ch2%3Edoc%2Fshare%2Epng%3C%2Fh2%3E%0A%0A%0A%0A%0A%0A%3Cdiv%20id%3D%22nav%22%3E%3C%2Fdiv%3E%0A%0A%0A%3C%21%2D%2D%0A%09Copyright%202009%20The%20Go%20Authors%2E%20All%20rights%20reserved%2E%0A%09Use%20of%20this%20source%20code%20is%20governed%20by%20a%20BSD%2Dstyle%0A%09license%20that%20can%20be%20found%20in%20the%20LICENSE%20file%2E%0A%2D%2D%3E%0A%0A%3Cp%3E%0A%3Cspan%20class%3D%22alert%22%20style%3D%22font%2Dsize%3A120%25%22%3Elstat%20REDACTED%3A%20no%20such%20file%20or%20directory%3C%2Fspan%3E%0A%3C%2Fp%3E%0A%0A%0A%3Cdiv%20id%3D%22footer%22%3E%0ABuild%20version%20go1%2E17%2E8%2E%3Cbr%3E%0AExcept%20as%20%3Ca%20href%3D%22https%3A%2F%2Fdevelopers%2Egoogle%2Ecom%2Fsite%2Dpolicies%23restrictions%22%3Enoted%3C%2Fa%3E%2C%0Athe%20content%20of%20this%20page%20is%20licensed%20under%20the%0ACreative%20Commons%20Attribution%203%2E0%20License%2C%0Aand%20code%20is%20licensed%20under%20a%20%3Ca%20href%3D%22%2FLICENSE%22%3EBSD%20license%3C%2Fa%3E%2E%3Cbr%3E%0A%3Ca%20href%3D%22https%3A%2F%2Fgolang%2Eorg%2Fdoc%2Ftos%2Ehtml%22%3ETerms%20of%20Service%3C%2Fa%3E%20%7C%0A%3Ca%20href%3D%22https%3A%2F%2Fwww%2Egoogle%2Ecom%2Fintl%2Fen%2Fpolicies%2Fprivacy%2F%22%3EPrivacy%20Policy%3C%2Fa%3E%0A%3C%2Fdiv%3E%0A%0A%3C%2Fdiv%3E%3C%21%2D%2D%20%2Econtainer%20%2D%2D%3E%0A%3C%2Fdiv%3E%3C%21%2D%2D%20%23page%20%2D%2D%3E%0A%3C%2Fbody%3E%0A%3C%2Fhtml%3E%0A) no-repeat;
+background-position: right center;
+padding: 0.375rem 1.688rem;
+}
+div#learn pre,
+div#learn textarea {
+padding: 0;
+margin: 0;
+font-family: Menlo, monospace;
+font-size: 0.875rem;
+}
+div#learn .input {
+padding: 0.625rem;
+margin-top: 0.625rem;
+height: 9.375rem;
+border-top-left-radius: 0.3125rem;
+border-top-right-radius: 0.3125rem;
+}
+div#learn .input textarea {
+width: 100%;
+height: 100%;
+border: none;
+outline: none;
+resize: none;
+}
+div#learn .output {
+border-top: none !important;
+padding: 0.625rem;
+height: 3.688rem;
+overflow: auto;
+border-bottom-right-radius: 0.3125rem;
+border-bottom-left-radius: 0.3125rem;
+}
+div#learn .output pre {
+padding: 0;
+border-radius: 0;
+}
+div#learn .input,
+div#learn .input textarea,
+div#learn .output,
+div#learn .output pre {
+background: #ffffd8;
+}
+div#learn .input,
+div#learn .output {
+border: 0.0625rem solid #375eab;
+}
+div#learn .buttons {
+float: right;
+padding: 1.25rem 0 0.625rem 0;
+text-align: right;
+}
+div#learn .buttons a {
+height: 1rem;
+margin-left: 0.3125rem;
+padding: 0.625rem;
+}
+div#learn .toys {
+margin-top: 0.5rem;
+}
+div#learn .toys select {
+font-size: 0.875rem;
+border: 0.0625rem solid #375eab;
+margin: 0;
+}
+div#learn .output .exit {
+display: none;
+}
+div#video {
+max-width: 100%;
+}
+div#blog,
+div#video {
+margin-top: 2.5rem;
+}
+div#blog > a,
+div#blog > div,
+div#blog > h2,
+div#video > a,
+div#video > div,
+div#video > h2 {
+margin-bottom: 0.625rem;
+}
+div#blog .title,
+div#video .title {
+display: block;
+font-size: 1.25rem;
+}
+div#blog .when {
+color: #666;
+font-size: 0.875rem;
+}
+div#blog .read {
+text-align: right;
+}
+@supports (--c: 0) {
+[style*='--aspect-ratio-padding:'] {
+position: relative;
+overflow: hidden;
+padding-top: var(--aspect-ratio-padding);
+}
+[style*='--aspect-ratio-padding:'] > * {
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+}
+}
+.toggleButton {
+cursor: pointer;
+}
+.toggle > .collapsed {
+display: block;
+}
+.toggle > .expanded {
+display: none;
+}
+.toggleVisible > .collapsed {
+display: none;
+}
+.toggleVisible > .expanded {
+display: block;
+}
+table.codetable {
+margin-left: auto;
+margin-right: auto;
+border-style: none;
+}
+table.codetable td {
+padding-right: 0.625rem;
+}
+hr {
+border-style: none;
+border-top: 0.0625rem solid black;
+}
+img.gopher {
+float: right;
+margin-left: 0.625rem;
+margin-top: -2.5rem;
+margin-bottom: 0.625rem;
+z-index: -1;
+}
+h2 {
+clear: right;
+}
+
+div.play {
+padding: 0 1.25rem 2.5rem 1.25rem;
+}
+div.play pre,
+div.play textarea,
+div.play .lines {
+padding: 0;
+margin: 0;
+font-family: Menlo, monospace;
+font-size: 0.875rem;
+}
+div.play .input {
+padding: 0.625rem;
+margin-top: 0.625rem;
+border-top-left-radius: 0.3125rem;
+border-top-right-radius: 0.3125rem;
+overflow: hidden;
+}
+div.play .input textarea {
+width: 100%;
+height: 100%;
+border: none;
+outline: none;
+resize: none;
+overflow: hidden;
+}
+div#playground .input textarea {
+overflow: auto;
+resize: auto;
+}
+div.play .output {
+border-top: none !important;
+padding: 0.625rem;
+max-height: 12.5rem;
+overflow: auto;
+border-bottom-right-radius: 0.3125rem;
+border-bottom-left-radius: 0.3125rem;
+}
+div.play .output pre {
+padding: 0;
+border-radius: 0;
+}
+div.play .input,
+div.play .input textarea,
+div.play .output,
+div.play .output pre {
+background: #ffffd8;
+}
+div.play .input,
+div.play .output {
+border: 0.0625rem solid #375eab;
+}
+div.play .buttons {
+float: right;
+padding: 1.25rem 0 0.625rem 0;
+text-align: right;
+}
+div.play .buttons a {
+height: 1rem;
+margin-left: 0.3125rem;
+padding: 0.625rem;
+cursor: pointer;
+}
+.output .stderr {
+color: #933;
+}
+.output .system {
+color: #999;
+}
+
+div#playground {
+
+display: none;
+}
+div#playground {
+position: absolute;
+top: 3.938rem;
+right: 1.25rem;
+padding: 0 0.625rem 0.625rem 0.625rem;
+z-index: 1;
+text-align: left;
+background: #e0ebf5;
+border: 0.0625rem solid #b0bbc5;
+border-top: none;
+border-bottom-left-radius: 0.3125rem;
+border-bottom-right-radius: 0.3125rem;
+}
+div#playground .code {
+width: 32.5rem;
+height: 12.5rem;
+}
+div#playground .output {
+height: 6.25rem;
+}
+
+#content .code pre,
+#content .playground pre,
+#content .output pre {
+margin: 0;
+padding: 0;
+background: none;
+border: none;
+outline: 0 solid transparent;
+overflow: auto;
+}
+#content .playground .number,
+#content .code .number {
+color: #999;
+}
+#content .code,
+#content .playground,
+#content .output {
+width: auto;
+margin: 1.25rem;
+padding: 0.625rem;
+border-radius: 0.3125rem;
+}
+#content .code,
+#content .playground {
+background: #e9e9e9;
+}
+#content .output {
+background: #202020;
+}
+#content .output .stdout,
+#content .output pre {
+color: #e6e6e6;
+}
+#content .output .stderr,
+#content .output .error {
+color: rgb(244, 74, 63);
+}
+#content .output .system,
+#content .output .exit {
+color: rgb(255, 209, 77);
+}
+#content .buttons {
+position: relative;
+float: right;
+top: -3.125rem;
+right: 1.875rem;
+}
+#content .output .buttons {
+top: -3.75rem;
+right: 0;
+height: 0;
+}
+#content .buttons .kill {
+display: none;
+visibility: hidden;
+}
+a.error {
+font-weight: bold;
+color: white;
+background-color: darkred;
+border-bottom-left-radius: 0.25rem;
+border-bottom-right-radius: 0.25rem;
+border-top-left-radius: 0.25rem;
+border-top-right-radius: 0.25rem;
+padding: 0.125rem 0.25rem 0.125rem 0.25rem; 
+}
+#heading-narrow {
+display: none;
+}
+.downloading {
+background: #f9f9be;
+padding: 0.625rem;
+text-align: center;
+border-radius: 0.3125rem;
+}
+@media (max-width: 58.125em) {
+#heading-wide {
+display: none;
+}
+#heading-narrow {
+display: block;
+}
+}
+@media (max-width: 47.5em) {
+.container .left,
+.container .right {
+width: auto;
+float: none;
+}
+div#about {
+max-width: 31.25rem;
+text-align: center;
+}
+}
+@media (min-width: 43.75em) and (max-width: 62.5em) {
+div#menu > a {
+margin: 0.3125rem 0;
+font-size: 0.875rem;
+}
+input#search {
+font-size: 0.875rem;
+}
+}
+@media (max-width: 43.75em) {
+body {
+font-size: 0.9375rem;
+}
+div#playground {
+left: 0;
+right: 0;
+}
+pre,
+code {
+font-size: 0.866rem;
+}
+div#page > .container {
+padding: 0 0.625rem;
+}
+div#topbar {
+height: auto;
+padding: 0.625rem;
+}
+div#topbar > .container {
+padding: 0;
+}
+#heading-wide {
+display: block;
+}
+#heading-narrow {
+display: none;
+}
+.top-heading {
+float: none;
+display: inline-block;
+padding: 0.75rem;
+}
+div#menu {
+padding: 0;
+min-width: 0;
+text-align: left;
+float: left;
+}
+div#menu > a {
+display: block;
+margin-left: 0;
+margin-right: 0;
+}
+#menu .search-box {
+display: flex;
+width: 100%;
+}
+#menu-button {
+display: inline-block;
+}
+p,
+pre,
+ul,
+ol {
+margin: 0.625rem;
+}
+.pkg-synopsis {
+display: none;
+}
+img.gopher {
+display: none;
+}
+}
+@media (max-width: 30em) {
+#heading-wide {
+display: none;
+}
+#heading-narrow {
+display: block;
+}
+}
+@media print {
+pre {
+background: #fff;
+border: 0.0625rem solid #bbb;
+white-space: pre-wrap;
+}
+}
+div#topbar {
+visibility: hidden;
+}
+</style>
+  <style type="text/css">body {
+margin: 1in;
+text-align: left;
+}
+</style>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">stc(1)</h1>
+<p class="author">David Mazières</p>
+</header>
+<h1 id="name">NAME</h1>
+<p>stc - Stellar transaction compiler</p>
+<h1 id="synopsis">SYNOPSIS</h1>
+<p>stc [-net=<em>id</em>] [-z] [-sign] [-c|-json] [-l] [-u] [-i | -o
+FILE] <em>input-file</em><br />
+stc -edit [-net=ID] <em>file</em><br />
+stc -post [-net=ID] <em>input-file</em><br />
+stc -preauth [-net=ID] <em>input-file</em><br />
+stc -txhash [-net=ID] <em>input-file</em><br />
+stc -qa [-net=ID] <em>accountID</em><br />
+stc -qt [-net=ID] <em>txhash</em><br />
+stc -qta [-net=ID] <em>accountID</em><br />
+stc -fee-stats<br />
+stc -ledger-header<br />
+stc -create [-net=ID] <em>accountID</em><br />
+stc -keygen [<em>name</em>]<br />
+stc -pub [<em>name</em>]<br />
+stc -import-key <em>name</em><br />
+stc -export-key <em>name</em><br />
+stc -list-keys<br />
+stc -hint <em>PublicKey</em><br />
+stc -mux <em>accountID</em> <em>uint64</em><br />
+stc -demux <em>muxedAccount</em><br />
+stc -payload <em>PublicKey</em><br />
+stc -pack-payload <em>PublicKey</em> <em>hex-payload</em><br />
+stc -unpack-payload <em>payload-signer</em><br />
+stc -opid <em>muxedAccount</em> <em>sequenceNumber</em>
+<em>operationIndex</em> stc -date YYYY-MM-DDThh:mm:ss[Z]<br />
+stc -builtin-config</p>
+<h1 id="description">DESCRIPTION</h1>
+<p>The Stellar transaction compiler, stc, is a command-line tool for
+creating, viewing, editing, signing, and posting Stellar network
+transactions. It is intended for use by scripts or for creating test
+transactions without the ambiguity of higher-layer wallet abstractions.
+stc is also useful in non-graphical environments, such as a single-board
+computer used for cold storage.</p>
+<p>The tool runs in one of several modes. The default mode processes a
+transaction in a single shot, optionally updating the sequence numbers
+and fees, translating the transaction to/from human-readable form, or
+signing it. In edit mode, stc repeatedly invokes a text editor to allow
+somewhat interactive editing of transactions. In hash mode, stc hashes a
+transactions to facilitate creation of pre-signed transactions or lookup
+of transaction results. Key management mode allows one to maintain a set
+of signing keys. Finally, network mode allows one to post transactions
+or query the network for account and fee status.</p>
+<h2 id="default-mode">Default mode</h2>
+<p>The default mode parses a transaction (in either textual or
+base64-encoded binary), and then outputs it. The input comes from a file
+specified on the command line, or from standard input of the argument is
+“<code>-</code>”. By default, stc outputs transactions in the
+human-readable <em>txrep</em> format, specified by SEP-0011. With the
+<code>-c</code> flag, stc outputs base64-encoded binary XDR format.
+Various options modify the transaction as it is being processed, notably
+<code>-sign</code>, <code>-key</code> (which implies
+<code>-sign</code>), <code>-payload</code> (which implies
+<code>-sign</code>) and <code>-u</code>.</p>
+<p>Txrep format is automatically derived from the XDR specification of
+<code>TransactionEnvelope</code>, with just a few special-cased types.
+The format is a series of lines of the form “<code>Field-Name: Value
+Comment</code>”. The field name is the XDR field name, or one of two
+pseudo-fields. Pointers have a boolean pseudofield called
+<code>_present</code> that is true when the pointer is non-null.
+Variable-length arrays have an integer pseudofield <code>len</code>
+specifying the array length. There must be no space between a field name
+and the colon. After the colon comes the value for that field. Anything
+after the value is ignored. stc sometimes places a comment there, such
+as when an account ID has been configured to have a comment (see the
+FILES section below).</p>
+<p>Two field types have specially formatted values:</p>
+<ul>
+<li><p>Account IDs and Signers are expressed using Stellar’s “strkey”
+format, which is a base32-encoded format where public keys start with
+“G”, multiplexed accounts start with “M”, pre-auth transaction hashes
+start with “T”, and hash-X signers start with “X”. (Private keys start
+with “S” in strkey format, but never appear in transactions.)</p></li>
+<li><p>Assets are formatted as <em>code</em>:<em>issuer</em>, where
+codes are formatted as printable ASCII bytes and two-byte hex escapes
+(e.g., <code>\x1f</code>), with no surrounding quotes. A literal
+backslash or colon in an asset code must be escaped (e.g.,
+<code>\\</code>).</p></li>
+<li><p>The <code>asset</code> field in <code>AllowTrustOp</code> (where
+the issuer is implicit) is rendered the same as the <em>code</em> in an
+asset.</p></li>
+</ul>
+<p>Note that txrep is more likely to change than the base-64 XDR
+encoding of transactions. Hence, if you want to preserve transactions
+that you can later read or re-use, compile them with <code>-c</code>.
+XDR is also compatible with other tools. Notably, you can examine the
+contents of an XDR transaction with <code>stellar-core</code> itself,
+using the command “<code>stellar-core print-xdr --filetype tx --base64
+FILE</code>”, or by using the web-based Stellar XDR viewer at <a href="https://www.stellar.org/laboratory/#xdr-viewer" class="uri">https://www.stellar.org/laboratory/#xdr-viewer</a>. You can
+also sign XDR transactions with <code>stellar-core</code>, using
+“<code>stellar-core sign-transaction --base64 --netid &#39;Public Global
+Stellar Network ; September 2015&#39; FILE</code>”.</p>
+<h2 id="edit-mode">Edit mode</h2>
+<p>Edit mode is selected whenever stc is invoked with the
+<code>-edit</code> flag. In this mode, whether the transaction is
+originally in base64 binary or text, it is output in text format to a
+temporary file and your editor is repeatedly invoked to edit the file.
+In this way, you can change union discriminant values or array sizes,
+quit the editor, and automatically re-enter the editor with any new
+fields appropriately populated.</p>
+<p>Note that for enum fields, if you add a question mark (“?”) to the
+end of the line, stc will populate the line with a comment containing
+all possible values. This is handy if you forget the various options to
+a union discriminant such as the operation type.</p>
+<p>Edit mode terminates when you quit the editor without modifying the
+file, at which point stc writes the transaction back to the original
+file.</p>
+<h2 id="hash-mode">Hash mode</h2>
+<p>Stellar hashes transactions to a unique 32-byte value that depends on
+the network identification string. A transaction’s hash, in hex format,
+can be used to query horizon for the results of the transaction after it
+executes. With the option <code>-txhash</code>, stc hashes transaction
+and outputs this hex value.</p>
+<p>Stellar also allows an account to be configured to allow a
+pre-authorized transaction to have a specific signing weight. These
+pre-authorized transactions use the same network-dependent hash values
+as computed by <code>-txhash</code>. However, to include such a hash as
+an account signer, it must be encoded in strkey format starting with the
+letter “T”. Running stc with the <code>-preauth</code> flag prints this
+strkey-format hash to standard output.</p>
+<p>Great care must be taken when creating a pre-authorized transaction,
+as any mistake will cause the transaction not to run. In particular,
+make sure you have set the sequence number to one more than it will be
+at the time you run the transaction, not one more than it is currently.
+(If the transaction adding the pre-authorized transaction as a signer
+uses the same source account, it will consume a sequence number.) You
+should also make sure the transaction fee is high enough. You may wish
+to increase the fee above what is currently required in case the fee has
+increased at the time you need to execute the pre-authorized
+transaction.</p>
+<p>Another potential source of error is that the pre-authorized
+transaction hash depends on the network name, so make absolutely sure
+the <code>-net</code> option is correct when using
+<code>-preauth</code>.</p>
+<h2 id="key-management-mode">Key management mode</h2>
+<p>stc runs in key management mode when one of the following flags is
+selected: <code>-keygen</code>, <code>-pub</code>,
+<code>-import-key</code>, <code>-export-key</code>, and
+<code>-list-keys</code>.</p>
+<p>These options take a key name. If the key name contains a slash, it
+refers to a file in the file system. If the key name does not contain a
+slash, it refers to a file name in the stc configuration directory (see
+FILES below). This allows keys to be stored in the configuration
+directory and then accessed from any directory in which stc runs.</p>
+<p>The <code>-keygen</code> and <code>-pub</code> options can be run
+with no key name, in which case <code>-keygen</code> will output both
+the secret and public key to standard output, and <code>-pub</code> will
+read a key from standard input or prompt for one to be pasted into the
+terminal.</p>
+<p>Keys are generally stored encrypted, but if you supply an empty
+passphrase, they will be stored in plaintext. If you use the
+<code>-nopass</code> option, stc will never prompt for a passphrase and
+always assume you do not encrypt your private keys.</p>
+<h2 id="network-query-mode">Network query mode</h2>
+<p>stc runs in network query mode when one of the <code>-post</code>,
+<code>-fee-stats</code>, <code>-ledger-header</code>, <code>-qa</code>,
+<code>-qt</code>, <code>-qta</code>, or <code>-create</code> options is
+provided.</p>
+<p>Post-mode, selected by <code>-post</code>, submits a transaction to
+the Stellar network. This is how you actually execute a transaction you
+have properly formatted and signed.</p>
+<p><code>-fee-stats</code> reports on recent transaction fees.
+<code>-ledger-header</code> returns the latest ledger header.
+<code>-qa</code> reports on the state of a particular account.
+<code>-qt</code> reports the result of a transaction that has been
+previously submitted. <code>-qta</code> reports transactions on an
+account in reverse chronological order (use <code>-qt</code> to get more
+detail on any transaction ID). Unfortunately, some of these requests are
+parsed from horizon responses in JSON rather than XDR format, and so are
+reported in a somewhat incomparable style to txrep format.
+<code>-create</code> creates and funds an account (which only works when
+the test network is specified).</p>
+<h2 id="miscellaneous-modes">Miscellaneous modes</h2>
+<p>The <code>-date</code> option parses a date and converts it to a Unix
+time. This is convenient for determining the Unix time to place in
+Timebounds. The time can have one of several formats:</p>
+<ul>
+<li><code>2006-01-02T15:04:05Z</code> (for parsing in UTC timezone)</li>
+<li><code>2006-01-02T15:04:05-07:00</code> (for parsing in a specific
+timezone)</li>
+<li><code>2006-01-02T15:04:05</code> (local time)</li>
+<li><code>2006-01-02T15:04</code> (local time)</li>
+<li><code>2006-01-02</code> (local time)</li>
+</ul>
+<p>Stellar requires each signature to be paired with the last 4 bytes of
+the public key (known as the “hint”), so as to facilitate matching the
+signature to the key. The <code>-hint</code> option outputs the hint
+corresponding to a particular <code>PublicKey</code>, for use when
+manually constructing <code>DecoratedSignature</code>s.</p>
+<p>The <code>-mux</code> and <code>-demux</code> options construct and
+deconstruct a multiplexed account identifier or “MuxedAccount”.
+MuxedAccounts behave the same as the underlying accounts, but contain an
+unsigned 64-bit integer that acts as a kind of comment. This allows a
+single account holder to give out multiple addresses that point the same
+underlying account.</p>
+<p>The <code>-pack-payload</code> and <code>-unpack-payload</code>
+options construct and deconstruct a payload signer (i.e., a signer
+starting with <code>P</code>) based on an Ed25519 signer (which starts
+with <code>G</code>) and a payload in hex.</p>
+<p>The <code>-opid</code> option calculates an operation ID for use in a
+<code>CLAIM_CLAIMABLE_BALANCE</code> operation.</p>
+<p>If no <code>stc.conf</code> configuration file exists, stc will use a
+built-in one. To see the contents of the built-in file, you can print it
+with <code>-builtin-config</code>.</p>
+<h1 id="options">OPTIONS</h1>
+<dl>
+<dt><code>-builtin-config</code></dt>
+<dd>
+Print the built-in system configuration file that is used if no
+<code>stc.conf</code> file is found.
+</dd>
+<dt><code>-c</code></dt>
+<dd>
+Compile the output to base64 XDR binary. Otherwise, the default is to
+preserve the format (with <code>-i</code> and <code>-edit</code>) or
+output in text mode to standard output or new files. Only available in
+default mode.
+</dd>
+<dt><code>-create</code></dt>
+<dd>
+Create and fund an account on a network with a “friendbot” that gives
+away coins. Currently the stellar test network has such a bot available
+by querying the <code>/friendbot?addr=ACCOUNT</code> path on horizon.
+</dd>
+<dt><code>-date</code></dt>
+<dd>
+Compute a Unix time from a human-readable time.
+</dd>
+<dt><code>-demux</code></dt>
+<dd>
+Break a <code>MuxedAccount</code> (starting with <code>M</code>) into
+its component <code>AccountID</code> (starting with <code>G</code>)
+64-bit identifier.
+</dd>
+<dt><code>-edit</code></dt>
+<dd>
+Select edit mode.
+</dd>
+<dt><code>-export-key</code></dt>
+<dd>
+Print a private key in strkey format to standard output.
+</dd>
+<dt><code>-fee-stats</code></dt>
+<dd>
+Dump fee stats from network
+</dd>
+<dt><code>-help</code></dt>
+<dd>
+Print usage information.
+</dd>
+<dt><code>-hint</code></dt>
+<dd>
+Return the last 4 bytes of a public key as a 32-bit “hint”, required in
+<code>DecoratedSignature</code>s.
+</dd>
+<dt><code>-i</code></dt>
+<dd>
+Edit in place—overwrite the input file with the stc’s output. The
+original file is saved with a <code>~</code> appended to the name. Only
+available in default mode.
+</dd>
+<dt><code>-import-key</code></dt>
+<dd>
+Read a private key from the terminal (or standard input) and write it
+(optionally encrypted) into a file (if the name has a slash) or into the
+configuration directory.
+</dd>
+<dt><code>-json</code></dt>
+<dd>
+Output the transaction in JSON format, using field names similar to
+txrep format. The JSON representation of transactions is mechanically
+derived from XDR in a similar fashion as txrep. However, the mapping of
+XDR to JSON is not standardized anywhere and could change between
+releases of stc. Nonetheless, this option may be convenient in scenarios
+in which you have tools for parsing JSON.
+</dd>
+<dt><code>-key</code> <em>name</em></dt>
+<dd>
+Specifies the name of a key to sign with. Implies the <code>-sign</code>
+option. Only available in default mode.
+</dd>
+<dt><code>-keygen</code> [<em>file</em>]</dt>
+<dd>
+Creates a new public keypair. With no argument, prints first the secret
+then the public key to standard output. When given an argument, writes
+the public key to standard output and the private key to a file, asking
+for a passphrase if you don’t supply <code>-nopass</code>. Note that if
+file contains a ‘/’ character, the file is taken relative to the current
+working directory or root directory. If it does not, the file is stored
+in stc’s configuration directory.
+</dd>
+<dt><code>-l</code></dt>
+<dd>
+Learn all signers associated with an account. Queries horizon and stores
+the signers under the network’s configuration directory, so that it can
+verify signatures from all keys associated with the account. Only
+available in default mode.
+</dd>
+<dt><code>-list-keys</code></dt>
+<dd>
+List all private keys stored under the configuration directory.
+</dd>
+<dt><code>-mux</code></dt>
+<dd>
+Combine an <code>AccountID</code> (starting with <code>G</code>) and
+64-bit identifier into a <code>MuxedAccount</code>.
+</dd>
+<dt><code>-net</code> <em>name</em></dt>
+<dd>
+Specify which network to use for hashing, signing, and posting
+transactions, as well as for querying signers with the <code>-l</code>
+option. Two pre-defined names are “main” and “test”, but you can
+configure other networks in <code>stc.conf</code> or by creating
+per-network configuration files as discussed in the FILES section below.
+</dd>
+<dt><code>-nopass</code></dt>
+<dd>
+Never prompt for a passphrase, so assume an empty passphrase anytime one
+is required.
+</dd>
+<dt><code>-o</code> <em>file</em></dt>
+<dd>
+Specify a file in which to write the output. The default is to send the
+transaction to standard output unless <code>-i</code> has been supplied.
+<code>-i</code> and <code>-o</code> are mutually exclusive, and can only
+be used in default mode.
+</dd>
+<dt><code>-pack-payload</code> <em>hex-payload</em>
+<em>public-key</em></dt>
+<dd>
+Create an Ed25519 signed payload signer key (starting
+<code>P...</code>), usually for including as one of the
+<code>extraSigners</code> in a transaction’s preconditions.
+</dd>
+<dt><code>-payload</code> <em>hex-payload</em></dt>
+<dd>
+The payload option, which implies <code>-sign</code>, specifies a
+hexadecimal payload to sign instead of the current transaction’s txhash.
+Typically, this would be used when a payload signer in the
+<code>extraSigners</code> precondition of a transaction requires a
+transaction to include a signature for a different transaction in order
+to be valid. A payload and public key can be packed together into a
+payload signer or unpacked with the <code>-pack-payload</code> and
+<code>-unpack-payload</code>. For safety, you would generally want to
+compute the <em>hex-payload</em> by using the <code>-txhash</code>
+option on a different transaction you have validated.
+</dd>
+<dt><code>-post</code></dt>
+<dd>
+Submit the transaction to the network.
+</dd>
+<dt><code>-preauth</code></dt>
+<dd>
+Hash a transaction to strkey for use as a pre-auth transaction signer.
+Beware that <code>-net</code> must be set correctly or the hash will be
+incorrect, since the input to the hash function includes the network ID
+as well as the transaction.
+</dd>
+<dt><code>-pub</code></dt>
+<dd>
+Print the public key corresponding to a particular private key.
+</dd>
+<dt><code>-qa</code></dt>
+<dd>
+Query the network for the state of a particular account.
+</dd>
+<dt><code>-qt</code></dt>
+<dd>
+Query the network for the results and effects of a particular
+transaction. The transaction must be specified in the hex format output
+by <code>-txhash</code>.
+</dd>
+<dt><code>-qta</code></dt>
+<dd>
+Query the network for all transactions that have affected a particular
+account, in reverse chronological order. Also shows the effects those
+transactions had on the target account. To see effects on all accounts,
+you can look up a particular transaction using <code>-qt</code>.
+</dd>
+<dt><code>-sign</code></dt>
+<dd>
+Sign the transaction. If no <code>-key</code> option is specified, it
+will prompt for the private key on the terminal (or read it from
+standard input if standard input is not a terminal).
+</dd>
+<dt><code>-txhash</code></dt>
+<dd>
+Like <code>-preauth</code>, but outputs the hash in hex format. Like
+<code>-preauth</code>, also gives incorrect results if <code>-net</code>
+is not properly specified.
+</dd>
+<dt><code>-u</code></dt>
+<dd>
+Query the network to update the fee and sequence number. The fee depends
+on the number of operations, so be sure to re-run this if you change the
+number of transactions. Only available in default mode.
+</dd>
+<dt><code>-unpack-payload</code> <em>payload-signer</em></dt>
+<dd>
+Extracts the public key and payload from a payload signer starting
+<code>P...</code>.
+</dd>
+<dt><code>-v</code></dt>
+<dd>
+Produce more verbose output for the query options.
+</dd>
+<dt><code>-z</code></dt>
+<dd>
+Sets the signature vector to zero length, clearing out any previous
+signatures on a transaction.
+</dd>
+</dl>
+<h1 id="examples">EXAMPLES</h1>
+<dl>
+<dt><code>stc trans</code></dt>
+<dd>
+Reads a transaction from a file called <code>trans</code> and prints it
+to standard output in human-readable form.
+</dd>
+<dt><code>stc -edit trans</code></dt>
+<dd>
+Run the editor on the text format of the transaction in file
+<code>trans</code> (which can be either text or base64 XDR, or not exist
+yet in which case it will be created in XDR format). Keep editing the
+file until the editor quits without making any changes.
+</dd>
+<dt><code>stc -c -i -key mykey trans</code></dt>
+<dd>
+Reads a transaction in file <code>trans</code>, signs it using key
+<code>mykey</code>, then overwrite the <code>trans</code> file with the
+signed transaction in base64 format. The original unsigned transaction
+is backed up in <code>trans~</code>.
+</dd>
+<dt><code>stc -pack-payload $(stc -pub mykey) $(stc -txhash
+trans1)</code></dt>
+<dd>
+Create a “signed payload” signer requiring a signature by key
+<code>mykey</code> on transaction <code>trans1</code>. This signer can
+be required by other transactions that should not be executed without
+disclosing a signature on <code>trans1</code>.
+</dd>
+<dt><code>stc -i -key mykey -payload $(stc -txhash trans1)
+trans2</code></dt>
+<dd>
+Adds a signature for transaction <code>trans1</code> to transaction
+<code>trans2</code>. (For this to make sense, <code>trans1</code> should
+require a corresponding payload signer, as might be generated by the
+previous example.) Note that payload signers have different hints from
+regular signers, so that <code>stc -i -key mykey -payload $(stc -txhash
+trans1) trans1</code> will not have the same effect as <code>stc -i -key
+mykey trans1</code>.
+</dd>
+<dt><code>stc -post trans</code></dt>
+<dd>
+Posts a transaction in file <code>trans</code> to the network. The
+transaction must previously have been signed.
+</dd>
+<dt><code>stc -keygen</code></dt>
+<dd>
+Generate a new private/public key pair and print them both to standard
+output, one per line (private key first).
+</dd>
+<dt><code>stc -keygen mykey</code></dt>
+<dd>
+Generate a new private/public key pair. Prompt for a passphrase. Print
+the public key to standard output. Write the private key to
+<code>$HOME/.config/stc/keys/mykey</code> encrypted with the passphrase.
+</dd>
+<dt><code>stc trans | sed -n &#39;s/^tx.sourceAccount: *//p&#39;</code></dt>
+<dd>
+Extract the source account field of a transaction in file
+<code>trans</code>, using sed to strip the txrep field name and print
+the key.
+</dd>
+<dt><code>stc -json trans | jq -r .tx.sourceAccount</code></dt>
+<dd>
+Use the <code>jq</code> command-line JSON processor to extract the
+source account of the transaction in file <code>trans</code>.
+</dd>
+<dt>Here string private key</dt>
+<dd>
+<p>The following shell script:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">PRIV</span><span class="op">=</span>SAIJXTLM3FRBVO7ZLFZM35T2E3WPSOTK24ERXXDUON6AU7ECPNM33MFT</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="va">PUB</span><span class="op">=</span><span class="kw">`</span><span class="ex">stc</span> <span class="at">-pub</span> <span class="op">&lt;&lt;&lt;</span><span class="va">$PRIV</span><span class="kw">`</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">stc</span> <span class="at">-c</span> <span class="at">-u</span> <span class="at">-key</span> /dev/fd/3 <span class="at">-</span> <span class="dv">3</span><span class="op">&lt;&lt;&lt;</span><span class="va">$PRIV</span> <span class="op">&lt;&lt; EOF</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="st">tx.sourceAccount: </span><span class="va">$PUB</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="st">tx.operations.len: 1</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="st">tx.operations[0].body.type: CREATE_ACCOUNT</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="st">tx.operations[0].body.createAccountOp.destination: GCUOUYGM7GJ27PGHE5FSGDAMPOSPWH6Z26YHMJJVGWWKTUBYMZDBT3I5</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="st">tx.operations[0].body.createAccountOp.startingBalance: 100000000</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+<p>creates a transaction from standard input and signs it using a key
+that has been directly specified using bash’s “here string” syntax. Note
+that there is no way to pass a raw private key on the command line,
+because command-line arguments are visible to other users and would thus
+leak the secret. On the other hand, using a here string to pass the
+private key as file descriptor 3 is safe.</p>
+</dd>
+</dl>
+<h1 id="environment">ENVIRONMENT</h1>
+<dl>
+<dt>STCEDITOR, EDITOR</dt>
+<dd>
+Name of editor to invoke with the <code>-edit</code> argument. If
+<code>STCEDITOR</code> is defined, it takes priority. Otherwise, if
+<code>EDITOR</code> is defined, stc uses that. If neither is defined,
+stc defaults to <code>vi</code>.
+</dd>
+<dt>STCDIR</dt>
+<dd>
+Directory containing all the configuration files (default:
+<code>$XDG_CONFIG_HOME/stc</code> or <code>$HOME/.config/stc</code>)
+</dd>
+<dt>STCNET</dt>
+<dd>
+Name of network to use by default if not overridden by <code>-net</code>
+argument (default: <code>default</code>)
+</dd>
+</dl>
+<h1 id="files">FILES</h1>
+<p>Configuration files use the INI file format specified in the
+git-config(1) manual page. This also means you can use a command such as
+<code>git config -f ~/.config/stc/stc.conf net.main.horizon
+https://...</code> to edit the configuration files. An example of this
+syntax is:</p>
+<pre><code>[net]
+name = main
+network-id = &quot;Public Global Stellar Network ; September 2015&quot;
+horizon = https://horizon.stellar.org/
+native-asset = XLM</code></pre>
+<p>When using a network <em>NetName</em>, as specified by
+<code>$STCNET</code> or the <code>-net</code> command-line argument,
+three configuration files are parsed in order:</p>
+<ol type="1">
+<li><p>$STCDIR/<em>NetName</em>.net (or the default value of $STCDIR as
+described in the ENVIRONMENT section if $STCDIR is unset)</p></li>
+<li><p><code>$STCDIR/global.conf</code></p></li>
+<li><p>The system configuration, which comes from the first to exist of
+the following files: <code>$STCDIR/stc.conf</code>,
+<code>/etc/stc.conf</code>, or <code>../share/stc.conf</code> relative
+to the executable. If none of these files exist, stc uses the built-in
+version returned by the <code>-builtin-config</code> option.</p></li>
+</ol>
+<p>A key is set to the first value encountered. This means definitions
+in the $STCDIR/<em>NetName</em>.net file take precedence over ones in
+the <code>global.conf</code> file, which in turn has precedence over the
+global configuration file. However, it is possible to undefine a key by
+including it without an equals sign, in which case it can be redefined.
+For example, the following would override any previously set
+network-id:</p>
+<pre><code>[net &quot;main&quot;]
+network-id
+network-id = &quot;Public Global Stellar Network ; September 2015&quot;</code></pre>
+<p>Subsections are only considered when the subsection string matches
+the network name. Hence, the section <code>[signers]</code> applies to
+all networks, while <code>[signers &quot;main&quot;]</code> only applies to
+network main. Generally the $STCDIR/<em>NetName</em>.net file will
+include a <code>[net]</code> section, since it is for only one network,
+while the global and system defaults will include sections <code>[net
+&quot;main&quot;]</code> and <code>[net &quot;test&quot;]</code> for per-network
+defaults.</p>
+<p>The recognized keys are as follows:</p>
+<dl>
+<dt><code>net.name</code></dt>
+<dd>
+Specifies the name of the network, which affects which subsections will
+be parsed as described above. This parameter can only be set in a
+<code>[net]</code> section in the $STCDIR/<em>NetName</em>.net file, as
+it does not make sense to set this globally. Note that the value only
+changes subsequently parsed sections; if the network name is changed,
+previously parsed sections with the new name have already been ignored
+and will not be reconsidered.
+</dd>
+<dt><code>net.network-id</code></dt>
+<dd>
+The network ID that permutes signatures and pre-signed-transaction
+hashes (which prevents signatures from being valid on more than one
+instantiation of the Stellar network). If this is not specified, stc
+automatically fetches and stores the network ID the first time it is
+used.
+</dd>
+<dt><code>net.horizon</code></dt>
+<dd>
+The base URL of the horizon instance to use for this network. You may
+wish to change this URL to use your own local validator if you are
+running one, or else that of an exchange that you trust. Note that the
+URL <em>must</em> end with a <code>/</code> (slash) character.
+</dd>
+<dt><code>net.native-asset</code></dt>
+<dd>
+Shows how to render the native asset—e.g., <code>XLM</code> for the
+stellar main network, and <code>TestXLM</code> for the stellar test
+network. If not specified, it defaults to the string
+<code>NATIVE</code>. Note that this only controls how the asset is
+rendered not parsed. When parsing, any string not ending
+“:IssuerAccountID” is considered the native asset.
+</dd>
+<dt>accounts._AccountID_</dt>
+<dd>
+Specifies a human-readable comment for <em>AccountID</em> (which must be
+in strkey format)
+</dd>
+<dt>signers._SignerKey_</dt>
+<dd>
+Specifies a human-readable comment for <em>SigherKey</em> (in strkey
+format)
+</dd>
+</dl>
+<h1 id="see-also">SEE ALSO</h1>
+<p>stellar-core(1), gpg(1), git-config(1)</p>
+<p>The Stellar web site: <a href="https://www.stellar.org/" class="uri">https://www.stellar.org/</a></p>
+<p>Stellar’s web-based XDR viewer:<br />
+<a href="https://www.stellar.org/laboratory/#xdr-viewer" class="uri">https://www.stellar.org/laboratory/#xdr-viewer</a></p>
+<p>SEP-0011, the specification for txrep format:<br />
+<a href="https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0011.md" class="uri">https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0011.md</a></p>
+<p>SEP-0023, the specification for strkey: <a href="https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0023.md" class="uri">https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0023.md</a></p>
+<p>RFC4506, the specification for XDR:<br />
+<a href="https://tools.ietf.org/html/rfc4506" class="uri">https://tools.ietf.org/html/rfc4506</a></p>
+<p>The XDR definition of a <code>TransactionEnvelope</code>:<br />
+<a href="https://github.com/stellar/stellar-core/blob/master/src/xdr/Stellar-transaction.x" class="uri">https://github.com/stellar/stellar-core/blob/master/src/xdr/Stellar-transaction.x</a></p>
+<h1 id="bugs">BUGS</h1>
+<p>stc accepts and generates any <code>TransactionEnvelope</code> that
+is valid according to the XDR specification. However, a
+<code>TransactionEnvelope</code> that is syntactically valid XDR may not
+be a valid Stellar transaction. stellar-core imposes additional
+restrictions on transactions, such as prohibiting non-ASCII characters
+in certain string fields. This fact is important to keep in mind when
+using stc to examine pre-signed transactions: what looks like a valid,
+signed transaction may not actually be valid.</p>
+<p>stc uses a potentially imperfect heuristic to decide whether a file
+contains a base64-encoded binary transaction a txrep transaction, or
+JSON input.</p>
+<p>stc can only encrypt secret keys with symmetric encryption. However,
+the <code>-sign</code> option will read a key from standard input, so
+you can always run <code>gpg -d keyfile.pgp | stc -sign -i txfile</code>
+to sign the transaction in <code>txfile</code> with a
+public-key-encrypted signature key in <code>keyfile.pgp</code>.</p>
+<p>The options that interact with Horizon and parse JSON (such as
+<code>-qa</code>) report things in a different style from the options
+that manipulate XDR.</p>
+<p>The txrep format has periodically been updated, and stc does not
+attempt to maintain backwards compatibility with old files. Binary XDR,
+however, has been standard since 1995, so stc should be able to parse
+any binary transaction since the launch of the Stellar network.</p>
+</body>
+</html>

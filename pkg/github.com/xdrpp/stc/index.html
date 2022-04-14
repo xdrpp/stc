@@ -1,0 +1,4240 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#375EAB">
+
+  <title>stc - Go Documentation Server</title>
+
+<link type="text/css" rel="stylesheet" href="../../../../lib/godoc/style.css">
+
+<script>window.initFuncs = [];</script>
+<script src="../../../../lib/godoc/jquery.js" defer></script>
+
+
+
+<script>var goVersion = "go1.17.8";</script>
+<script src="../../../../lib/godoc/godocs.js" defer></script>
+</head>
+<body>
+
+<div id='lowframe' style="position: fixed; bottom: 0; left: 0; height: 0; width: 100%; border-top: thin solid grey; background-color: white; overflow: auto;">
+...
+</div><!-- #lowframe -->
+
+<div id="topbar" class="wide"><div class="container">
+<div class="top-heading" id="heading-wide"><a href="../../../index.html">Go Documentation Server</a></div>
+<div class="top-heading" id="heading-narrow"><a href="../../../index.html">GoDoc</a></div>
+<a href="index.html#" id="menu-button"><span id="menu-button-arrow">&#9661;</span></a>
+<form method="GET" action="http://localhost:6666/search">
+<div id="menu">
+
+<span class="search-box"><input type="search" id="search" name="q" placeholder="Search" aria-label="Search" required><button type="submit"><span><!-- magnifying glass: --><svg width="24" height="24" viewBox="0 0 24 24"><title>submit search</title><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/><path d="M0 0h24v24H0z" fill="none"/></svg></span></button></span>
+</div>
+</form>
+
+</div></div>
+
+
+
+<div id="page" class="wide">
+<div class="container">
+
+
+  <h1>
+    Package stc
+    <span class="text-muted"></span>
+  </h1>
+
+
+
+
+
+
+
+<div id="nav"></div>
+
+
+<!--
+	Copyright 2009 The Go Authors. All rights reserved.
+	Use of this source code is governed by a BSD-style
+	license that can be found in the LICENSE file.
+-->
+<!--
+	Note: Static (i.e., not template-generated) href and id
+	attributes start with "pkg-" to make it impossible for
+	them to conflict with generated attributes (some of which
+	correspond to Go identifiers).
+-->
+
+	<script>
+	document.ANALYSIS_DATA = null;
+	document.CALLGRAPH = null;
+	</script>
+
+	
+		
+		<div id="short-nav">
+			<dl>
+			<dd><code>import "github.com/xdrpp/stc"</code></dd>
+			</dl>
+			<dl>
+			<dd><a href="index.html#pkg-overview" class="overviewLink">Overview</a></dd>
+			<dd><a href="index.html#pkg-index" class="indexLink">Index</a></dd>
+			
+				<dd><a href="index.html#pkg-examples" class="examplesLink">Examples</a></dd>
+			
+			
+				<dd><a href="index.html#pkg-subdirectories">Subdirectories</a></dd>
+			
+			</dl>
+		</div>
+		<!-- The package's Name is printed as title by the top-level template -->
+		<div id="pkg-overview" class="toggleVisible">
+			<div class="collapsed">
+				<h2 class="toggleButton" title="Click to show Overview section">Overview ▹</h2>
+			</div>
+			<div class="expanded">
+				<h2 class="toggleButton" title="Click to hide Overview section">Overview ▾</h2>
+				<p>
+Stellar transaction compiler library.  Provides functions for
+manipulating Stellar transactions, translating them back and forth
+between txrep format, and posting them.
+</p>
+
+				<div id="example__postTransaction" class="toggle">
+	<div class="collapsed">
+		<p class="exampleHeading toggleButton">▹ <span class="text">Example (PostTransaction)</span></p>
+	</div>
+	<div class="expanded">
+		<p class="exampleHeading toggleButton">▾ <span class="text">Example (PostTransaction)</span></p>
+		
+		
+		
+			<p>Code:</p>
+			<pre class="code">
+var mykey PrivateKey
+fmt.Sscan(&#34;SDWHLWL24OTENLATXABXY5RXBG6QFPLQU7VMKFH4RZ7EWZD2B7YRAYFS&#34;,
+    &amp;mykey)
+
+var yourkey PublicKey
+fmt.Sscan(&#34;GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L&#34;,
+    &amp;yourkey)
+
+<span class="comment">// Fetch account entry to get sequence number</span>
+myacct, err := DefaultStellarNet(&#34;test&#34;).GetAccountEntry(
+    mykey.Public().String())
+if err != nil {
+    panic(err)
+}
+
+<span class="comment">// Build a transaction</span>
+txe := NewTransactionEnvelope()
+txe.SetSourceAccount(mykey.Public())
+txe.V1().Tx.SeqNum = myacct.NextSeq()
+txe.V1().Tx.Memo = MemoText(&#34;Hello&#34;)
+txe.Append(nil, SetOptions{
+    SetFlags:      NewUint(uint32(stx.AUTH_REQUIRED_FLAG)),
+    LowThreshold:  NewUint(2),
+    MedThreshold:  NewUint(2),
+    HighThreshold: NewUint(2),
+    Signer:        NewSignerKey(yourkey, 1),
+})
+
+net := DefaultStellarNet(&#34;test&#34;)
+
+<span class="comment">// Pay the median per-operation fee of recent ledgers</span>
+fees, err := net.GetFeeStats()
+if err != nil {
+    panic(err)
+}
+txe.SetFee(fees.Percentile(50))
+
+<span class="comment">// Sign and post the transaction</span>
+net.SignTx(&amp;mykey, txe)
+result, err := net.Post(txe)
+if err != nil {
+    panic(err)
+}
+
+fmt.Println(result)
+</pre>
+			
+		
+	</div>
+</div>
+<div id="example__txrep" class="toggle">
+	<div class="collapsed">
+		<p class="exampleHeading toggleButton">▹ <span class="text">Example (Txrep)</span></p>
+	</div>
+	<div class="expanded">
+		<p class="exampleHeading toggleButton">▾ <span class="text">Example (Txrep)</span></p>
+		
+		
+		
+			<p>Code:</p>
+			<pre class="code">var mykey PrivateKey
+fmt.Sscan(&#34;SDWHLWL24OTENLATXABXY5RXBG6QFPLQU7VMKFH4RZ7EWZD2B7YRAYFS&#34;,
+    &amp;mykey)
+
+var yourkey PublicKey
+fmt.Sscan(&#34;GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L&#34;,
+    &amp;yourkey)
+
+<span class="comment">// Build a transaction</span>
+txe := NewTransactionEnvelope()
+txe.SetSourceAccount(mykey.Public())
+txe.V1().Tx.SeqNum = 3319833626148865
+txe.V1().Tx.Memo = MemoText(&#34;Hello&#34;)
+txe.Append(nil, Payment{
+    Destination: *yourkey.ToMuxedAccount(),
+    Asset:       NativeAsset(),
+    Amount:      20000000,
+})
+<span class="comment">// ... Can keep appending operations with txe.Append</span>
+txe.SetFee(100)
+
+net := DefaultStellarNet(&#34;main&#34;)
+<span class="comment">// Sign the transaction</span>
+net.SignTx(&amp;mykey, txe)
+
+<span class="comment">// Print the transaction in multi-line human-readable &#34;txrep&#34; form</span>
+fmt.Print(net.TxToRep(txe))
+
+<span class="comment"></pre>
+			
+			<p>Output:</p>
+			<pre class="output">type: ENVELOPE_TYPE_TX
+tx.sourceAccount: GDFR4HZMNZCNHFEIBWDQCC4JZVFQUGXUQ473EJ4SUPFOJ3XBG5DUCS2G
+tx.fee: 100
+tx.seqNum: 3319833626148865
+tx.cond.type: PRECOND_NONE
+tx.memo.type: MEMO_TEXT
+tx.memo.text: &#34;Hello&#34;
+tx.operations.len: 1
+tx.operations[0].sourceAccount._present: false
+tx.operations[0].body.type: PAYMENT
+tx.operations[0].body.paymentOp.destination: GATPALHEEUERWYW275QDBNBMCM4KEHYJU34OPIZ6LKJAXK6B4IJ73V4L
+tx.operations[0].body.paymentOp.asset: XLM
+tx.operations[0].body.paymentOp.amount: 20000000 (2e7)
+tx.ext.v: 0
+signatures.len: 1
+signatures[0].hint: e1374741 (bad signature/unknown key/main is wrong network)
+signatures[0].signature: 3bf96c29ab95730775612b5a9a0ec630d779846ab31b2e07de8d24de927961f8667604091a3942e756e0dc14dd94465e2b6132880481e403055ec33905429502
+</pre>
+			
+		
+	</div>
+</div>
+
+			</div>
+		</div>
+
+		<div id="pkg-index" class="toggleVisible">
+		<div class="collapsed">
+			<h2 class="toggleButton" title="Click to show Index section">Index ▹</h2>
+		</div>
+		<div class="expanded">
+			<h2 class="toggleButton" title="Click to hide Index section">Index ▾</h2>
+
+		<!-- Table of contents for API; must be named manual-nav to turn off auto nav. -->
+			<div id="manual-nav">
+			<dl>
+			
+				<dd><a href="index.html#pkg-constants">Constants</a></dd>
+			
+			
+				<dd><a href="index.html#pkg-variables">Variables</a></dd>
+			
+			
+				
+				<dd><a href="index.html#ConfigPath">func ConfigPath(components ...string) string</a></dd>
+			
+				
+				<dd><a href="index.html#IsTemporary">func IsTemporary(err error) bool</a></dd>
+			
+				
+				<dd><a href="index.html#MemoHash">func MemoHash(arg [32]uint8) (ret stx.Memo)</a></dd>
+			
+				
+				<dd><a href="index.html#MemoId">func MemoId(arg uint64) (ret stx.Memo)</a></dd>
+			
+				
+				<dd><a href="index.html#MemoNone">func MemoNone() stx.Memo</a></dd>
+			
+				
+				<dd><a href="index.html#MemoReturn">func MemoReturn(arg [32]uint8) (ret stx.Memo)</a></dd>
+			
+				
+				<dd><a href="index.html#MemoText">func MemoText(arg string) (ret stx.Memo)</a></dd>
+			
+				
+				<dd><a href="index.html#MkAsset">func MkAsset(acc AccountID, code string) stx.Asset</a></dd>
+			
+				
+				<dd><a href="index.html#MkAssetCode">func MkAssetCode(code string) stx.AssetCode</a></dd>
+			
+				
+				<dd><a href="index.html#NativeAsset">func NativeAsset() stx.Asset</a></dd>
+			
+				
+				<dd><a href="index.html#NewHyper">func NewHyper(v int64) *int64</a></dd>
+			
+				
+				<dd><a href="index.html#NewSignerHashX">func NewSignerHashX(x stx.Hash, weight uint32) *stx.Signer</a></dd>
+			
+				
+				<dd><a href="index.html#NewSignerKey">func NewSignerKey(pk PublicKey, weight uint32) *stx.Signer</a></dd>
+			
+				
+				<dd><a href="index.html#NewString">func NewString(v string) *string</a></dd>
+			
+				
+				<dd><a href="index.html#NewUhyper">func NewUhyper(v uint64) *uint64</a></dd>
+			
+				
+				<dd><a href="index.html#NewUint">func NewUint(v uint32) *uint32</a></dd>
+			
+				
+				<dd><a href="index.html#ParseConfigFiles">func ParseConfigFiles(sink ini.IniSink, paths ...string) error</a></dd>
+			
+				
+				<dd><a href="index.html#Set">func Set(t xdr.XdrType, fieldValues ...interface{})</a></dd>
+			
+				
+				<dd><a href="index.html#TxToBase64">func TxToBase64(tx *TransactionEnvelope) string</a></dd>
+			
+				
+				<dd><a href="index.html#ValidNetName">func ValidNetName(name string) bool</a></dd>
+			
+			
+				
+				<dd><a href="index.html#AccountHints">type AccountHints</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#AccountHints.String">func (h AccountHints) String() string</a></dd>
+				
+			
+				
+				<dd><a href="index.html#AccountID">type AccountID</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#DemuxAcct">func DemuxAcct(macct *MuxedAccount) (*AccountID, *uint64)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#NewAccountID">func NewAccountID(id AccountID) *AccountID</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#AccountMerge">type AccountMerge</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#AccountMerge.To_Operation_Body">func (arg AccountMerge) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#AllowTrust">type AllowTrust</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#AllowTrust.To_Operation_Body">func (arg AllowTrust) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#BeginSponsoringFutureReserves">type BeginSponsoringFutureReserves</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#BeginSponsoringFutureReserves.To_Operation_Body">func (arg BeginSponsoringFutureReserves) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#BumpSequence">type BumpSequence</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#BumpSequence.To_Operation_Body">func (arg BumpSequence) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#ChangeTrust">type ChangeTrust</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#ChangeTrust.To_Operation_Body">func (arg ChangeTrust) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#ClaimClaimableBalance">type ClaimClaimableBalance</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#ClaimClaimableBalance.To_Operation_Body">func (arg ClaimClaimableBalance) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#Clawback">type Clawback</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#Clawback.To_Operation_Body">func (arg Clawback) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#ClawbackClaimableBalance">type ClawbackClaimableBalance</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#ClawbackClaimableBalance.To_Operation_Body">func (arg ClawbackClaimableBalance) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#CreateAccount">type CreateAccount</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#CreateAccount.To_Operation_Body">func (arg CreateAccount) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#CreateClaimableBalance">type CreateClaimableBalance</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#CreateClaimableBalance.To_Operation_Body">func (arg CreateClaimableBalance) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#CreatePassiveSellOffer">type CreatePassiveSellOffer</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#CreatePassiveSellOffer.To_Operation_Body">func (arg CreatePassiveSellOffer) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#EndSponsoringFutureReserves">type EndSponsoringFutureReserves</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#EndSponsoringFutureReserves.To_Operation_Body">func (EndSponsoringFutureReserves) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#ErrEventStream">type ErrEventStream</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#ErrEventStream.Error">func (e ErrEventStream) Error() string</a></dd>
+				
+			
+				
+				<dd><a href="index.html#FeeDist">type FeeDist</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#FeeDist.Percentile">func (fd *FeeDist) Percentile(target int) FeeVal</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#FeeDist.UnmarshalJSON">func (fd *FeeDist) UnmarshalJSON(data []byte) error</a></dd>
+				
+			
+				
+				<dd><a href="index.html#FeePercentile">type FeePercentile</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#FeeStats">type FeeStats</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#FeeStats.Percentile">func (fs *FeeStats) Percentile(target int) FeeVal</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#FeeStats.String">func (fs FeeStats) String() string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#FeeStats.UnmarshalJSON">func (fs *FeeStats) UnmarshalJSON(data []byte) error</a></dd>
+				
+			
+				
+				<dd><a href="index.html#FeeVal">type FeeVal</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#HorizonAccountEntry">type HorizonAccountEntry</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#HorizonAccountEntry.NextSeq">func (ae *HorizonAccountEntry) NextSeq() stx.SequenceNumber</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#HorizonAccountEntry.String">func (hs *HorizonAccountEntry) String() string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#HorizonAccountEntry.UnmarshalJSON">func (ae *HorizonAccountEntry) UnmarshalJSON(data []byte) error</a></dd>
+				
+			
+				
+				<dd><a href="index.html#HorizonBalance">type HorizonBalance</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#HorizonBalance.UnmarshalJSON">func (hb *HorizonBalance) UnmarshalJSON(data []byte) error</a></dd>
+				
+			
+				
+				<dd><a href="index.html#HorizonFlags">type HorizonFlags</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#HorizonSigner">type HorizonSigner</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#HorizonThresholds">type HorizonThresholds</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#HorizonTxResult">type HorizonTxResult</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#HorizonTxResult.String">func (r HorizonTxResult) String() string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#HorizonTxResult.Success">func (r *HorizonTxResult) Success() bool</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#HorizonTxResult.UnmarshalJSON">func (r *HorizonTxResult) UnmarshalJSON(data []byte) error</a></dd>
+				
+			
+				
+				<dd><a href="index.html#Inflation">type Inflation</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#Inflation.To_Operation_Body">func (Inflation) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#LedgerHeader">type LedgerHeader</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#LiquidityPoolDeposit">type LiquidityPoolDeposit</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#LiquidityPoolDeposit.To_Operation_Body">func (arg LiquidityPoolDeposit) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#LiquidityPoolWithdraw">type LiquidityPoolWithdraw</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#LiquidityPoolWithdraw.To_Operation_Body">func (arg LiquidityPoolWithdraw) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#ManageBuyOffer">type ManageBuyOffer</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#ManageBuyOffer.To_Operation_Body">func (arg ManageBuyOffer) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#ManageData">type ManageData</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#ManageData.To_Operation_Body">func (arg ManageData) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#ManageSellOffer">type ManageSellOffer</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#ManageSellOffer.To_Operation_Body">func (arg ManageSellOffer) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#MuxedAccount">type MuxedAccount</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#MuxAcct">func MuxAcct(acct *AccountID, id *uint64) *MuxedAccount</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#OperationBody">type OperationBody</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#PathPaymentStrictReceive">type PathPaymentStrictReceive</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#PathPaymentStrictReceive.To_Operation_Body">func (arg PathPaymentStrictReceive) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#PathPaymentStrictSend">type PathPaymentStrictSend</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#PathPaymentStrictSend.To_Operation_Body">func (arg PathPaymentStrictSend) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#Payment">type Payment</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#Payment.To_Operation_Body">func (arg Payment) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#PrivateKey">type PrivateKey</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#InputPrivateKey">func InputPrivateKey(prompt string) (PrivateKey, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#LoadPrivateKey">func LoadPrivateKey(file string) (PrivateKey, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#NewPrivateKey">func NewPrivateKey(pkt stx.PublicKeyType) PrivateKey</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#PrivateKey.Save">func (sk PrivateKey) Save(file string, passphrase []byte) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#PrivateKey.Scan">func (sec *PrivateKey) Scan(ss fmt.ScanState, _ rune) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#PrivateKey.Valid">func (sec PrivateKey) Valid() bool</a></dd>
+				
+			
+				
+				<dd><a href="index.html#PublicKey">type PublicKey</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#RevokeSponsorship">type RevokeSponsorship</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#RevokeSponsorship.To_Operation_Body">func (arg RevokeSponsorship) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#SetOptions">type SetOptions</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#SetOptions.To_Operation_Body">func (arg SetOptions) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#SetTrustLineFlags">type SetTrustLineFlags</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#SetTrustLineFlags.To_Operation_Body">func (arg SetTrustLineFlags) To_Operation_Body() (ret stx.XdrAnon_Operation_Body)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#Signature">type Signature</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#SignerCache">type SignerCache</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#SignerCache.Add">func (c SignerCache) Add(strkey, comment string) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#SignerCache.Del">func (c SignerCache) Del(strkey string) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#SignerCache.Lookup">func (c SignerCache) Lookup(networkID string, e *stx.TransactionEnvelope, ds *stx.DecoratedSignature) *SignerKeyInfo</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#SignerCache.LookupComment">func (c SignerCache) LookupComment(key *stx.SignerKey) string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#SignerCache.String">func (c SignerCache) String() string</a></dd>
+				
+			
+				
+				<dd><a href="index.html#SignerKey">type SignerKey</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#SignerKeyInfo">type SignerKeyInfo</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#SignerKeyInfo.Scan">func (ski *SignerKeyInfo) Scan(ss fmt.ScanState, c rune) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#SignerKeyInfo.String">func (ski SignerKeyInfo) String() string</a></dd>
+				
+			
+				
+				<dd><a href="index.html#StellarMetas">type StellarMetas</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#StellarNet">type StellarNet</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#DefaultStellarNet">func DefaultStellarNet(name string) *StellarNet</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#LoadStellarNet">func LoadStellarNet(name string, paths ...string) (*StellarNet, error)</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.AccountDelta">func (net *StellarNet) AccountDelta(m *StellarMetas, acct *AccountID, prefix string) string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.AccountIDNote">func (net *StellarNet) AccountIDNote(acct string) string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.AddHint">func (net *StellarNet) AddHint(acct string, hint string)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.AddSigner">func (net *StellarNet) AddSigner(signer, comment string)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.Get">func (net *StellarNet) Get(query string) ([]byte, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.GetAccountEntry">func (net *StellarNet) GetAccountEntry(acct string) (*HorizonAccountEntry, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.GetFeeCache">func (net *StellarNet) GetFeeCache() (*FeeStats, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.GetFeeStats">func (net *StellarNet) GetFeeStats() (*FeeStats, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.GetJSON">func (net *StellarNet) GetJSON(query string, out interface{}) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.GetLedgerHeader">func (net *StellarNet) GetLedgerHeader() (*LedgerHeader, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.GetNativeAsset">func (net *StellarNet) GetNativeAsset() string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.GetNetworkId">func (net *StellarNet) GetNetworkId() string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.GetTxResult">func (net *StellarNet) GetTxResult(txid string) (*HorizonTxResult, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.HashTx">func (net *StellarNet) HashTx(tx stx.Signable) *stx.Hash</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.IniSink">func (net *StellarNet) IniSink() ini.IniSink</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.IterateJSON">func (net *StellarNet) IterateJSON(ctx context.Context, query string, cb interface{}) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.NewSignerPreauth">func (net *StellarNet) NewSignerPreauth(tx stx.Signable, weight uint32) *stx.Signer</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.Post">func (net *StellarNet) Post(e *TransactionEnvelope) (*TransactionResult, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.Save">func (net *StellarNet) Save() error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.SavePerm">func (net *StellarNet) SavePerm(perm os.FileMode) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.SigNote">func (net *StellarNet) SigNote(txe *stx.TransactionEnvelope, sig *stx.DecoratedSignature) string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.SignTx">func (net *StellarNet) SignTx(sk stcdetail.PrivateKeyInterface, e *TransactionEnvelope) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.SignerNote">func (net *StellarNet) SignerNote(key *stx.SignerKey) string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.StreamJSON">func (net *StellarNet) StreamJSON(ctx context.Context, query string, cb interface{}) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.ToRep">func (net *StellarNet) ToRep(txe xdr.XdrType) string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.TxToRep">func (net *StellarNet) TxToRep(txe *TransactionEnvelope) string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.Validate">func (net *StellarNet) Validate() error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.VerifySig">func (net *StellarNet) VerifySig(pk *SignerKey, tx stx.Signable, sig Signature) bool</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#StellarNet.WriteRep">func (net *StellarNet) WriteRep(out io.Writer, name string, txe xdr.XdrType)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#TransactionEnvelope">type TransactionEnvelope</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#NewTransactionEnvelope">func NewTransactionEnvelope() *TransactionEnvelope</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#TxFromBase64">func TxFromBase64(input string) (*TransactionEnvelope, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#TxFromRep">func TxFromRep(rep string) (*TransactionEnvelope, error)</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#TransactionEnvelope.Append">func (txe *TransactionEnvelope) Append(sourceAccount *stx.MuxedAccount, body OperationBody)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#TransactionEnvelope.GetHelp">func (txe *TransactionEnvelope) GetHelp(name string) bool</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#TransactionEnvelope.SetFee">func (txe *TransactionEnvelope) SetFee(baseFee uint32)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#TransactionEnvelope.SetHelp">func (txe *TransactionEnvelope) SetHelp(name string)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#TransactionEnvelope.SetSourceAccount">func (txe *TransactionEnvelope) SetSourceAccount(m0 stx.IsAccount)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#TransactionEnvelope.SourceAccount">func (txe *TransactionEnvelope) SourceAccount() *stx.MuxedAccount</a></dd>
+				
+			
+				
+				<dd><a href="index.html#TransactionResult">type TransactionResult</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#TxFailure">type TxFailure</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#TxFailure.Error">func (e TxFailure) Error() string</a></dd>
+				
+			
+			
+			</dl>
+			</div><!-- #manual-nav -->
+
+		
+		<div id="pkg-examples">
+			<h3>Examples</h3>
+			<div class="js-expandAll expandAll collapsed">(Expand All)</div>
+			<dl>
+			
+			<dd><a class="exampleLink" href="index.html#example__postTransaction">Package (PostTransaction)</a></dd>
+			
+			<dd><a class="exampleLink" href="index.html#example__txrep">Package (Txrep)</a></dd>
+			
+			</dl>
+		</div>
+		
+
+		
+			<h3>Package files</h3>
+			<p>
+			<span style="font-size:90%">
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/config.go">config.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go">horizon.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/privkey.go">privkey.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go">stellarnet.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go">uhelper.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go">xdr.go</a>
+			
+			</span>
+			</p>
+		
+		</div><!-- .expanded -->
+		</div><!-- #pkg-index -->
+
+		
+
+		
+			<h2 id="pkg-constants">Constants</h2>
+			
+				<p>
+Largest 64-bit signed integer (9223372036854775807).
+</p>
+
+				<pre>const <span id="MaxInt64">MaxInt64</span> = 0x7fffffffffffffff</pre>
+			
+		
+		
+			<h2 id="pkg-variables">Variables</h2>
+			
+				<p>
+When a user does not have an stc.conf configuration file, the
+library searches for one in $STCDIR/stc.conf, then /etc/stc.conf,
+then ../share/stc.conf (relative to the executable path).  If none
+of those paths exists, then it uses the built-in contents specified
+by this variable.
+</p>
+
+				<pre>var <span id="DefaultGlobalConfigContents">DefaultGlobalConfigContents</span> = []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>(
+    `# Default Stellar network configurations for stc.
+
+[net &#34;main&#34;]
+network-id = &#34;Public Global Stellar Network ; September 2015&#34;
+horizon = https://horizon.stellar.org/
+native-asset = XLM
+
+[net &#34;test&#34;]
+horizon = https://horizon-testnet.stellar.org/
+native-asset = TestXLM
+
+[net &#34;standalone&#34;]
+network-id = &#34;Standalone Network ; February 2017&#34;
+horizon = http://localhost:8000/
+native-asset = StandaloneXLM
+
+`)</pre>
+			
+				
+				<pre>var <span id="ErrInvalidNetName">ErrInvalidNetName</span> = <a href="http://localhost:6666/pkg/errors/">errors</a>.<a href="http://localhost:6666/pkg/errors/#New">New</a>(&#34;Invalid or missing Stellar network name&#34;)</pre>
+			
+				
+				<pre>var <span id="ErrNoNetworkId">ErrNoNetworkId</span> = <a href="http://localhost:6666/pkg/errors/">errors</a>.<a href="http://localhost:6666/pkg/errors/#New">New</a>(&#34;Cannot obtain Stellar network-id&#34;)</pre>
+			
+				
+				<pre>var <span id="InvalidKeyFile">InvalidKeyFile</span> = <a href="http://localhost:6666/pkg/errors/">errors</a>.<a href="http://localhost:6666/pkg/errors/#New">New</a>(&#34;Invalid private key file&#34;)</pre>
+			
+				
+				<pre>var <span id="InvalidPassphrase">InvalidPassphrase</span> = <a href="http://localhost:6666/pkg/errors/">errors</a>.<a href="http://localhost:6666/pkg/errors/#New">New</a>(&#34;Invalid passphrase&#34;)</pre>
+			
+		
+		
+			
+			
+			<h2 id="ConfigPath">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/config.go?s=2742:2786#L92">ConfigPath</a>
+				<a class="permalink" href="index.html#ConfigPath">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func ConfigPath(components ...<a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+			<p>
+Return the path to a file under the user&#39;s configuration directory.
+The configuration directory is found based on environment
+variables.  From highest to lowest precedence tries $STCDIR,
+UserConfigDir() (i.e., on Unix $XDG_CONFIG_HOME/.stc or
+$HOME/.config/stc), or ./.stc, using the first one with for which
+the environment variable exists.  If the configuration directory
+doesn&#39;t exist, it gets created, but the underlying path requested
+will not be created.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="IsTemporary">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=857:889#L23">IsTemporary</a>
+				<a class="permalink" href="index.html#IsTemporary">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func IsTemporary(err <a href="http://localhost:6666/pkg/builtin/#error">error</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+			<p>
+Try to determine whether a request to Horizon indicates the
+operation is worth retrying.  Specifically, this function
+repeatedly unwraps errors and returns true if either A) one of the
+errors has a Temporary() method that returns true, or B) one of the
+errors is a net.OpError for Op &#34;dial&#34; and that is not wrapping a
+DNS error.  The logic here is that if the DNS name of a horizon
+server does not exist (permanent DNS error), there is likely some
+misconfiguration.  However, if the horizon server is refusing TCP
+connections, it may be undergoing maintenance.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="MemoHash">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=12696:12739#L307">MemoHash</a>
+				<a class="permalink" href="index.html#MemoHash">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func MemoHash(arg [32]<a href="http://localhost:6666/pkg/builtin/#uint8">uint8</a>) (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#Memo">Memo</a>)</pre>
+			<p>
+Helper function for initializing a Memo with
+Type == MEMO_HASH
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="MemoId">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=12534:12572#L299">MemoId</a>
+				<a class="permalink" href="index.html#MemoId">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func MemoId(arg <a href="http://localhost:6666/pkg/builtin/#uint64">uint64</a>) (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#Memo">Memo</a>)</pre>
+			<p>
+Helper function for initializing a Memo with
+Type == MEMO_ID
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="MemoNone">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=12225:12249#L283">MemoNone</a>
+				<a class="permalink" href="index.html#MemoNone">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func MemoNone() <a href="stx/index.html">stx</a>.<a href="stx/index.html#Memo">Memo</a></pre>
+			<p>
+Helper function for initializing a Memo with
+Type == MEMO_NONE
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="MemoReturn">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=12869:12914#L315">MemoReturn</a>
+				<a class="permalink" href="index.html#MemoReturn">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func MemoReturn(arg [32]<a href="http://localhost:6666/pkg/builtin/#uint8">uint8</a>) (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#Memo">Memo</a>)</pre>
+			<p>
+Helper function for initializing a Memo with
+Type == MEMO_RETURN
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="MemoText">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=12368:12408#L291">MemoText</a>
+				<a class="permalink" href="index.html#MemoText">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func MemoText(arg <a href="http://localhost:6666/pkg/builtin/#string">string</a>) (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#Memo">Memo</a>)</pre>
+			<p>
+Helper function for initializing a Memo with
+Type == MEMO_TEXT
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="MkAsset">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=755:805#L27">MkAsset</a>
+				<a class="permalink" href="index.html#MkAsset">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func MkAsset(acc <a href="index.html#AccountID">AccountID</a>, code <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="stx/index.html">stx</a>.<a href="stx/index.html#Asset">Asset</a></pre>
+			
+			
+			
+
+		
+			
+			
+			<h2 id="MkAssetCode">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=1203:1246#L43">MkAssetCode</a>
+				<a class="permalink" href="index.html#MkAssetCode">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func MkAssetCode(code <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="stx/index.html">stx</a>.<a href="stx/index.html#AssetCode">AssetCode</a></pre>
+			
+			
+			
+
+		
+			
+			
+			<h2 id="NativeAsset">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=668:696#L21">NativeAsset</a>
+				<a class="permalink" href="index.html#NativeAsset">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func NativeAsset() <a href="stx/index.html">stx</a>.<a href="stx/index.html#Asset">Asset</a></pre>
+			
+			
+			
+
+		
+			
+			
+			<h2 id="NewHyper">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=2592:2621#L91">NewHyper</a>
+				<a class="permalink" href="index.html#NewHyper">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func NewHyper(v <a href="http://localhost:6666/pkg/builtin/#int64">int64</a>) *<a href="http://localhost:6666/pkg/builtin/#int64">int64</a></pre>
+			<p>
+Allocate an int64 when initializing types that take an XDR hyper*.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="NewSignerHashX">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=2226:2284#L80">NewSignerHashX</a>
+				<a class="permalink" href="index.html#NewSignerHashX">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func NewSignerHashX(x <a href="stx/index.html">stx</a>.<a href="stx/index.html#Hash">Hash</a>, weight <a href="http://localhost:6666/pkg/builtin/#uint32">uint32</a>) *<a href="stx/index.html">stx</a>.<a href="stx/index.html#Signer">Signer</a></pre>
+			<p>
+Create a signer that requires the hash pre-image of some hash value x
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="NewSignerKey">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=1727:1785#L63">NewSignerKey</a>
+				<a class="permalink" href="index.html#NewSignerKey">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func NewSignerKey(pk <a href="index.html#PublicKey">PublicKey</a>, weight <a href="http://localhost:6666/pkg/builtin/#uint32">uint32</a>) *<a href="stx/index.html">stx</a>.<a href="stx/index.html#Signer">Signer</a></pre>
+			<p>
+Create a signer for a particular public key and weight
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="NewString">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=2837:2869#L97">NewString</a>
+				<a class="permalink" href="index.html#NewString">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func NewString(v <a href="http://localhost:6666/pkg/builtin/#string">string</a>) *<a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+			<p>
+Allocate a string when initializing types that take an XDR *string&lt;&gt;.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="NewUhyper">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=2716:2748#L94">NewUhyper</a>
+				<a class="permalink" href="index.html#NewUhyper">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func NewUhyper(v <a href="http://localhost:6666/pkg/builtin/#uint64">uint64</a>) *<a href="http://localhost:6666/pkg/builtin/#uint64">uint64</a></pre>
+			<p>
+Allocate a uint64 when initializing types that take an XDR unsigned hyper*.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="NewUint">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=2476:2506#L88">NewUint</a>
+				<a class="permalink" href="index.html#NewUint">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func NewUint(v <a href="http://localhost:6666/pkg/builtin/#uint32">uint32</a>) *<a href="http://localhost:6666/pkg/builtin/#uint32">uint32</a></pre>
+			<p>
+Allocate a uint32 when initializing types that take an XDR int*.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="ParseConfigFiles">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/config.go?s=2984:3046#L98">ParseConfigFiles</a>
+				<a class="permalink" href="index.html#ParseConfigFiles">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func ParseConfigFiles(sink <a href="ini/index.html">ini</a>.<a href="ini/index.html#IniSink">IniSink</a>, paths ...<a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+			<p>
+Parse a series of INI configuration files specified by paths,
+followed by the global or built-in stc.conf file.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="Set">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=14659:14710#L500">Set</a>
+				<a class="permalink" href="index.html#Set">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func Set(t <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>, fieldValues ...interface{})</pre>
+			<p>
+Assign a set of values to successive fields of an XDR structure in a
+type-safe way, flattening out nested structures.  For example, given
+the following XDR:
+</p>
+<pre>union Asset switch (AssetType type) {
+case ASSET_TYPE_NATIVE: // Not credit
+	void;
+
+case ASSET_TYPE_CREDIT_ALPHANUM4:
+	struct {
+		opaque assetCode[4]; // 1 to 4 characters
+		AccountID issuer;
+	} alphaNum4;
+
+case ASSET_TYPE_CREDIT_ALPHANUM12:
+	struct {
+		opaque assetCode[12]; // 5 to 12 characters
+		AccountID issuer;
+	} alphaNum12;
+};
+</pre>
+<p>
+You can initalize it with the following:
+</p>
+<pre>var asset Asset
+Set(&amp;asset, ASSET_TYPE_CREDIT_ALPHANUM12, &#34;Asset Code&#34;, AccountID{})
+</pre>
+<p>
+Fixed-length arrays of size n must be assigned from n successive
+arguments passed to Set and cannot be passed as an array.  Slices, by
+contrast, must be assigned from slices.  The one exception is
+fixed-size array of bytes opaque[n], which can be initialized from a
+string, a slice []byte, or an array [n]byte.  The string or slice may
+be shorter than n (in which case the remainig bytes are filled with
+0), but a byte array must be exactly the same length.  (If you really
+must assign from a shorter fixed-length byte array, just slice the
+array.)
+</p>
+<p>
+Note that aggregates can be passed as arguments to assign, in which
+case Set will take fewer arguments.  The recursive traversal of
+structures stops when it is possible to assign the next value to the
+current aggregate.  For example, it is valid to say:
+</p>
+<pre>var asset Asset
+Set(&amp;asset, ASSET_TYPE_CREDIT_ALPHANUM12, otherAsset.AlphaNum12)
+</pre>
+
+			
+			
+
+		
+			
+			
+			<h2 id="TxToBase64">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=10450:10497#L355">TxToBase64</a>
+				<a class="permalink" href="index.html#TxToBase64">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func TxToBase64(tx *<a href="index.html#TransactionEnvelope">TransactionEnvelope</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+			<p>
+Convert a TransactionEnvelope to base64-encoded binary XDR format.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="ValidNetName">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/config.go?s=3414:3449#L117">ValidNetName</a>
+				<a class="permalink" href="index.html#ValidNetName">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func ValidNetName(name <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+			
+			
+			
+
+		
+		
+			
+			
+			<h2 id="AccountHints">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=5434:5469#L208">AccountHints</a>
+				<a class="permalink" href="index.html#AccountHints">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Set of annotations to show as comments when showing Stellar
+AccountID values.
+</p>
+
+			<pre>type AccountHints map[<a href="http://localhost:6666/pkg/builtin/#string">string</a>]<a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="AccountHints.String">func (AccountHints) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=5571:5608#L212">String</a>
+					<a class="permalink" href="index.html#AccountHints.String">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (h <a href="index.html#AccountHints">AccountHints</a>) String() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				<p>
+Renders an account hint as the AccountID in StrKey format, a space,
+and the comment (if any).
+</p>
+
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="AccountID">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=360:390#L11">AccountID</a>
+				<a class="permalink" href="index.html#AccountID">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type AccountID = <a href="stx/index.html">stx</a>.<a href="stx/index.html#AccountID">AccountID</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="DemuxAcct">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=3589:3646#L121">DemuxAcct</a>
+					<a class="permalink" href="index.html#DemuxAcct">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func DemuxAcct(macct *<a href="index.html#MuxedAccount">MuxedAccount</a>) (*<a href="index.html#AccountID">AccountID</a>, *<a href="http://localhost:6666/pkg/builtin/#uint64">uint64</a>)</pre>
+				<p>
+Break a MuxedAccount into its consituent parts.  Note that the
+second return value of type *uint64 may be nil for MuxedAccounts
+that don&#39;t include an embedded identifier.
+</p>
+
+				
+				
+			
+				
+				<h3 id="NewAccountID">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=1609:1651#L58">NewAccountID</a>
+					<a class="permalink" href="index.html#NewAccountID">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func NewAccountID(id <a href="index.html#AccountID">AccountID</a>) *<a href="index.html#AccountID">AccountID</a></pre>
+				<p>
+Return a pointer to an account ID
+</p>
+
+				
+				
+			
+
+			
+		
+			
+			
+			<h2 id="AccountMerge">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=4296:4330#L97">AccountMerge</a>
+				<a class="permalink" href="index.html#AccountMerge">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+AccountMerge is a type with the same fields as stx.MuxedAccount that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == ACCOUNT_MERGE and *Body.Destination()
+initialized from the fields of the AccountMerge.
+</p>
+
+			<pre>type AccountMerge <a href="stx/index.html">stx</a>.<a href="stx/index.html#MuxedAccount">MuxedAccount</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="AccountMerge.To_Operation_Body">func (AccountMerge) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=4332:4408#L99">To_Operation_Body</a>
+					<a class="permalink" href="index.html#AccountMerge.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#AccountMerge">AccountMerge</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="AllowTrust">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=3843:3875#L85">AllowTrust</a>
+				<a class="permalink" href="index.html#AllowTrust">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+AllowTrust is a type with the same fields as stx.AllowTrustOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == ALLOW_TRUST and *Body.AllowTrustOp()
+initialized from the fields of the AllowTrust.
+</p>
+
+			<pre>type AllowTrust <a href="stx/index.html">stx</a>.<a href="stx/index.html#AllowTrustOp">AllowTrustOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="AllowTrust.To_Operation_Body">func (AllowTrust) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=3877:3951#L87">To_Operation_Body</a>
+					<a class="permalink" href="index.html#AllowTrust.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#AllowTrust">AllowTrust</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="BeginSponsoringFutureReserves">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=8260:8330#L191">BeginSponsoringFutureReserves</a>
+				<a class="permalink" href="index.html#BeginSponsoringFutureReserves">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+BeginSponsoringFutureReserves is a type with the same fields as stx.BeginSponsoringFutureReservesOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == BEGIN_SPONSORING_FUTURE_RESERVES and *Body.BeginSponsoringFutureReservesOp()
+initialized from the fields of the BeginSponsoringFutureReserves.
+</p>
+
+			<pre>type BeginSponsoringFutureReserves <a href="stx/index.html">stx</a>.<a href="stx/index.html#BeginSponsoringFutureReservesOp">BeginSponsoringFutureReservesOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="BeginSponsoringFutureReserves.To_Operation_Body">func (BeginSponsoringFutureReserves) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=8332:8425#L193">To_Operation_Body</a>
+					<a class="permalink" href="index.html#BeginSponsoringFutureReserves.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#BeginSponsoringFutureReserves">BeginSponsoringFutureReserves</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="BumpSequence">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=5483:5519#L131">BumpSequence</a>
+				<a class="permalink" href="index.html#BumpSequence">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+BumpSequence is a type with the same fields as stx.BumpSequenceOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == BUMP_SEQUENCE and *Body.BumpSequenceOp()
+initialized from the fields of the BumpSequence.
+</p>
+
+			<pre>type BumpSequence <a href="stx/index.html">stx</a>.<a href="stx/index.html#BumpSequenceOp">BumpSequenceOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="BumpSequence.To_Operation_Body">func (BumpSequence) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=5521:5597#L133">To_Operation_Body</a>
+					<a class="permalink" href="index.html#BumpSequence.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#BumpSequence">BumpSequence</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ChangeTrust">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=3389:3423#L73">ChangeTrust</a>
+				<a class="permalink" href="index.html#ChangeTrust">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+ChangeTrust is a type with the same fields as stx.ChangeTrustOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == CHANGE_TRUST and *Body.ChangeTrustOp()
+initialized from the fields of the ChangeTrust.
+</p>
+
+			<pre>type ChangeTrust <a href="stx/index.html">stx</a>.<a href="stx/index.html#ChangeTrustOp">ChangeTrustOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="ChangeTrust.To_Operation_Body">func (ChangeTrust) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=3425:3500#L75">To_Operation_Body</a>
+					<a class="permalink" href="index.html#ChangeTrust.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#ChangeTrust">ChangeTrust</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ClaimClaimableBalance">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=7648:7702#L179">ClaimClaimableBalance</a>
+				<a class="permalink" href="index.html#ClaimClaimableBalance">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+ClaimClaimableBalance is a type with the same fields as stx.ClaimClaimableBalanceOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == CLAIM_CLAIMABLE_BALANCE and *Body.ClaimClaimableBalanceOp()
+initialized from the fields of the ClaimClaimableBalance.
+</p>
+
+			<pre>type ClaimClaimableBalance <a href="stx/index.html">stx</a>.<a href="stx/index.html#ClaimClaimableBalanceOp">ClaimClaimableBalanceOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="ClaimClaimableBalance.To_Operation_Body">func (ClaimClaimableBalance) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=7704:7789#L181">To_Operation_Body</a>
+					<a class="permalink" href="index.html#ClaimClaimableBalance.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#ClaimClaimableBalance">ClaimClaimableBalance</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="Clawback">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=9710:9738#L225">Clawback</a>
+				<a class="permalink" href="index.html#Clawback">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Clawback is a type with the same fields as stx.ClawbackOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == CLAWBACK and *Body.ClawbackOp()
+initialized from the fields of the Clawback.
+</p>
+
+			<pre>type Clawback <a href="stx/index.html">stx</a>.<a href="stx/index.html#ClawbackOp">ClawbackOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="Clawback.To_Operation_Body">func (Clawback) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=9740:9812#L227">To_Operation_Body</a>
+					<a class="permalink" href="index.html#Clawback.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#Clawback">Clawback</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ClawbackClaimableBalance">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=10216:10276#L237">ClawbackClaimableBalance</a>
+				<a class="permalink" href="index.html#ClawbackClaimableBalance">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+ClawbackClaimableBalance is a type with the same fields as stx.ClawbackClaimableBalanceOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == CLAWBACK_CLAIMABLE_BALANCE and *Body.ClawbackClaimableBalanceOp()
+initialized from the fields of the ClawbackClaimableBalance.
+</p>
+
+			<pre>type ClawbackClaimableBalance <a href="stx/index.html">stx</a>.<a href="stx/index.html#ClawbackClaimableBalanceOp">ClawbackClaimableBalanceOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="ClawbackClaimableBalance.To_Operation_Body">func (ClawbackClaimableBalance) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=10278:10366#L239">To_Operation_Body</a>
+					<a class="permalink" href="index.html#ClawbackClaimableBalance.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#ClawbackClaimableBalance">ClawbackClaimableBalance</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="CreateAccount">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=362:400#L1">CreateAccount</a>
+				<a class="permalink" href="index.html#CreateAccount">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+CreateAccount is a type with the same fields as stx.CreateAccountOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == CREATE_ACCOUNT and *Body.CreateAccountOp()
+initialized from the fields of the CreateAccount.
+</p>
+
+			<pre>type CreateAccount <a href="stx/index.html">stx</a>.<a href="stx/index.html#CreateAccountOp">CreateAccountOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="CreateAccount.To_Operation_Body">func (CreateAccount) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=402:479#L3">To_Operation_Body</a>
+					<a class="permalink" href="index.html#CreateAccount.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#CreateAccount">CreateAccount</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="CreateClaimableBalance">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=7071:7127#L167">CreateClaimableBalance</a>
+				<a class="permalink" href="index.html#CreateClaimableBalance">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+CreateClaimableBalance is a type with the same fields as stx.CreateClaimableBalanceOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == CREATE_CLAIMABLE_BALANCE and *Body.CreateClaimableBalanceOp()
+initialized from the fields of the CreateClaimableBalance.
+</p>
+
+			<pre>type CreateClaimableBalance <a href="stx/index.html">stx</a>.<a href="stx/index.html#CreateClaimableBalanceOp">CreateClaimableBalanceOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="CreateClaimableBalance.To_Operation_Body">func (CreateClaimableBalance) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=7129:7215#L169">To_Operation_Body</a>
+					<a class="permalink" href="index.html#CreateClaimableBalance.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#CreateClaimableBalance">CreateClaimableBalance</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="CreatePassiveSellOffer">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=2414:2470#L49">CreatePassiveSellOffer</a>
+				<a class="permalink" href="index.html#CreatePassiveSellOffer">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+CreatePassiveSellOffer is a type with the same fields as stx.CreatePassiveSellOfferOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == CREATE_PASSIVE_SELL_OFFER and *Body.CreatePassiveSellOfferOp()
+initialized from the fields of the CreatePassiveSellOffer.
+</p>
+
+			<pre>type CreatePassiveSellOffer <a href="stx/index.html">stx</a>.<a href="stx/index.html#CreatePassiveSellOfferOp">CreatePassiveSellOfferOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="CreatePassiveSellOffer.To_Operation_Body">func (CreatePassiveSellOffer) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=2472:2558#L51">To_Operation_Body</a>
+					<a class="permalink" href="index.html#CreatePassiveSellOffer.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#CreatePassiveSellOffer">CreatePassiveSellOffer</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="EndSponsoringFutureReserves">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=8752:8793#L202">EndSponsoringFutureReserves</a>
+				<a class="permalink" href="index.html#EndSponsoringFutureReserves">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+EndSponsoringFutureReserves is an empty type that can be passed to
+TransactionEnvelope.Append() to append a new Operation
+with Body.Type == END_SPONSORING_FUTURE_RESERVES.
+</p>
+
+			<pre>type EndSponsoringFutureReserves struct{}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="EndSponsoringFutureReserves.To_Operation_Body">func (EndSponsoringFutureReserves) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=8795:8882#L204">To_Operation_Body</a>
+					<a class="permalink" href="index.html#EndSponsoringFutureReserves.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (<a href="index.html#EndSponsoringFutureReserves">EndSponsoringFutureReserves</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ErrEventStream">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=2276:2302#L82">ErrEventStream</a>
+				<a class="permalink" href="index.html#ErrEventStream">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type ErrEventStream <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="ErrEventStream.Error">func (ErrEventStream) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=2304:2342#L84">Error</a>
+					<a class="permalink" href="index.html#ErrEventStream.Error">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (e <a href="index.html#ErrEventStream">ErrEventStream</a>) Error() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="FeeDist">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=15885:15997#L580">FeeDist</a>
+				<a class="permalink" href="index.html#FeeDist">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Distribution of offered or charged fees.
+</p>
+
+			<pre>type FeeDist struct {
+<span id="FeeDist.Max"></span>    Max         <a href="index.html#FeeVal">FeeVal</a>
+<span id="FeeDist.Min"></span>    Min         <a href="index.html#FeeVal">FeeVal</a>
+<span id="FeeDist.Mode"></span>    Mode        <a href="index.html#FeeVal">FeeVal</a>
+<span id="FeeDist.Percentiles"></span>    Percentiles []<a href="index.html#FeePercentile">FeePercentile</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="FeeDist.Percentile">func (*FeeDist) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=17947:17995#L666">Percentile</a>
+					<a class="permalink" href="index.html#FeeDist.Percentile">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (fd *<a href="index.html#FeeDist">FeeDist</a>) Percentile(target <a href="http://localhost:6666/pkg/builtin/#int">int</a>) <a href="index.html#FeeVal">FeeVal</a></pre>
+				<p>
+Conservatively returns a fee that is a known fee for the target or
+the closest higher known percentile.  Does not interpolate--e.g.,
+if you ask for the 51st percentile but only the 50th and 60th are
+known, returns the 60th percentile.  Never returns a value less
+than the base fee.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="FeeDist.UnmarshalJSON">func (*FeeDist) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=16720:16771#L625">UnmarshalJSON</a>
+					<a class="permalink" href="index.html#FeeDist.UnmarshalJSON">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (fd *<a href="index.html#FeeDist">FeeDist</a>) UnmarshalJSON(data []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="FeePercentile">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=15773:15839#L574">FeePercentile</a>
+				<a class="permalink" href="index.html#FeePercentile">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type FeePercentile = struct {
+<span id="FeePercentile.Percentile"></span>    Percentile <a href="http://localhost:6666/pkg/builtin/#int">int</a>
+<span id="FeePercentile.Fee"></span>    Fee        <a href="index.html#FeeVal">FeeVal</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="FeeStats">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=19123:19300#L712">FeeStats</a>
+				<a class="permalink" href="index.html#FeeStats">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Go representation of the Horizon Fee Stats structure response.  The
+fees are per operation in a transaction, and the individual fields
+are documented here:
+<a href="https://www.stellar.org/developers/horizon/reference/endpoints/fee-stats.html">https://www.stellar.org/developers/horizon/reference/endpoints/fee-stats.html</a>
+</p>
+
+			<pre>type FeeStats struct {
+<span id="FeeStats.Last_ledger"></span>    Last_ledger           <a href="http://localhost:6666/pkg/builtin/#uint64">uint64</a>
+<span id="FeeStats.Last_ledger_base_fee"></span>    Last_ledger_base_fee  <a href="http://localhost:6666/pkg/builtin/#uint32">uint32</a>
+<span id="FeeStats.Ledger_capacity_usage"></span>    Ledger_capacity_usage <a href="http://localhost:6666/pkg/builtin/#float64">float64</a>
+<span id="FeeStats.Charged"></span>    Charged               <a href="index.html#FeeDist">FeeDist</a>
+<span id="FeeStats.Offered"></span>    Offered               <a href="index.html#FeeDist">FeeDist</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="FeeStats.Percentile">func (*FeeStats) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=20251:20300#L756">Percentile</a>
+					<a class="permalink" href="index.html#FeeStats.Percentile">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (fs *<a href="index.html#FeeStats">FeeStats</a>) Percentile(target <a href="http://localhost:6666/pkg/builtin/#int">int</a>) <a href="index.html#FeeVal">FeeVal</a></pre>
+				<p>
+Conservatively a known offered fee for the target or a higher
+percentile.  Never returns a value less than the base fee.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="FeeStats.String">func (FeeStats) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=20427:20461#L764">String</a>
+					<a class="permalink" href="index.html#FeeStats.String">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (fs <a href="index.html#FeeStats">FeeStats</a>) String() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="FeeStats.UnmarshalJSON">func (*FeeStats) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=19302:19354#L720">UnmarshalJSON</a>
+					<a class="permalink" href="index.html#FeeStats.UnmarshalJSON">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (fs *<a href="index.html#FeeStats">FeeStats</a>) UnmarshalJSON(data []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="FeeVal">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=15368:15388#L561">FeeVal</a>
+				<a class="permalink" href="index.html#FeeVal">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+A Fee Value is currently 32 bits, but could become 64 bits if
+CAP-0015 is adopted.
+</p>
+
+			<pre>type FeeVal = <a href="http://localhost:6666/pkg/builtin/#uint32">uint32</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="HorizonAccountEntry">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=7899:8389#L311">HorizonAccountEntry</a>
+				<a class="permalink" href="index.html#HorizonAccountEntry">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Structure into which you can unmarshal JSON returned by a query to
+horizon for an account endpoint
+</p>
+
+			<pre>type HorizonAccountEntry struct {
+<span id="HorizonAccountEntry.Net"></span>    Net                   *<a href="index.html#StellarNet">StellarNet</a> `json:&#34;-&#34;`
+<span id="HorizonAccountEntry.Sequence"></span>    Sequence              <a href="stcdetail/index.html">stcdetail</a>.<a href="stcdetail/index.html#JsonInt64">JsonInt64</a>
+<span id="HorizonAccountEntry.Balance"></span>    Balance               <a href="stcdetail/index.html">stcdetail</a>.<a href="stcdetail/index.html#JsonInt64e7">JsonInt64e7</a>
+<span id="HorizonAccountEntry.Subentry_count"></span>    Subentry_count        <a href="http://localhost:6666/pkg/builtin/#uint32">uint32</a>
+<span id="HorizonAccountEntry.Inflation_destination"></span>    Inflation_destination *<a href="index.html#AccountID">AccountID</a>
+<span id="HorizonAccountEntry.Home_domain"></span>    Home_domain           <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+<span id="HorizonAccountEntry.Last_modified_ledger"></span>    Last_modified_ledger  <a href="http://localhost:6666/pkg/builtin/#uint32">uint32</a>
+<span id="HorizonAccountEntry.Flags"></span>    Flags                 <a href="index.html#HorizonFlags">HorizonFlags</a>
+<span id="HorizonAccountEntry.Thresholds"></span>    Thresholds            <a href="index.html#HorizonThresholds">HorizonThresholds</a>
+<span id="HorizonAccountEntry.Balances"></span>    Balances              []<a href="index.html#HorizonBalance">HorizonBalance</a>
+<span id="HorizonAccountEntry.Signers"></span>    Signers               []<a href="index.html#HorizonSigner">HorizonSigner</a>
+<span id="HorizonAccountEntry.Data"></span>    Data                  map[<a href="http://localhost:6666/pkg/builtin/#string">string</a>]<a href="http://localhost:6666/pkg/builtin/#string">string</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="HorizonAccountEntry.NextSeq">func (*HorizonAccountEntry) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=9220:9279#L356">NextSeq</a>
+					<a class="permalink" href="index.html#HorizonAccountEntry.NextSeq">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ae *<a href="index.html#HorizonAccountEntry">HorizonAccountEntry</a>) NextSeq() <a href="stx/index.html">stx</a>.<a href="stx/index.html#SequenceNumber">SequenceNumber</a></pre>
+				<p>
+Return the next sequence number (1 + Sequence) as an int64 (or 0 if
+an invalid sequence number was returned by horizon).
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="HorizonAccountEntry.String">func (*HorizonAccountEntry) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=8981:9027#L350">String</a>
+					<a class="permalink" href="index.html#HorizonAccountEntry.String">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (hs *<a href="index.html#HorizonAccountEntry">HorizonAccountEntry</a>) String() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="HorizonAccountEntry.UnmarshalJSON">func (*HorizonAccountEntry) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=9381:9444#L365">UnmarshalJSON</a>
+					<a class="permalink" href="index.html#HorizonAccountEntry.UnmarshalJSON">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ae *<a href="index.html#HorizonAccountEntry">HorizonAccountEntry</a>) UnmarshalJSON(data []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="HorizonBalance">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=6616:6860#L264">HorizonBalance</a>
+				<a class="permalink" href="index.html#HorizonBalance">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type HorizonBalance struct {
+<span id="HorizonBalance.Balance"></span>    Balance             <a href="stcdetail/index.html">stcdetail</a>.<a href="stcdetail/index.html#JsonInt64e7">JsonInt64e7</a>
+<span id="HorizonBalance.Buying_liabilities"></span>    Buying_liabilities  <a href="stcdetail/index.html">stcdetail</a>.<a href="stcdetail/index.html#JsonInt64e7">JsonInt64e7</a>
+<span id="HorizonBalance.Selling_liabilities"></span>    Selling_liabilities <a href="stcdetail/index.html">stcdetail</a>.<a href="stcdetail/index.html#JsonInt64e7">JsonInt64e7</a>
+<span id="HorizonBalance.Limit"></span>    Limit               <a href="stcdetail/index.html">stcdetail</a>.<a href="stcdetail/index.html#JsonInt64e7">JsonInt64e7</a>
+<span id="HorizonBalance.Asset"></span>    Asset               <a href="stx/index.html">stx</a>.<a href="stx/index.html#Asset">Asset</a> `json:&#34;-&#34;`
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="HorizonBalance.UnmarshalJSON">func (*HorizonBalance) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=6862:6920#L272">UnmarshalJSON</a>
+					<a class="permalink" href="index.html#HorizonBalance.UnmarshalJSON">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (hb *<a href="index.html#HorizonBalance">HorizonBalance</a>) UnmarshalJSON(data []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="HorizonFlags">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=6460:6551#L254">HorizonFlags</a>
+				<a class="permalink" href="index.html#HorizonFlags">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type HorizonFlags struct {
+<span id="HorizonFlags.Auth_required"></span>    Auth_required  <a href="http://localhost:6666/pkg/builtin/#bool">bool</a>
+<span id="HorizonFlags.Auth_revocable"></span>    Auth_revocable <a href="http://localhost:6666/pkg/builtin/#bool">bool</a>
+<span id="HorizonFlags.Auth_immutable"></span>    Auth_immutable <a href="http://localhost:6666/pkg/builtin/#bool">bool</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="HorizonSigner">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=6552:6614#L259">HorizonSigner</a>
+				<a class="permalink" href="index.html#HorizonSigner">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type HorizonSigner struct {
+<span id="HorizonSigner.Key"></span>    Key    <a href="index.html#SignerKey">SignerKey</a>
+<span id="HorizonSigner.Weight"></span>    Weight <a href="http://localhost:6666/pkg/builtin/#uint32">uint32</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="HorizonThresholds">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=6360:6459#L249">HorizonThresholds</a>
+				<a class="permalink" href="index.html#HorizonThresholds">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type HorizonThresholds struct {
+<span id="HorizonThresholds.Low_threshold"></span>    Low_threshold  <a href="http://localhost:6666/pkg/builtin/#uint8">uint8</a>
+<span id="HorizonThresholds.Med_threshold"></span>    Med_threshold  <a href="http://localhost:6666/pkg/builtin/#uint8">uint8</a>
+<span id="HorizonThresholds.High_threshold"></span>    High_threshold <a href="http://localhost:6666/pkg/builtin/#uint8">uint8</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="HorizonTxResult">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=13146:13343#L484">HorizonTxResult</a>
+				<a class="permalink" href="index.html#HorizonTxResult">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type HorizonTxResult struct {
+<span id="HorizonTxResult.Net"></span>    Net    *<a href="index.html#StellarNet">StellarNet</a>
+<span id="HorizonTxResult.Txhash"></span>    Txhash <a href="stx/index.html">stx</a>.<a href="stx/index.html#Hash">Hash</a>
+<span id="HorizonTxResult.Ledger"></span>    Ledger <a href="http://localhost:6666/pkg/builtin/#uint32">uint32</a>
+<span id="HorizonTxResult.Time"></span>    Time   <a href="http://localhost:6666/pkg/time/">time</a>.<a href="http://localhost:6666/pkg/time/#Time">Time</a>
+<span id="HorizonTxResult.Env"></span>    Env    <a href="stx/index.html">stx</a>.<a href="stx/index.html#TransactionEnvelope">TransactionEnvelope</a>
+<span id="HorizonTxResult.Result"></span>    Result <a href="stx/index.html">stx</a>.<a href="stx/index.html#TransactionResult">TransactionResult</a>
+    <a href="index.html#StellarMetas">StellarMetas</a>
+<span id="HorizonTxResult.PagingToken"></span>    PagingToken <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="HorizonTxResult.String">func (HorizonTxResult) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=13478:13518#L500">String</a>
+					<a class="permalink" href="index.html#HorizonTxResult.String">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (r <a href="index.html#HorizonTxResult">HorizonTxResult</a>) String() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="HorizonTxResult.Success">func (*HorizonTxResult) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=13345:13385#L495">Success</a>
+					<a class="permalink" href="index.html#HorizonTxResult.Success">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (r *<a href="index.html#HorizonTxResult">HorizonTxResult</a>) Success() <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="HorizonTxResult.UnmarshalJSON">func (*HorizonTxResult) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=13980:14038#L513">UnmarshalJSON</a>
+					<a class="permalink" href="index.html#HorizonTxResult.UnmarshalJSON">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (r *<a href="index.html#HorizonTxResult">HorizonTxResult</a>) UnmarshalJSON(data []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="Inflation">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=4638:4661#L108">Inflation</a>
+				<a class="permalink" href="index.html#Inflation">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Inflation is an empty type that can be passed to
+TransactionEnvelope.Append() to append a new Operation
+with Body.Type == INFLATION.
+</p>
+
+			<pre>type Inflation struct{}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="Inflation.To_Operation_Body">func (Inflation) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=4663:4732#L110">To_Operation_Body</a>
+					<a class="permalink" href="index.html#Inflation.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (<a href="index.html#Inflation">Inflation</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="LedgerHeader">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=537:573#L16">LedgerHeader</a>
+				<a class="permalink" href="index.html#LedgerHeader">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type LedgerHeader = <a href="stx/index.html">stx</a>.<a href="stx/index.html#LedgerHeader">LedgerHeader</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="LiquidityPoolDeposit">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=11329:11381#L261">LiquidityPoolDeposit</a>
+				<a class="permalink" href="index.html#LiquidityPoolDeposit">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+LiquidityPoolDeposit is a type with the same fields as stx.LiquidityPoolDepositOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == LIQUIDITY_POOL_DEPOSIT and *Body.LiquidityPoolDepositOp()
+initialized from the fields of the LiquidityPoolDeposit.
+</p>
+
+			<pre>type LiquidityPoolDeposit <a href="stx/index.html">stx</a>.<a href="stx/index.html#LiquidityPoolDepositOp">LiquidityPoolDepositOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="LiquidityPoolDeposit.To_Operation_Body">func (LiquidityPoolDeposit) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=11383:11467#L263">To_Operation_Body</a>
+					<a class="permalink" href="index.html#LiquidityPoolDeposit.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#LiquidityPoolDeposit">LiquidityPoolDeposit</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="LiquidityPoolWithdraw">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=11894:11948#L273">LiquidityPoolWithdraw</a>
+				<a class="permalink" href="index.html#LiquidityPoolWithdraw">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+LiquidityPoolWithdraw is a type with the same fields as stx.LiquidityPoolWithdrawOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == LIQUIDITY_POOL_WITHDRAW and *Body.LiquidityPoolWithdrawOp()
+initialized from the fields of the LiquidityPoolWithdraw.
+</p>
+
+			<pre>type LiquidityPoolWithdraw <a href="stx/index.html">stx</a>.<a href="stx/index.html#LiquidityPoolWithdrawOp">LiquidityPoolWithdrawOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="LiquidityPoolWithdraw.To_Operation_Body">func (LiquidityPoolWithdraw) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=11950:12035#L275">To_Operation_Body</a>
+					<a class="permalink" href="index.html#LiquidityPoolWithdraw.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#LiquidityPoolWithdraw">LiquidityPoolWithdraw</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ManageBuyOffer">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=5964:6004#L143">ManageBuyOffer</a>
+				<a class="permalink" href="index.html#ManageBuyOffer">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+ManageBuyOffer is a type with the same fields as stx.ManageBuyOfferOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == MANAGE_BUY_OFFER and *Body.ManageBuyOfferOp()
+initialized from the fields of the ManageBuyOffer.
+</p>
+
+			<pre>type ManageBuyOffer <a href="stx/index.html">stx</a>.<a href="stx/index.html#ManageBuyOfferOp">ManageBuyOfferOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="ManageBuyOffer.To_Operation_Body">func (ManageBuyOffer) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=6006:6084#L145">To_Operation_Body</a>
+					<a class="permalink" href="index.html#ManageBuyOffer.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#ManageBuyOffer">ManageBuyOffer</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ManageData">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=5025:5057#L119">ManageData</a>
+				<a class="permalink" href="index.html#ManageData">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+ManageData is a type with the same fields as stx.ManageDataOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == MANAGE_DATA and *Body.ManageDataOp()
+initialized from the fields of the ManageData.
+</p>
+
+			<pre>type ManageData <a href="stx/index.html">stx</a>.<a href="stx/index.html#ManageDataOp">ManageDataOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="ManageData.To_Operation_Body">func (ManageData) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=5059:5133#L121">To_Operation_Body</a>
+					<a class="permalink" href="index.html#ManageData.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#ManageData">ManageData</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ManageSellOffer">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=1873:1915#L37">ManageSellOffer</a>
+				<a class="permalink" href="index.html#ManageSellOffer">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+ManageSellOffer is a type with the same fields as stx.ManageSellOfferOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == MANAGE_SELL_OFFER and *Body.ManageSellOfferOp()
+initialized from the fields of the ManageSellOffer.
+</p>
+
+			<pre>type ManageSellOffer <a href="stx/index.html">stx</a>.<a href="stx/index.html#ManageSellOfferOp">ManageSellOfferOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="ManageSellOffer.To_Operation_Body">func (ManageSellOffer) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=1917:1996#L39">To_Operation_Body</a>
+					<a class="permalink" href="index.html#ManageSellOffer.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#ManageSellOffer">ManageSellOffer</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="MuxedAccount">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=391:427#L12">MuxedAccount</a>
+				<a class="permalink" href="index.html#MuxedAccount">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type MuxedAccount = <a href="stx/index.html">stx</a>.<a href="stx/index.html#MuxedAccount">MuxedAccount</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="MuxAcct">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=3001:3056#L101">MuxAcct</a>
+					<a class="permalink" href="index.html#MuxAcct">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func MuxAcct(acct *<a href="index.html#AccountID">AccountID</a>, id *<a href="http://localhost:6666/pkg/builtin/#uint64">uint64</a>) *<a href="index.html#MuxedAccount">MuxedAccount</a></pre>
+				<p>
+Created a MuxedAccount from its consituent parts.  id may be nil to
+indicate there is no embedded identifier.
+</p>
+
+				
+				
+			
+
+			
+		
+			
+			
+			<h2 id="OperationBody">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=4751:4831#L157">OperationBody</a>
+				<a class="permalink" href="index.html#OperationBody">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Interface for placeholder types that are named by camel-cased
+versions of the OperationType enum and can be transformed into the
+body of an Operation
+</p>
+
+			<pre>type OperationBody interface {
+    To_Operation_Body() <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>
+}</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="PathPaymentStrictReceive">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=1313:1373#L25">PathPaymentStrictReceive</a>
+				<a class="permalink" href="index.html#PathPaymentStrictReceive">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+PathPaymentStrictReceive is a type with the same fields as stx.PathPaymentStrictReceiveOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == PATH_PAYMENT_STRICT_RECEIVE and *Body.PathPaymentStrictReceiveOp()
+initialized from the fields of the PathPaymentStrictReceive.
+</p>
+
+			<pre>type PathPaymentStrictReceive <a href="stx/index.html">stx</a>.<a href="stx/index.html#PathPaymentStrictReceiveOp">PathPaymentStrictReceiveOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="PathPaymentStrictReceive.To_Operation_Body">func (PathPaymentStrictReceive) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=1375:1463#L27">To_Operation_Body</a>
+					<a class="permalink" href="index.html#PathPaymentStrictReceive.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#PathPaymentStrictReceive">PathPaymentStrictReceive</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="PathPaymentStrictSend">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=6494:6548#L155">PathPaymentStrictSend</a>
+				<a class="permalink" href="index.html#PathPaymentStrictSend">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+PathPaymentStrictSend is a type with the same fields as stx.PathPaymentStrictSendOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == PATH_PAYMENT_STRICT_SEND and *Body.PathPaymentStrictSendOp()
+initialized from the fields of the PathPaymentStrictSend.
+</p>
+
+			<pre>type PathPaymentStrictSend <a href="stx/index.html">stx</a>.<a href="stx/index.html#PathPaymentStrictSendOp">PathPaymentStrictSendOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="PathPaymentStrictSend.To_Operation_Body">func (PathPaymentStrictSend) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=6550:6635#L157">To_Operation_Body</a>
+					<a class="permalink" href="index.html#PathPaymentStrictSend.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#PathPaymentStrictSend">PathPaymentStrictSend</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="Payment">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=812:838#L13">Payment</a>
+				<a class="permalink" href="index.html#Payment">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Payment is a type with the same fields as stx.PaymentOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == PAYMENT and *Body.PaymentOp()
+initialized from the fields of the Payment.
+</p>
+
+			<pre>type Payment <a href="stx/index.html">stx</a>.<a href="stx/index.html#PaymentOp">PaymentOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="Payment.To_Operation_Body">func (Payment) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=840:911#L15">To_Operation_Body</a>
+					<a class="permalink" href="index.html#Payment.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#Payment">Payment</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="PrivateKey">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/privkey.go?s=359:416#L10">PrivateKey</a>
+				<a class="permalink" href="index.html#PrivateKey">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Abstract type representing a Stellar private key.  Prints and scans
+in StrKey format.
+</p>
+
+			<pre>type PrivateKey struct {
+    <a href="stcdetail/index.html">stcdetail</a>.<a href="stcdetail/index.html#PrivateKeyInterface">PrivateKeyInterface</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="InputPrivateKey">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/privkey.go?s=3395:3450#L117">InputPrivateKey</a>
+					<a class="permalink" href="index.html#InputPrivateKey">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func InputPrivateKey(prompt <a href="http://localhost:6666/pkg/builtin/#string">string</a>) (<a href="index.html#PrivateKey">PrivateKey</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Reads a private key from standard input.  If standard input is a
+terminal, disables echo and prints prompt to standard error.
+</p>
+
+				
+				
+			
+				
+				<h3 id="LoadPrivateKey">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/privkey.go?s=2358:2410#L81">LoadPrivateKey</a>
+					<a class="permalink" href="index.html#LoadPrivateKey">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func LoadPrivateKey(file <a href="http://localhost:6666/pkg/builtin/#string">string</a>) (<a href="index.html#PrivateKey">PrivateKey</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Reads a private key from a file, prompting for a passphrase if the
+key is in ASCII-armored symmetrically-encrypted GPG format.
+</p>
+
+				
+				
+			
+				
+				<h3 id="NewPrivateKey">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/privkey.go?s=1035:1087#L37">NewPrivateKey</a>
+					<a class="permalink" href="index.html#NewPrivateKey">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func NewPrivateKey(pkt <a href="stx/index.html">stx</a>.<a href="stx/index.html#PublicKeyType">PublicKeyType</a>) <a href="index.html#PrivateKey">PrivateKey</a></pre>
+				<p>
+Generates a new Stellar keypair and returns the PrivateKey.
+Currently the only valid value for pkt is
+stx.PUBLIC_KEY_TYPE_ED25519.
+</p>
+
+				
+				
+			
+
+			
+				
+				<h3 id="PrivateKey.Save">func (PrivateKey) <a href="http://localhost:6666/src/github.com/xdrpp/stc/privkey.go?s=1436:1499#L49">Save</a>
+					<a class="permalink" href="index.html#PrivateKey.Save">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (sk <a href="index.html#PrivateKey">PrivateKey</a>) Save(file <a href="http://localhost:6666/pkg/builtin/#string">string</a>, passphrase []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Writes the a private key to a file in strkey format.  If passphrase
+has non-zero length, then the key is symmetrically encrypted in
+ASCII-armored GPG format.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="PrivateKey.Scan">func (*PrivateKey) <a href="http://localhost:6666/src/github.com/xdrpp/stc/privkey.go?s=497:556#L18">Scan</a>
+					<a class="permalink" href="index.html#PrivateKey.Scan">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (sec *<a href="index.html#PrivateKey">PrivateKey</a>) Scan(ss <a href="http://localhost:6666/pkg/fmt/">fmt</a>.<a href="http://localhost:6666/pkg/fmt/#ScanState">ScanState</a>, _ <a href="http://localhost:6666/pkg/builtin/#rune">rune</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="PrivateKey.Valid">func (PrivateKey) <a href="http://localhost:6666/src/github.com/xdrpp/stc/privkey.go?s=418:452#L14">Valid</a>
+					<a class="permalink" href="index.html#PrivateKey.Valid">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (sec <a href="index.html#PrivateKey">PrivateKey</a>) Valid() <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="PublicKey">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=329:359#L10">PublicKey</a>
+				<a class="permalink" href="index.html#PublicKey">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type PublicKey = <a href="stx/index.html">stx</a>.<a href="stx/index.html#PublicKey">PublicKey</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="RevokeSponsorship">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=9231:9277#L213">RevokeSponsorship</a>
+				<a class="permalink" href="index.html#RevokeSponsorship">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+RevokeSponsorship is a type with the same fields as stx.RevokeSponsorshipOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == REVOKE_SPONSORSHIP and *Body.RevokeSponsorshipOp()
+initialized from the fields of the RevokeSponsorship.
+</p>
+
+			<pre>type RevokeSponsorship <a href="stx/index.html">stx</a>.<a href="stx/index.html#RevokeSponsorshipOp">RevokeSponsorshipOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="RevokeSponsorship.To_Operation_Body">func (RevokeSponsorship) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=9279:9360#L215">To_Operation_Body</a>
+					<a class="permalink" href="index.html#RevokeSponsorship.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#RevokeSponsorship">RevokeSponsorship</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="SetOptions">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=2936:2968#L61">SetOptions</a>
+				<a class="permalink" href="index.html#SetOptions">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+SetOptions is a type with the same fields as stx.SetOptionsOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == SET_OPTIONS and *Body.SetOptionsOp()
+initialized from the fields of the SetOptions.
+</p>
+
+			<pre>type SetOptions <a href="stx/index.html">stx</a>.<a href="stx/index.html#SetOptionsOp">SetOptionsOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="SetOptions.To_Operation_Body">func (SetOptions) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=2970:3044#L63">To_Operation_Body</a>
+					<a class="permalink" href="index.html#SetOptions.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#SetOptions">SetOptions</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="SetTrustLineFlags">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=10786:10832#L249">SetTrustLineFlags</a>
+				<a class="permalink" href="index.html#SetTrustLineFlags">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+SetTrustLineFlags is a type with the same fields as stx.SetTrustLineFlagsOp that
+can be passed to TransactionEnvelope.Append() to append a new
+operation with Body.Type == SET_TRUST_LINE_FLAGS and *Body.SetTrustLineFlagsOp()
+initialized from the fields of the SetTrustLineFlags.
+</p>
+
+			<pre>type SetTrustLineFlags <a href="stx/index.html">stx</a>.<a href="stx/index.html#SetTrustLineFlagsOp">SetTrustLineFlagsOp</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="SetTrustLineFlags.To_Operation_Body">func (SetTrustLineFlags) <a href="http://localhost:6666/src/github.com/xdrpp/stc/uhelper.go?s=10834:10915#L251">To_Operation_Body</a>
+					<a class="permalink" href="index.html#SetTrustLineFlags.To_Operation_Body">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (arg <a href="index.html#SetTrustLineFlags">SetTrustLineFlags</a>) To_Operation_Body() (ret <a href="stx/index.html">stx</a>.<a href="stx/index.html#XdrAnon_Operation_Body">XdrAnon_Operation_Body</a>)</pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="Signature">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=459:489#L14">Signature</a>
+				<a class="permalink" href="index.html#Signature">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type Signature = <a href="stx/index.html">stx</a>.<a href="stx/index.html#Signature">Signature</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="SignerCache">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=3237:3291#L113">SignerCache</a>
+				<a class="permalink" href="index.html#SignerCache">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+A SignerCache contains a set of possible Stellar signers.  Because
+a TransactionEnvelope contains an array of signatures without
+public keys, it is not possible to verify the signatures without
+having the Signers.  The signatures in a TransactionEnvelope
+envelope are, however, accompanied by a 4-byte SignatureHint,
+making it efficient to look up signers if they are in a SignerCache.
+</p>
+
+			<pre>type SignerCache map[<a href="stx/index.html">stx</a>.<a href="stx/index.html#SignatureHint">SignatureHint</a>][]<a href="index.html#SignerKeyInfo">SignerKeyInfo</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="SignerCache.Add">func (SignerCache) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=4366:4420#L155">Add</a>
+					<a class="permalink" href="index.html#SignerCache.Add">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (c <a href="index.html#SignerCache">SignerCache</a>) Add(strkey, comment <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Adds a signer to a SignerCache if the signer is not already in the
+cache.  If the signer is already in the cache, the comment is left
+unchanged.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="SignerCache.Del">func (SignerCache) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=4859:4904#L177">Del</a>
+					<a class="permalink" href="index.html#SignerCache.Del">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (c <a href="index.html#SignerCache">SignerCache</a>) Del(strkey <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Deletes a signer from the cache.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="SignerCache.Lookup">func (SignerCache) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=3940:4057#L141">Lookup</a>
+					<a class="permalink" href="index.html#SignerCache.Lookup">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (c <a href="index.html#SignerCache">SignerCache</a>) Lookup(networkID <a href="http://localhost:6666/pkg/builtin/#string">string</a>, e *<a href="stx/index.html">stx</a>.<a href="stx/index.html#TransactionEnvelope">TransactionEnvelope</a>,
+    ds *<a href="stx/index.html">stx</a>.<a href="stx/index.html#DecoratedSignature">DecoratedSignature</a>) *<a href="index.html#SignerKeyInfo">SignerKeyInfo</a></pre>
+				<p>
+Finds the signer in a SignerCache that corresponds to a particular
+signature on a transaction.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="SignerCache.LookupComment">func (SignerCache) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=3585:3646#L127">LookupComment</a>
+					<a class="permalink" href="index.html#SignerCache.LookupComment">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (c <a href="index.html#SignerCache">SignerCache</a>) LookupComment(key *<a href="stx/index.html">stx</a>.<a href="stx/index.html#SignerKey">SignerKey</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="SignerCache.String">func (SignerCache) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=3404:3440#L117">String</a>
+					<a class="permalink" href="index.html#SignerCache.String">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (c <a href="index.html#SignerCache">SignerCache</a>) String() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				<p>
+Renders SignerCache as a a set of SignerKeyInfo structures, one per
+line, suitable for saving to a file.
+</p>
+
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="SignerKey">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=428:458#L13">SignerKey</a>
+				<a class="permalink" href="index.html#SignerKey">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type SignerKey = <a href="stx/index.html">stx</a>.<a href="stx/index.html#SignerKey">SignerKey</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="SignerKeyInfo">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=2310:2378#L81">SignerKeyInfo</a>
+				<a class="permalink" href="index.html#SignerKeyInfo">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+An annotated SignerKey that can be used to authenticate
+transactions.  Prints and Scans as a StrKey-format SignerKey, a
+space, and then the comment.
+</p>
+
+			<pre>type SignerKeyInfo struct {
+<span id="SignerKeyInfo.Key"></span>    Key     <a href="stx/index.html">stx</a>.<a href="stx/index.html#SignerKey">SignerKey</a>
+<span id="SignerKeyInfo.Comment"></span>    Comment <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="SignerKeyInfo.Scan">func (*SignerKeyInfo) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=2530:2592#L93">Scan</a>
+					<a class="permalink" href="index.html#SignerKeyInfo.Scan">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ski *<a href="index.html#SignerKeyInfo">SignerKeyInfo</a>) Scan(ss <a href="http://localhost:6666/pkg/fmt/">fmt</a>.<a href="http://localhost:6666/pkg/fmt/#ScanState">ScanState</a>, c <a href="http://localhost:6666/pkg/builtin/#rune">rune</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="SignerKeyInfo.String">func (SignerKeyInfo) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=2380:2420#L86">String</a>
+					<a class="permalink" href="index.html#SignerKeyInfo.String">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ski <a href="index.html#SignerKeyInfo">SignerKeyInfo</a>) String() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="StellarMetas">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=13049:13144#L479">StellarMetas</a>
+				<a class="permalink" href="index.html#StellarMetas">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Ledger entries changed by a transaction.
+</p>
+
+			<pre>type StellarMetas struct {
+<span id="StellarMetas.FeeMeta"></span>    FeeMeta    <a href="stx/index.html">stx</a>.<a href="stx/index.html#LedgerEntryChanges">LedgerEntryChanges</a>
+<span id="StellarMetas.ResultMeta"></span>    ResultMeta <a href="stx/index.html">stx</a>.<a href="stx/index.html#TransactionMeta">TransactionMeta</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="StellarNet">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=141:905#L2">StellarNet</a>
+				<a class="permalink" href="index.html#StellarNet">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type StellarNet struct {
+    <span class="comment">// Short name for network (used only in error messages).</span>
+<span id="StellarNet.Name"></span>    Name <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+
+    <span class="comment">// Network password used for hashing and signing transactions.</span>
+<span id="StellarNet.NetworkId"></span>    NetworkId <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+
+    <span class="comment">// Name to use for native asset</span>
+<span id="StellarNet.NativeAsset"></span>    NativeAsset <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+
+    <span class="comment">// Base URL of horizon (including trailing slash).</span>
+<span id="StellarNet.Horizon"></span>    Horizon <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+
+    <span class="comment">// Set of signers to recognize when checking signatures on</span>
+    <span class="comment">// transactions and annotations to show when printing signers.</span>
+<span id="StellarNet.Signers"></span>    Signers <a href="index.html#SignerCache">SignerCache</a>
+
+    <span class="comment">// Annotations to show on particular accounts when rendering them</span>
+    <span class="comment">// in human-readable txrep format.</span>
+<span id="StellarNet.Accounts"></span>    Accounts <a href="index.html#AccountHints">AccountHints</a>
+
+    <span class="comment">// Changes will be saved to this file.</span>
+<span id="StellarNet.SavePath"></span>    SavePath <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+
+    <span class="comment">// Changes to be applied by Save().</span>
+<span id="StellarNet.Edits"></span>    Edits <a href="ini/index.html">ini</a>.<a href="ini/index.html#IniEdits">IniEdits</a>
+
+    <span class="comment">// Cache of fee stats</span>
+<span id="StellarNet.FeeCache"></span>    FeeCache     *<a href="index.html#FeeStats">FeeStats</a>
+<span id="StellarNet.FeeCacheTime"></span>    FeeCacheTime <a href="http://localhost:6666/pkg/time/">time</a>.<a href="http://localhost:6666/pkg/time/#Time">Time</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="DefaultStellarNet">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/config.go?s=7849:7896#L282">DefaultStellarNet</a>
+					<a class="permalink" href="index.html#DefaultStellarNet">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func DefaultStellarNet(name <a href="http://localhost:6666/pkg/builtin/#string">string</a>) *<a href="index.html#StellarNet">StellarNet</a></pre>
+				<p>
+Load a network from under the ConfigPath() ($STCDIR) directory.  If
+name is &#34;&#34;, then it will look at the $STCNET environment variable
+and if that is unset load a default network.  Returns nil if the
+network name does not exist.  After loading the netname.net file,
+also parses $STCDIR/global.conf.
+</p>
+<p>
+Two pre-defined names are &#34;main&#34; and &#34;test&#34;, with &#34;main&#34; being the
+default.  Other networks can be created under ConfigPath(), or can
+be pre-specified (and created on demand) in stc.conf.
+</p>
+
+				
+				
+			
+				
+				<h3 id="LoadStellarNet">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/config.go?s=6960:7030#L257">LoadStellarNet</a>
+					<a class="permalink" href="index.html#LoadStellarNet">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func LoadStellarNet(name <a href="http://localhost:6666/pkg/builtin/#string">string</a>, paths ...<a href="http://localhost:6666/pkg/builtin/#string">string</a>) (*<a href="index.html#StellarNet">StellarNet</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Load a Stellar network from an INI files.  If path[0] does not
+exist but name is valid, the path will be created and net.name will
+be set to name.  Otherwise the name argument is ignored.  After all
+files in paths are parsed, the global stc.conf file will be parsed.
+After that, there must be a valid NetworkId or the function will
+return nil.
+</p>
+
+				
+				
+			
+
+			
+				
+				<h3 id="StellarNet.AccountDelta">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=11627:11720#L435">AccountDelta</a>
+					<a class="permalink" href="index.html#StellarNet.AccountDelta">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) AccountDelta(
+    m *<a href="index.html#StellarMetas">StellarMetas</a>, acct *<a href="index.html#AccountID">AccountID</a>, prefix <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.AccountIDNote">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=8958:9014#L299">AccountIDNote</a>
+					<a class="permalink" href="index.html#StellarNet.AccountIDNote">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) AccountIDNote(acct <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.AddHint">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=907:963#L34">AddHint</a>
+					<a class="permalink" href="index.html#StellarNet.AddHint">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) AddHint(acct <a href="http://localhost:6666/pkg/builtin/#string">string</a>, hint <a href="http://localhost:6666/pkg/builtin/#string">string</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.AddSigner">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=1035:1091#L39">AddSigner</a>
+					<a class="permalink" href="index.html#StellarNet.AddSigner">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) AddSigner(signer, comment <a href="http://localhost:6666/pkg/builtin/#string">string</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.Get">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=1779:1835#L63">Get</a>
+					<a class="permalink" href="index.html#StellarNet.Get">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) Get(query <a href="http://localhost:6666/pkg/builtin/#string">string</a>) ([]<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Send an HTTP request to horizon
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.GetAccountEntry">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=9848:9931#L382">GetAccountEntry</a>
+					<a class="permalink" href="index.html#StellarNet.GetAccountEntry">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) GetAccountEntry(acct <a href="http://localhost:6666/pkg/builtin/#string">string</a>) (
+    *<a href="index.html#HorizonAccountEntry">HorizonAccountEntry</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Fetch the sequence number and signers of an account over the
+network.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.GetFeeCache">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=21267:21322#L794">GetFeeCache</a>
+					<a class="permalink" href="index.html#StellarNet.GetFeeCache">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) GetFeeCache() (*<a href="index.html#FeeStats">FeeStats</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Like GetFeeStats but a version cached for 1 minute
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.GetFeeStats">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=20975:21030#L782">GetFeeStats</a>
+					<a class="permalink" href="index.html#StellarNet.GetFeeStats">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) GetFeeStats() (*<a href="index.html#FeeStats">FeeStats</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Queries the network for the latest fee statistics.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.GetJSON">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=1996:2063#L71">GetJSON</a>
+					<a class="permalink" href="index.html#StellarNet.GetJSON">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) GetJSON(query <a href="http://localhost:6666/pkg/builtin/#string">string</a>, out interface{}) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Send an HTTP request to horizon and perse the result as JSON
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.GetLedgerHeader">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=21527:21590#L803">GetLedgerHeader</a>
+					<a class="permalink" href="index.html#StellarNet.GetLedgerHeader">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) GetLedgerHeader() (*<a href="index.html#LedgerHeader">LedgerHeader</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Fetch the latest ledger header over the network.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.GetNativeAsset">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=1174:1220#L44">GetNativeAsset</a>
+					<a class="permalink" href="index.html#StellarNet.GetNativeAsset">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) GetNativeAsset() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.GetNetworkId">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=10567:10611#L400">GetNetworkId</a>
+					<a class="permalink" href="index.html#StellarNet.GetNetworkId">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) GetNetworkId() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				<p>
+Returns the network ID, a string that is hashed into transaction
+IDs to ensure that signature are not valid across networks (e.g., a
+testnet signature cannot work on the public network).  If the
+network ID is not cached in the StellarNet structure itself, then
+this function fetches it from the network.
+</p>
+<p>
+Note StellarMainNet already contains the network ID, while
+StellarTestNet requires fetching the network ID since the Stellar
+test network is periodically reset.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.GetTxResult">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=15062:15135#L551">GetTxResult</a>
+					<a class="permalink" href="index.html#StellarNet.GetTxResult">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) GetTxResult(txid <a href="http://localhost:6666/pkg/builtin/#string">string</a>) (*<a href="index.html#HorizonTxResult">HorizonTxResult</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.HashTx">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=1646:1702#L58">HashTx</a>
+					<a class="permalink" href="index.html#StellarNet.HashTx">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) HashTx(tx <a href="stx/index.html">stx</a>.<a href="stx/index.html#Signable">Signable</a>) *<a href="stx/index.html">stx</a>.<a href="stx/index.html#Hash">Hash</a></pre>
+				<p>
+Return a transaction hash (which in Stellar is defined as the hash
+of the constant ENVELOPE_TYPE_TX, the NetworkID, and the marshaled
+XDR of the Transaction).
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.IniSink">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/config.go?s=6352:6396#L238">IniSink</a>
+					<a class="permalink" href="index.html#StellarNet.IniSink">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) IniSink() <a href="ini/index.html">ini</a>.<a href="ini/index.html#IniSink">IniSink</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.IterateJSON">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=4440:4533#L160">IterateJSON</a>
+					<a class="permalink" href="index.html#StellarNet.IterateJSON">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) IterateJSON(
+    ctx <a href="http://localhost:6666/pkg/context/">context</a>.<a href="http://localhost:6666/pkg/context/#Context">Context</a>, query <a href="http://localhost:6666/pkg/builtin/#string">string</a>, cb interface{}) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Send a request to horizon and iterate through a series of embedded
+records in the response, continuing to fetch more records until
+zero records are returned.  cb is a callback function which must
+have type func(obj *T)error or func(obj *T), where *T is a type
+into which JSON can be unmarshalled.  Returns if there is an error
+or the ctx argument is Done.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.NewSignerPreauth">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=1927:2011#L71">NewSignerPreauth</a>
+					<a class="permalink" href="index.html#StellarNet.NewSignerPreauth">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) NewSignerPreauth(tx <a href="stx/index.html">stx</a>.<a href="stx/index.html#Signable">Signable</a>,
+    weight <a href="http://localhost:6666/pkg/builtin/#uint32">uint32</a>) *<a href="stx/index.html">stx</a>.<a href="stx/index.html#Signer">Signer</a></pre>
+				<p>
+Create a pre-signed transaction from a transaction and weight.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.Post">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=23905:23986#L905">Post</a>
+					<a class="permalink" href="index.html#StellarNet.Post">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) Post(e *<a href="index.html#TransactionEnvelope">TransactionEnvelope</a>) (
+    *<a href="index.html#TransactionResult">TransactionResult</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Post a new transaction to the network.  In the event that the
+transaction is successfully submitted to horizon but rejected by
+the Stellar network, the error will be of type TxFailure, which
+contains the transaction result.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.Save">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/config.go?s=9013:9048#L333">Save</a>
+					<a class="permalink" href="index.html#StellarNet.Save">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) Save() <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Save any changes to to SavePath.  Equivalent to SavePerm(0666).
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.SavePerm">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/config.go?s=8451:8506#L306">SavePerm</a>
+					<a class="permalink" href="index.html#StellarNet.SavePerm">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) SavePerm(perm <a href="http://localhost:6666/pkg/os/">os</a>.<a href="http://localhost:6666/pkg/os/#FileMode">FileMode</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Save any changes to SavePath.  If SavePath does not exist, then
+create it with permissions Perm (subject to umask, of course).
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.SigNote">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=8639:8736#L288">SigNote</a>
+					<a class="permalink" href="index.html#StellarNet.SigNote">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) SigNote(txe *<a href="stx/index.html">stx</a>.<a href="stx/index.html#TransactionEnvelope">TransactionEnvelope</a>,
+    sig *<a href="stx/index.html">stx</a>.<a href="stx/index.html#DecoratedSignature">DecoratedSignature</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.SignTx">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=1842:1936#L64">SignTx</a>
+					<a class="permalink" href="index.html#StellarNet.SignTx">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) SignTx(sk <a href="stcdetail/index.html">stcdetail</a>.<a href="stcdetail/index.html#PrivateKeyInterface">PrivateKeyInterface</a>,
+    e *<a href="index.html#TransactionEnvelope">TransactionEnvelope</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Sign a transaction and append the signature to the
+TransactionEnvelope.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.SignerNote">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=9047:9107#L303">SignerNote</a>
+					<a class="permalink" href="index.html#StellarNet.SignerNote">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) SignerNote(key *<a href="stx/index.html">stx</a>.<a href="stx/index.html#SignerKey">SignerKey</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.StreamJSON">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=2985:3077#L107">StreamJSON</a>
+					<a class="permalink" href="index.html#StellarNet.StreamJSON">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) StreamJSON(
+    ctx <a href="http://localhost:6666/pkg/context/">context</a>.<a href="http://localhost:6666/pkg/context/#Context">Context</a>, query <a href="http://localhost:6666/pkg/builtin/#string">string</a>, cb interface{}) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Stream a series of events.  cb is a callback function which must
+have type func(obj *T)error or func(obj *T), where *T is a type
+into which JSON can be unmarshalled.  Returns if there is an error
+or the ctx argument is Done.  You likely want to call this in a
+goroutine, and might want to call it in a loop to try again after
+errors.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.ToRep">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=9781:9833#L332">ToRep</a>
+					<a class="permalink" href="index.html#StellarNet.ToRep">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) ToRep(txe <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				<p>
+Convert an arbitrary XDR data structure to human-readable Txrep
+format.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.TxToRep">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=9979:10042#L339">TxToRep</a>
+					<a class="permalink" href="index.html#StellarNet.TxToRep">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) TxToRep(txe *<a href="index.html#TransactionEnvelope">TransactionEnvelope</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				<p>
+Convert a TransactionEnvelope to human-readable Txrep format.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.Validate">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/config.go?s=6177:6216#L228">Validate</a>
+					<a class="permalink" href="index.html#StellarNet.Validate">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) Validate() <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.VerifySig">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/stellarnet.go?s=1326:1412#L50">VerifySig</a>
+					<a class="permalink" href="index.html#StellarNet.VerifySig">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) VerifySig(
+    pk *<a href="index.html#SignerKey">SignerKey</a>, tx <a href="stx/index.html">stx</a>.<a href="stx/index.html#Signable">Signable</a>, sig <a href="index.html#Signature">Signature</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+				<p>
+Returns true only if sig is a valid signature on e for public key
+pk.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="StellarNet.WriteRep">func (*StellarNet) <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=9219:9295#L308">WriteRep</a>
+					<a class="permalink" href="index.html#StellarNet.WriteRep">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (net *<a href="index.html#StellarNet">StellarNet</a>) WriteRep(out <a href="http://localhost:6666/pkg/io/">io</a>.<a href="http://localhost:6666/pkg/io/#Writer">Writer</a>, name <a href="http://localhost:6666/pkg/builtin/#string">string</a>, txe <a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/">xdr</a>.<a href="http://localhost:6666/pkg/github.com/xdrpp/goxdr/xdr/#XdrType">XdrType</a>)</pre>
+				<p>
+Write the human-readable Txrep of an XDR structure to a Writer.
+</p>
+
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="TransactionEnvelope">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=4316:4403#L140">TransactionEnvelope</a>
+				<a class="permalink" href="index.html#TransactionEnvelope">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+This is a wrapper around the XDR TransactionEnvelope structure.
+The wrapper allows transactions to be built up more easily via the
+Append() method and various helper types.  When parsing and
+generating Txrep format, it also keeps track of which enums were
+followed by &#39;?&#39; indicating a request for help.
+</p>
+
+			<pre>type TransactionEnvelope struct {
+    *<a href="stx/index.html">stx</a>.<a href="stx/index.html#TransactionEnvelope">TransactionEnvelope</a>
+<span id="TransactionEnvelope.Help"></span>    Help map[<a href="http://localhost:6666/pkg/builtin/#string">string</a>]struct{}
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="NewTransactionEnvelope">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=4405:4455#L145">NewTransactionEnvelope</a>
+					<a class="permalink" href="index.html#NewTransactionEnvelope">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func NewTransactionEnvelope() *<a href="index.html#TransactionEnvelope">TransactionEnvelope</a></pre>
+				
+				
+				
+			
+				
+				<h3 id="TxFromBase64">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=10607:10668#L360">TxFromBase64</a>
+					<a class="permalink" href="index.html#TxFromBase64">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func TxFromBase64(input <a href="http://localhost:6666/pkg/builtin/#string">string</a>) (*<a href="index.html#TransactionEnvelope">TransactionEnvelope</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Parse a TransactionEnvelope from base64-encoded binary XDR format.
+</p>
+
+				
+				
+			
+				
+				<h3 id="TxFromRep">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=10156:10212#L345">TxFromRep</a>
+					<a class="permalink" href="index.html#TxFromRep">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func TxFromRep(rep <a href="http://localhost:6666/pkg/builtin/#string">string</a>) (*<a href="index.html#TransactionEnvelope">TransactionEnvelope</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Parse a transaction in human-readable Txrep format into a
+TransactionEnvelope.
+</p>
+
+				
+				
+			
+
+			
+				
+				<h3 id="TransactionEnvelope.Append">func (*TransactionEnvelope) <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=5939:6033#L194">Append</a>
+					<a class="permalink" href="index.html#TransactionEnvelope.Append">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (txe *<a href="index.html#TransactionEnvelope">TransactionEnvelope</a>) Append(
+    sourceAccount *<a href="stx/index.html">stx</a>.<a href="stx/index.html#MuxedAccount">MuxedAccount</a>,
+    body <a href="index.html#OperationBody">OperationBody</a>)</pre>
+				<p>
+Append an operation to a transaction envelope.  To facilitate
+initialization of the transaction body (which is a union and so
+doesn&#39;t support direct initialization), a suite of helper types
+have the same fields as each of the operation types.  The helper
+types are named after camel-cased versions of the OperationType
+constants.  E.g., to append an operation of type CREATE_ACCOUNT,
+use type type CreateAccount:
+</p>
+<pre>txe.Append(nil, CreateAccount{
+	Destination: myNewAccountID,
+	StartingBalance: 15000000,
+})
+</pre>
+<p>
+The helper types are:
+</p>
+<pre>type CreateAccount stx.CreateAccountOp
+type Payment stx.PaymentOp
+type PathPaymentStrictReceive stx.PathPaymentStrictReceiveOp
+type ManageSellOffer stx.ManageSellOfferOp
+type CreatePassiveSellOffer stx.CreatePassiveSellOfferOp
+type SetOptions stx.SetOptionsOp
+type ChangeTrust stx.ChangeTrustOp
+type AllowTrust stx.AllowTrustOp
+type AccountMerge stx.PublicKey
+type Inflation struct{}
+type ManageData stx.ManageDataOp
+type BumpSequence stx.BumpSequenceOp
+type ManageBuyOffer stx.ManageBuyOfferOp
+type PathPaymentStrictSend stx.PathPaymentStrictSendOp
+</pre>
+
+				
+				
+				
+			
+				
+				<h3 id="TransactionEnvelope.GetHelp">func (*TransactionEnvelope) <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=8374:8431#L275">GetHelp</a>
+					<a class="permalink" href="index.html#TransactionEnvelope.GetHelp">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (txe *<a href="index.html#TransactionEnvelope">TransactionEnvelope</a>) GetHelp(name <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="TransactionEnvelope.SetFee">func (*TransactionEnvelope) <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=6824:6878#L218">SetFee</a>
+					<a class="permalink" href="index.html#TransactionEnvelope.SetFee">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (txe *<a href="index.html#TransactionEnvelope">TransactionEnvelope</a>) SetFee(baseFee <a href="http://localhost:6666/pkg/builtin/#uint32">uint32</a>)</pre>
+				<p>
+Set the fee of a transaction to baseFee times the number of
+operations.  If the result would exceed the maximum fee of
+0xffffffff (~430 XLM), then just set the fee to 0xffffffff.
+(Obviously only call this once you have finished adding operations
+to the transaction with Append.)
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="TransactionEnvelope.SetHelp">func (*TransactionEnvelope) <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=8473:8525#L280">SetHelp</a>
+					<a class="permalink" href="index.html#TransactionEnvelope.SetHelp">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (txe *<a href="index.html#TransactionEnvelope">TransactionEnvelope</a>) SetHelp(name <a href="http://localhost:6666/pkg/builtin/#string">string</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="TransactionEnvelope.SetSourceAccount">func (*TransactionEnvelope) <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=7906:7972#L258">SetSourceAccount</a>
+					<a class="permalink" href="index.html#TransactionEnvelope.SetSourceAccount">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (txe *<a href="index.html#TransactionEnvelope">TransactionEnvelope</a>) SetSourceAccount(m0 <a href="stx/index.html">stx</a>.<a href="stx/index.html#IsAccount">IsAccount</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="TransactionEnvelope.SourceAccount">func (*TransactionEnvelope) <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=7425:7490#L242">SourceAccount</a>
+					<a class="permalink" href="index.html#TransactionEnvelope.SourceAccount">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (txe *<a href="index.html#TransactionEnvelope">TransactionEnvelope</a>) SourceAccount() *<a href="stx/index.html">stx</a>.<a href="stx/index.html#MuxedAccount">MuxedAccount</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="TransactionResult">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/xdr.go?s=490:536#L15">TransactionResult</a>
+				<a class="permalink" href="index.html#TransactionResult">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type TransactionResult = <a href="stx/index.html">stx</a>.<a href="stx/index.html#TransactionResult">TransactionResult</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="TxFailure">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=22552:22597#L845">TxFailure</a>
+				<a class="permalink" href="index.html#TxFailure">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+An error representing the failure of a transaction submitted to the
+Stellar network, and from which you can extract the full
+TransactionResult.
+</p>
+
+			<pre>type TxFailure struct {
+    *<a href="index.html#TransactionResult">TransactionResult</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="TxFailure.Error">func (TxFailure) <a href="http://localhost:6666/src/github.com/xdrpp/stc/horizon.go?s=23162:23195#L880">Error</a>
+					<a class="permalink" href="index.html#TxFailure.Error">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (e <a href="index.html#TxFailure">TxFailure</a>) Error() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+	
+
+	
+
+
+
+
+
+	
+	
+		<h2 id="pkg-subdirectories">Subdirectories</h2>
+	
+	<div class="pkg-dir">
+		<table>
+			<tr>
+				<th class="pkg-name">Name</th>
+				<th class="pkg-synopsis">Synopsis</th>
+			</tr>
+
+			
+			<tr>
+				<td colspan="2"><a href="http://localhost:6666/pkg/github.com/xdrpp/">..</a></td>
+			</tr>
+			
+
+			
+				<tr>
+				
+					<td class="pkg-name" style="padding-left: 0px;">
+						<a href="cmd/index.html">cmd</a>
+					</td>
+				
+					<td class="pkg-synopsis">
+						
+					</td>
+				</tr>
+			
+				<tr>
+				
+					<td class="pkg-name" style="padding-left: 20px;">
+						<a href="cmd/ini/index.html">ini</a>
+					</td>
+				
+					<td class="pkg-synopsis">
+						This program is just for testing the ini parser/editor in the stc library.
+					</td>
+				</tr>
+			
+				<tr>
+				
+					<td class="pkg-name" style="padding-left: 20px;">
+						<a href="cmd/stc/index.html">stc</a>
+					</td>
+				
+					<td class="pkg-synopsis">
+						Please see the stc.1 man page for complete documentation of this command.
+					</td>
+				</tr>
+			
+				<tr>
+				
+					<td class="pkg-name" style="padding-left: 0px;">
+						<a href="ini/index.html">ini</a>
+					</td>
+				
+					<td class="pkg-synopsis">
+						Ini file parser library.
+					</td>
+				</tr>
+			
+				<tr>
+				
+					<td class="pkg-name" style="padding-left: 0px;">
+						<a href="stcdetail/index.html">stcdetail</a>
+					</td>
+				
+					<td class="pkg-synopsis">
+						Internal functions for the stc library.
+					</td>
+				</tr>
+			
+				<tr>
+				
+					<td class="pkg-name" style="padding-left: 0px;">
+						<a href="stx/index.html">stx</a>
+					</td>
+				
+					<td class="pkg-synopsis">
+						The stx package provides a compiled go representation of Stellar&#39;s XDR data structures.
+					</td>
+				</tr>
+			
+				<tr>
+				
+					<td class="pkg-name" style="padding-left: 0px;">
+						<a href="uniontool/index.html">uniontool</a>
+					</td>
+				
+					<td class="pkg-synopsis">
+						Ignore this program.
+					</td>
+				</tr>
+			
+		</table>
+	</div>
+
+
+
+<div id="footer">
+Build version go1.17.8.<br>
+Except as <a href="https://developers.google.com/site-policies#restrictions">noted</a>,
+the content of this page is licensed under the
+Creative Commons Attribution 3.0 License,
+and code is licensed under a <a href="http://localhost:6666/LICENSE">BSD license</a>.<br>
+<a href="https://golang.org/doc/tos.html">Terms of Service</a> |
+<a href="https://www.google.com/intl/en/policies/privacy/">Privacy Policy</a>
+</div>
+
+</div><!-- .container -->
+</div><!-- #page -->
+</body>
+</html>

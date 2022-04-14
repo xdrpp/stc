@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#375EAB">
+
+  <title>ini - Go Documentation Server</title>
+
+<link type="text/css" rel="stylesheet" href="../../../../../lib/godoc/style.css">
+
+<script>window.initFuncs = [];</script>
+<script src="../../../../../lib/godoc/jquery.js" defer></script>
+
+
+
+<script>var goVersion = "go1.17.8";</script>
+<script src="../../../../../lib/godoc/godocs.js" defer></script>
+</head>
+<body>
+
+<div id='lowframe' style="position: fixed; bottom: 0; left: 0; height: 0; width: 100%; border-top: thin solid grey; background-color: white; overflow: auto;">
+...
+</div><!-- #lowframe -->
+
+<div id="topbar" class="wide"><div class="container">
+<div class="top-heading" id="heading-wide"><a href="../../../../index.html">Go Documentation Server</a></div>
+<div class="top-heading" id="heading-narrow"><a href="../../../../index.html">GoDoc</a></div>
+<a href="index.html#" id="menu-button"><span id="menu-button-arrow">&#9661;</span></a>
+<form method="GET" action="http://localhost:6666/search">
+<div id="menu">
+
+<span class="search-box"><input type="search" id="search" name="q" placeholder="Search" aria-label="Search" required><button type="submit"><span><!-- magnifying glass: --><svg width="24" height="24" viewBox="0 0 24 24"><title>submit search</title><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/><path d="M0 0h24v24H0z" fill="none"/></svg></span></button></span>
+</div>
+</form>
+
+</div></div>
+
+
+
+<div id="page" class="wide">
+<div class="container">
+
+
+  <h1>
+    Package ini
+    <span class="text-muted"></span>
+  </h1>
+
+
+
+
+
+
+
+<div id="nav"></div>
+
+
+<!--
+	Copyright 2009 The Go Authors. All rights reserved.
+	Use of this source code is governed by a BSD-style
+	license that can be found in the LICENSE file.
+-->
+<!--
+	Note: Static (i.e., not template-generated) href and id
+	attributes start with "pkg-" to make it impossible for
+	them to conflict with generated attributes (some of which
+	correspond to Go identifiers).
+-->
+
+	<script>
+	document.ANALYSIS_DATA = null;
+	document.CALLGRAPH = null;
+	</script>
+
+	
+		
+		<div id="short-nav">
+			<dl>
+			<dd><code>import "github.com/xdrpp/stc/ini"</code></dd>
+			</dl>
+			<dl>
+			<dd><a href="index.html#pkg-overview" class="overviewLink">Overview</a></dd>
+			<dd><a href="index.html#pkg-index" class="indexLink">Index</a></dd>
+			
+				<dd><a href="index.html#pkg-examples" class="examplesLink">Examples</a></dd>
+			
+			
+			</dl>
+		</div>
+		<!-- The package's Name is printed as title by the top-level template -->
+		<div id="pkg-overview" class="toggleVisible">
+			<div class="collapsed">
+				<h2 class="toggleButton" title="Click to show Overview section">Overview ▹</h2>
+			</div>
+			<div class="expanded">
+				<h2 class="toggleButton" title="Click to hide Overview section">Overview ▾</h2>
+				<p>
+Ini file parser library.
+</p>
+
+				
+			</div>
+		</div>
+
+		<div id="pkg-index" class="toggleVisible">
+		<div class="collapsed">
+			<h2 class="toggleButton" title="Click to show Index section">Index ▹</h2>
+		</div>
+		<div class="expanded">
+			<h2 class="toggleButton" title="Click to hide Index section">Index ▾</h2>
+
+		<!-- Table of contents for API; must be named manual-nav to turn off auto nav. -->
+			<div id="manual-nav">
+			<dl>
+			
+			
+				<dd><a href="index.html#pkg-variables">Variables</a></dd>
+			
+			
+				
+				<dd><a href="index.html#EscapeIniValue">func EscapeIniValue(val string) string</a></dd>
+			
+				
+				<dd><a href="index.html#IniParse">func IniParse(sink IniSink, filename string) error</a></dd>
+			
+				
+				<dd><a href="index.html#IniParseContents">func IniParseContents(sink IniSink, filename string, contents []byte) error</a></dd>
+			
+				
+				<dd><a href="index.html#IniQKey">func IniQKey(s *IniSection, key string) string</a></dd>
+			
+				
+				<dd><a href="index.html#ValidIniKey">func ValidIniKey(s string) bool</a></dd>
+			
+				
+				<dd><a href="index.html#ValidIniSection">func ValidIniSection(s string) bool</a></dd>
+			
+				
+				<dd><a href="index.html#ValidIniSubsection">func ValidIniSubsection(s string) bool</a></dd>
+			
+			
+				
+				<dd><a href="index.html#BadKey">type BadKey</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#BadKey.Error">func (err BadKey) Error() string</a></dd>
+				
+			
+				
+				<dd><a href="index.html#BadValue">type BadValue</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#BadValue.Error">func (err BadValue) Error() string</a></dd>
+				
+			
+				
+				<dd><a href="index.html#GenericIniSink">type GenericIniSink</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#NewGenericSink">func NewGenericSink(args ...string) *GenericIniSink</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#GenericIniSink.AddField">func (s *GenericIniSink) AddField(name string, ptr interface{})</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#GenericIniSink.AddStruct">func (s *GenericIniSink) AddStruct(i interface{})</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#GenericIniSink.IniSink">func (s *GenericIniSink) IniSink() IniSink</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#GenericIniSink.Item">func (s *GenericIniSink) Item(ii IniItem) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#GenericIniSink.SaveAll">func (s *GenericIniSink) SaveAll(ies *IniEdits, includeZero bool)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#GenericIniSink.String">func (s *GenericIniSink) String() string</a></dd>
+				
+			
+				
+				<dd><a href="index.html#IniEditor">type IniEditor</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#NewIniEdit">func NewIniEdit(filename string, contents []byte) (*IniEditor, error)</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniEditor.Add">func (ie *IniEditor) Add(is *IniSection, key, value string)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniEditor.Del">func (ie *IniEditor) Del(is *IniSection, key string)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniEditor.Done">func (ie *IniEditor) Done(r IniRange)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniEditor.Item">func (ie *IniEditor) Item(ii IniItem) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniEditor.Section">func (ie *IniEditor) Section(ss IniSecStart) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniEditor.Set">func (ie *IniEditor) Set(is *IniSection, key, value string)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniEditor.String">func (ie *IniEditor) String() string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniEditor.WriteTo">func (ie *IniEditor) WriteTo(w io.Writer) (int64, error)</a></dd>
+				
+			
+				
+				<dd><a href="index.html#IniEdits">type IniEdits</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniEdits.Add">func (ie *IniEdits) Add(sec string, args ...string) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniEdits.Apply">func (ie *IniEdits) Apply(target *IniEditor)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniEdits.Del">func (ie *IniEdits) Del(sec string, args ...string) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniEdits.Set">func (ie *IniEdits) Set(sec string, args ...string) error</a></dd>
+				
+			
+				
+				<dd><a href="index.html#IniItem">type IniItem</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniItem.QKey">func (ii *IniItem) QKey() string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniItem.Val">func (ii *IniItem) Val() string</a></dd>
+				
+			
+				
+				<dd><a href="index.html#IniRange">type IniRange</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#IniSecStart">type IniSecStart</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#IniSection">type IniSection</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniSection.Eq">func (s *IniSection) Eq(s2 *IniSection) bool</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniSection.String">func (s *IniSection) String() string</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniSection.Valid">func (s *IniSection) Valid() bool</a></dd>
+				
+			
+				
+				<dd><a href="index.html#IniSink">type IniSink</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#IniSinker">type IniSinker</a></dd>
+				
+				
+			
+				
+				<dd><a href="index.html#IniSinks">type IniSinks</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniSinks.Done">func (s IniSinks) Done(IniRange)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniSinks.IniSink">func (s IniSinks) IniSink() IniSink</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniSinks.Init">func (s IniSinks) Init()</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniSinks.Item">func (s IniSinks) Item(ii IniItem) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniSinks.Push">func (s *IniSinks) Push(i IniSink)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniSinks.Section">func (s IniSinks) Section(ss IniSecStart) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#IniSinks.String">func (s IniSinks) String() string</a></dd>
+				
+			
+				
+				<dd><a href="index.html#ParseError">type ParseError</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#ParseError.Error">func (err ParseError) Error() string</a></dd>
+				
+			
+				
+				<dd><a href="index.html#ParseErrors">type ParseErrors</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="index.html#ParseErrors.Error">func (err ParseErrors) Error() string</a></dd>
+				
+			
+			
+			</dl>
+			</div><!-- #manual-nav -->
+
+		
+		<div id="pkg-examples">
+			<h3>Examples</h3>
+			<div class="js-expandAll expandAll collapsed">(Expand All)</div>
+			<dl>
+			
+			<dd><a class="exampleLink" href="index.html#example_GenericIniSink">GenericIniSink</a></dd>
+			
+			<dd><a class="exampleLink" href="index.html#example_IniParseContents">IniParseContents</a></dd>
+			
+			</dl>
+		</div>
+		
+
+		
+			<h3>Package files</h3>
+			<p>
+			<span style="font-size:90%">
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go">edit.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go">parser.go</a>
+			
+				<a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go">sinker.go</a>
+			
+			</span>
+			</p>
+		
+		</div><!-- .expanded -->
+		</div><!-- #pkg-index -->
+
+		
+
+		
+		
+			<h2 id="pkg-variables">Variables</h2>
+			
+				
+				<pre>var <span id="ErrInvalidNumArgs">ErrInvalidNumArgs</span> = <a href="http://localhost:6666/pkg/fmt/">fmt</a>.<a href="http://localhost:6666/pkg/fmt/#Errorf">Errorf</a>(&#34;invalid number of arguments&#34;)</pre>
+			
+				
+				<pre>var <span id="ErrInvalidSection">ErrInvalidSection</span> = <a href="http://localhost:6666/pkg/fmt/">fmt</a>.<a href="http://localhost:6666/pkg/fmt/#Errorf">Errorf</a>(&#34;syntactically invalid section&#34;)</pre>
+			
+		
+		
+			
+			
+			<h2 id="EscapeIniValue">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=9308:9346#L409">EscapeIniValue</a>
+				<a class="permalink" href="index.html#EscapeIniValue">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func EscapeIniValue(val <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+			
+			
+			
+
+		
+			
+			
+			<h2 id="IniParse">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=13344:13394#L605">IniParse</a>
+				<a class="permalink" href="index.html#IniParse">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func IniParse(sink <a href="index.html#IniSink">IniSink</a>, filename <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+			<p>
+Open, read, and parse an INI file.  If the file is incorrectly
+formatted, will return an error of type ParseErrors.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="IniParseContents">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=13092:13167#L599">IniParseContents</a>
+				<a class="permalink" href="index.html#IniParseContents">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func IniParseContents(sink <a href="index.html#IniSink">IniSink</a>, filename <a href="http://localhost:6666/pkg/builtin/#string">string</a>, contents []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+			<p>
+Parse the contents of an INI file.  The filename argument is used
+only for error messages.
+</p>
+
+			<div id="example_IniParseContents" class="toggle">
+	<div class="collapsed">
+		<p class="exampleHeading toggleButton">▹ <span class="text">Example</span></p>
+	</div>
+	<div class="expanded">
+		<p class="exampleHeading toggleButton">▾ <span class="text">Example</span></p>
+		
+		
+		
+			<p>Code:</p>
+			<pre class="code">package ini_test
+
+import (
+    &#34;fmt&#34;
+    &#34;github.com/xdrpp/stc/ini&#34;
+)
+
+type IniDumper struct{}
+
+func (IniDumper) Item(item ini.IniItem) error {
+    if item.Value == nil {
+        fmt.Printf(&#34;%s\n&#34;, item.QKey())
+    } else {
+        fmt.Printf(&#34;%s = %s\n&#34;, item.QKey(), *item.Value)
+    }
+    return nil
+}
+
+var contents = []byte(`
+# discouraged (like git-config, you can&#39;t edit keys outside of sections)
+bare-key = bare value
+[section]
+key1 = value1
+[other &#34;sub&#34;]
+key2 = value2
+key3 # this one has no value
+key4 = &#34; value4&#34;   ; this one started with a space
+`)
+
+func ExampleIniParseContents() {
+    ini.IniParseContents(IniDumper{}, &#34;(test)&#34;, contents)
+    <span class="comment">// Output:</span>
+    <span class="comment">// bare-key = bare value</span>
+    <span class="comment">// section.key1 = value1</span>
+    <span class="comment">// other.sub.key2 = value2</span>
+    <span class="comment">// other.sub.key3</span>
+    <span class="comment">// other.sub.key4 =  value4</span>
+}
+</pre>
+			
+		
+	</div>
+</div>
+
+			
+
+		
+			
+			
+			<h2 id="IniQKey">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=2738:2784#L94">IniQKey</a>
+				<a class="permalink" href="index.html#IniQKey">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func IniQKey(s *<a href="index.html#IniSection">IniSection</a>, key <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+			<p>
+Produce a fully &#34;qualified&#34; key consisting of the section, optional
+subsection, and key separated by dots, as understood by the
+git-config command.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="ValidIniKey">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=7776:7807#L329">ValidIniKey</a>
+				<a class="permalink" href="index.html#ValidIniKey">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func ValidIniKey(s <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+			<p>
+Test if string is a valid INI file key.  Valid keys start with a
+letter followed by zero or more alphanumeric characters or &#39;-&#39;
+characters.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="ValidIniSection">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=438:473#L11">ValidIniSection</a>
+				<a class="permalink" href="index.html#ValidIniSection">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func ValidIniSection(s <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+			<p>
+Test if a string is a valid INI file section name.  Section names
+cannot be the empty string and must consist only of alphanumeric
+characters and &#39;-&#39;.
+</p>
+
+			
+			
+
+		
+			
+			
+			<h2 id="ValidIniSubsection">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=714:752#L20">ValidIniSubsection</a>
+				<a class="permalink" href="index.html#ValidIniSubsection">&#xb6;</a>
+				
+				
+			</h2>
+			<pre>func ValidIniSubsection(s <a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+			<p>
+Test if a string is a valid subsection name in an INI file.
+Specifically, subsection names may not contain a newline or NUL
+byte.
+</p>
+
+			
+			
+
+		
+		
+			
+			
+			<h2 id="BadKey">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=4489:4507#L161">BadKey</a>
+				<a class="permalink" href="index.html#BadKey">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Error that an IniSink&#39;s Value method should return when there is a
+problem with the key, rather than a problem with the value.  By
+default, the line and column number of an error will correspond to
+the start of the value, but with BadKey the error will point to the
+key.
+</p>
+
+			<pre>type BadKey <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="BadKey.Error">func (BadKey) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=4509:4541#L163">Error</a>
+					<a class="permalink" href="index.html#BadKey.Error">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (err <a href="index.html#BadKey">BadKey</a>) Error() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="BadValue">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=4708:4728#L170">BadValue</a>
+				<a class="permalink" href="index.html#BadValue">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Just a random error type useful for bad values in INI files.
+Exists for symmetry with BadKey, though BadValue is in no way
+special.
+</p>
+
+			<pre>type BadValue <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="BadValue.Error">func (BadValue) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=4730:4764#L172">Error</a>
+					<a class="permalink" href="index.html#BadValue.Error">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (err <a href="index.html#BadValue">BadValue</a>) Error() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="GenericIniSink">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=133:335#L1">GenericIniSink</a>
+				<a class="permalink" href="index.html#GenericIniSink">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+A generic IniSink that uses fmt.Sscan to parse non-string fields.
+</p>
+
+			<pre>type GenericIniSink struct {
+    <span class="comment">// If non-nil, only match this specific section (otherwise</span>
+    <span class="comment">// ignore).</span>
+<span id="GenericIniSink.Sec"></span>    Sec *<a href="index.html#IniSection">IniSection</a>
+
+    <span class="comment">// Pointers to the fields that should be parsed.</span>
+<span id="GenericIniSink.Fields"></span>    Fields map[<a href="http://localhost:6666/pkg/builtin/#string">string</a>]interface{}
+}
+</pre>
+
+			
+
+			
+
+			<div id="example_GenericIniSink" class="toggle">
+	<div class="collapsed">
+		<p class="exampleHeading toggleButton">▹ <span class="text">Example</span></p>
+	</div>
+	<div class="expanded">
+		<p class="exampleHeading toggleButton">▾ <span class="text">Example</span></p>
+		
+		
+		
+			<p>Code:</p>
+			<pre class="code">package ini_test
+
+import (
+    &#34;fmt&#34;
+    &#34;github.com/xdrpp/stc/ini&#34;
+    &#34;strings&#34;
+)
+
+type Foo struct {
+    A_field           int
+    AnotherField      string `ini:&#34;the-field&#34;`
+    StillAnotherField bool
+    StrVec            []string
+    IntVec            []int
+}
+
+func trimSpace(i interface{}) string {
+    s := fmt.Sprint(i)
+    return strings.ReplaceAll(s, &#34; \n&#34;, &#34;\n&#34;)
+}
+
+func ExampleGenericIniSink() {
+    var contents = []byte(`
+[foo]
+    A-field = 44
+    the-field
+    the-field = hello world
+    StillAnotherField = true
+    StrVec = a string
+    StrVec = another string
+    IntVec = 101
+    IntVec = 102
+    IntVec	 # This erases previous entries
+    IntVec = 100
+`)
+
+    foo := Foo{}
+    gs := ini.NewGenericSink(&#34;foo&#34;)
+    gs.AddStruct(&amp;foo)
+    fmt.Println(&#34;=== before:&#34;)
+    fmt.Print(trimSpace(gs))
+    fmt.Println(&#34;=== after:&#34;)
+    err := ini.IniParseContents(gs, &#34;(test)&#34;, contents)
+    if err != nil {
+        fmt.Println(err)
+    }
+    fmt.Print(trimSpace(gs))
+    <span class="comment">// Unordered output:</span>
+    <span class="comment">// [foo]</span>
+    <span class="comment">// === before:</span>
+    <span class="comment">// 	A-field = 0</span>
+    <span class="comment">// 	the-field =</span>
+    <span class="comment">// 	StillAnotherField = false</span>
+    <span class="comment">// === after:</span>
+    <span class="comment">// [foo]</span>
+    <span class="comment">// 	A-field = 44</span>
+    <span class="comment">// 	the-field = hello world</span>
+    <span class="comment">// 	StillAnotherField = true</span>
+    <span class="comment">//	StrVec = a string</span>
+    <span class="comment">//	StrVec = another string</span>
+    <span class="comment">//	IntVec = 100</span>
+    <span class="comment">//</span>
+}
+</pre>
+			
+		
+	</div>
+</div>
+
+			
+			
+
+			
+				
+				<h3 id="NewGenericSink">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=380:431#L11">NewGenericSink</a>
+					<a class="permalink" href="index.html#NewGenericSink">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func NewGenericSink(args ...<a href="http://localhost:6666/pkg/builtin/#string">string</a>) *<a href="index.html#GenericIniSink">GenericIniSink</a></pre>
+				<p>
+NewGenericSink([section [, subsection])
+</p>
+
+				
+				
+			
+
+			
+				
+				<h3 id="GenericIniSink.AddField">func (*GenericIniSink) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=847:910#L36">AddField</a>
+					<a class="permalink" href="index.html#GenericIniSink.AddField">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s *<a href="index.html#GenericIniSink">GenericIniSink</a>) AddField(name <a href="http://localhost:6666/pkg/builtin/#string">string</a>, ptr interface{})</pre>
+				<p>
+Add a field to be parsed
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="GenericIniSink.AddStruct">func (*GenericIniSink) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=1275:1324#L46">AddStruct</a>
+					<a class="permalink" href="index.html#GenericIniSink.AddStruct">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s *<a href="index.html#GenericIniSink">GenericIniSink</a>) AddStruct(i interface{})</pre>
+				<p>
+Populate a GenericIniSink with fields of a struct, using the field
+name or or the ini struct field tag (`ini:&#34;field-name&#34;`) if one
+exists.  Tag `ini:&#34;-&#34;` says to ignore a field.  Note that i must be
+a pointer to a structure or this function will panic.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="GenericIniSink.IniSink">func (*GenericIniSink) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=3455:3497#L130">IniSink</a>
+					<a class="permalink" href="index.html#GenericIniSink.IniSink">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s *<a href="index.html#GenericIniSink">GenericIniSink</a>) IniSink() <a href="index.html#IniSink">IniSink</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="GenericIniSink.Item">func (*GenericIniSink) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=2776:2823#L103">Item</a>
+					<a class="permalink" href="index.html#GenericIniSink.Item">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s *<a href="index.html#GenericIniSink">GenericIniSink</a>) Item(ii <a href="index.html#IniItem">IniItem</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="GenericIniSink.SaveAll">func (*GenericIniSink) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=1991:2056#L72">SaveAll</a>
+					<a class="permalink" href="index.html#GenericIniSink.SaveAll">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s *<a href="index.html#GenericIniSink">GenericIniSink</a>) SaveAll(ies *<a href="index.html#IniEdits">IniEdits</a>, includeZero <a href="http://localhost:6666/pkg/builtin/#bool">bool</a>)</pre>
+				<p>
+Save the current state of an Ini-parsable structure to a set of
+IniEdits.  This is useful for creating an initial file.  If
+includeZero is true, then all fields are saved; otherwise, only
+ones with non-default values are saved.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="GenericIniSink.String">func (*GenericIniSink) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=2272:2312#L83">String</a>
+					<a class="permalink" href="index.html#GenericIniSink.String">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s *<a href="index.html#GenericIniSink">GenericIniSink</a>) String() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="IniEditor">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=239:382#L3">IniEditor</a>
+				<a class="permalink" href="index.html#IniEditor">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+You can parse an INI file into an IniEditor, Set, Del, or Add
+key-value pairs, then write out the result using WriteTo.
+Preserves most comments and file ordering.
+</p>
+
+			<pre>type IniEditor struct {
+    <span class="comment">// contains filtered or unexported fields</span>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="NewIniEdit">func <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=3605:3674#L134">NewIniEdit</a>
+					<a class="permalink" href="index.html#NewIniEdit">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func NewIniEdit(filename <a href="http://localhost:6666/pkg/builtin/#string">string</a>, contents []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>) (*<a href="index.html#IniEditor">IniEditor</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Create an IniEdit for a file with contents.  Note that filename is
+only used for parse errors; the file must already be read before
+calling this function.
+</p>
+
+				
+				
+			
+
+			
+				
+				<h3 id="IniEditor.Add">func (*IniEditor) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=2139:2198#L80">Add</a>
+					<a class="permalink" href="index.html#IniEditor.Add">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ie *<a href="index.html#IniEditor">IniEditor</a>) Add(is *<a href="index.html#IniSection">IniSection</a>, key, value <a href="http://localhost:6666/pkg/builtin/#string">string</a>)</pre>
+				<p>
+Add a new instance of key to the file without deleting any previous
+instance of the key.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="IniEditor.Del">func (*IniEditor) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=877:929#L31">Del</a>
+					<a class="permalink" href="index.html#IniEditor.Del">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ie *<a href="index.html#IniEditor">IniEditor</a>) Del(is *<a href="index.html#IniSection">IniSection</a>, key <a href="http://localhost:6666/pkg/builtin/#string">string</a>)</pre>
+				<p>
+Delete all instances of a key from the file.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="IniEditor.Done">func (*IniEditor) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=3261:3298#L122">Done</a>
+					<a class="permalink" href="index.html#IniEditor.Done">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ie *<a href="index.html#IniEditor">IniEditor</a>) Done(r <a href="index.html#IniRange">IniRange</a>)</pre>
+				<p>
+Called by IniParseContents; do not call directly.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="IniEditor.Item">func (*IniEditor) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=3054:3097#L114">Item</a>
+					<a class="permalink" href="index.html#IniEditor.Item">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ie *<a href="index.html#IniEditor">IniEditor</a>) Item(ii <a href="index.html#IniItem">IniItem</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Called by IniParseContents; do not call directly.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="IniEditor.Section">func (*IniEditor) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=2773:2823#L105">Section</a>
+					<a class="permalink" href="index.html#IniEditor.Section">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ie *<a href="index.html#IniEditor">IniEditor</a>) Section(ss <a href="index.html#IniSecStart">IniSecStart</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Called by IniParseContents; do not call directly.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="IniEditor.Set">func (*IniEditor) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=1718:1777#L63">Set</a>
+					<a class="permalink" href="index.html#IniEditor.Set">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ie *<a href="index.html#IniEditor">IniEditor</a>) Set(is *<a href="index.html#IniSection">IniSection</a>, key, value <a href="http://localhost:6666/pkg/builtin/#string">string</a>)</pre>
+				<p>
+Replace all instances of key with a single one equal to value.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="IniEditor.String">func (*IniEditor) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=722:758#L24">String</a>
+					<a class="permalink" href="index.html#IniEditor.String">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ie *<a href="index.html#IniEditor">IniEditor</a>) String() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="IniEditor.WriteTo">func (*IniEditor) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=471:527#L12">WriteTo</a>
+					<a class="permalink" href="index.html#IniEditor.WriteTo">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ie *<a href="index.html#IniEditor">IniEditor</a>) WriteTo(w <a href="http://localhost:6666/pkg/io/">io</a>.<a href="http://localhost:6666/pkg/io/#Writer">Writer</a>) (<a href="http://localhost:6666/pkg/builtin/#int64">int64</a>, <a href="http://localhost:6666/pkg/builtin/#error">error</a>)</pre>
+				<p>
+Write the contents of IniEditor to a Writer after applying edits
+have been made.
+</p>
+
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="IniEdits">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=3907:3939#L144">IniEdits</a>
+				<a class="permalink" href="index.html#IniEdits">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+A bunch of edits to be applied to an INI file.
+</p>
+
+			<pre>type IniEdits []func(*<a href="index.html#IniEditor">IniEditor</a>)</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="IniEdits.Add">func (*IniEdits) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=4453:4510#L167">Add</a>
+					<a class="permalink" href="index.html#IniEdits.Add">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ie *<a href="index.html#IniEdits">IniEdits</a>) Add(sec <a href="http://localhost:6666/pkg/builtin/#string">string</a>, args ...<a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Add a key, value pair.  Invoke as Add(sec, subsec, key, value) or
+Add(sec, key, value).
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="IniEdits.Apply">func (*IniEdits) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=5339:5383#L210">Apply</a>
+					<a class="permalink" href="index.html#IniEdits.Apply">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ie *<a href="index.html#IniEdits">IniEdits</a>) Apply(target *<a href="index.html#IniEditor">IniEditor</a>)</pre>
+				<p>
+Apply edits.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="IniEdits.Del">func (*IniEdits) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=4009:4066#L147">Del</a>
+					<a class="permalink" href="index.html#IniEdits.Del">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ie *<a href="index.html#IniEdits">IniEdits</a>) Del(sec <a href="http://localhost:6666/pkg/builtin/#string">string</a>, args ...<a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Delete a key.  Invoke as Del(sec, subsec, key) or Del(sec, key).
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="IniEdits.Set">func (*IniEdits) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/edit.go?s=4935:4992#L189">Set</a>
+					<a class="permalink" href="index.html#IniEdits.Set">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ie *<a href="index.html#IniEdits">IniEdits</a>) Set(sec <a href="http://localhost:6666/pkg/builtin/#string">string</a>, args ...<a href="http://localhost:6666/pkg/builtin/#string">string</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				<p>
+Add a key, value pair.  Invoke as Set(sec, subsec, key, value) or
+Set(sec, key, value).
+</p>
+
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="IniItem">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=3428:3503#L118">IniItem</a>
+				<a class="permalink" href="index.html#IniItem">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type IniItem struct {
+    *<a href="index.html#IniSection">IniSection</a>
+<span id="IniItem.Key"></span>    Key   <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+<span id="IniItem.Value"></span>    Value *<a href="http://localhost:6666/pkg/builtin/#string">string</a>
+    <a href="index.html#IniRange">IniRange</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="IniItem.QKey">func (*IniItem) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=3709:3741#L134">QKey</a>
+					<a class="permalink" href="index.html#IniItem.QKey">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ii *<a href="index.html#IniItem">IniItem</a>) QKey() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				<p>
+Returns the Key qualified by the section (see IniQKey).
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="IniItem.Val">func (*IniItem) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=3558:3589#L126">Val</a>
+					<a class="permalink" href="index.html#IniItem.Val">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (ii *<a href="index.html#IniItem">IniItem</a>) Val() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				<p>
+Returns Value or an empty string if Value is nil.
+</p>
+
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="IniRange">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=3099:3426#L107">IniRange</a>
+				<a class="permalink" href="index.html#IniRange">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type IniRange struct {
+    <span class="comment">// The text of a key, value pair or section header lies between</span>
+<span id="IniRange.StartIndex"></span>    <span class="comment">// StartIndex and EndIndex.  If PrevEndIndex != StartIndex, then</span>
+    <span class="comment">// the bytes between PrevEndIndex and StartIndex constitute a</span>
+    <span class="comment">// comment or blank lines.</span>
+    StartIndex, EndIndex, PrevEndIndex <a href="http://localhost:6666/pkg/builtin/#int">int</a>
+
+    <span class="comment">// The entire input file</span>
+<span id="IniRange.Input"></span>    Input []<a href="http://localhost:6666/pkg/builtin/#byte">byte</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="IniSecStart">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=4152:4201#L151">IniSecStart</a>
+				<a class="permalink" href="index.html#IniSecStart">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type IniSecStart struct {
+    <a href="index.html#IniSection">IniSection</a>
+    <a href="index.html#IniRange">IniRange</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="IniSection">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=1086:1151#L33">IniSection</a>
+				<a class="permalink" href="index.html#IniSection">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Section of an INI file.  A nil *IniSection corresponds to the
+&#34;section-free&#34; part of the file before the first section, which the
+git-config man page says is not valid, but the git-config tool
+halfway supports.
+</p>
+
+			<pre>type IniSection struct {
+<span id="IniSection.Section"></span>    Section    <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+<span id="IniSection.Subsection"></span>    Subsection *<a href="http://localhost:6666/pkg/builtin/#string">string</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="IniSection.Eq">func (*IniSection) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=2201:2245#L76">Eq</a>
+					<a class="permalink" href="index.html#IniSection.Eq">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s *<a href="index.html#IniSection">IniSection</a>) Eq(s2 *<a href="index.html#IniSection">IniSection</a>) <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+				<p>
+True if two *IniSection have the same contents.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="IniSection.String">func (*IniSection) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=1629:1665#L52">String</a>
+					<a class="permalink" href="index.html#IniSection.String">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s *<a href="index.html#IniSection">IniSection</a>) String() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				<p>
+Renders as [section] or [section &#34;subsection&#34;].  The nil
+*IniSection renders as an empty string.  Panics if the subsection
+includes the illegal characters &#39;\n&#39; or &#39;\000&#39;.
+</p>
+
+				
+				
+				
+			
+				
+				<h3 id="IniSection.Valid">func (*IniSection) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=1257:1290#L40">Valid</a>
+					<a class="permalink" href="index.html#IniSection.Valid">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s *<a href="index.html#IniSection">IniSection</a>) Valid() <a href="http://localhost:6666/pkg/builtin/#bool">bool</a></pre>
+				<p>
+Returns false if either the section or subsection is illegal.
+Returns true for a nil *IniSection.
+</p>
+
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="IniSink">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=4032:4150#L142">IniSink</a>
+				<a class="permalink" href="index.html#IniSink">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+Type that receives and processes the parsed INI file.  Note that if
+there is also Section(IniSecStart)error method, this is called at
+the start of sections, and if there is a Done(IniRange) method it
+is called at the end of the file.
+</p>
+
+			<pre>type IniSink interface {
+    <span class="comment">// optional:</span>
+    <span class="comment">// Section(IniSecStart) error</span>
+    <span class="comment">// Init()</span>
+    <span class="comment">// Done()</span>
+    <span class="comment">//</span>
+    Item(<a href="index.html#IniItem">IniItem</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a>
+}</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="IniSinker">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=3557:3604#L136">IniSinker</a>
+				<a class="permalink" href="index.html#IniSinker">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type IniSinker interface {
+    IniSink() <a href="index.html#IniSink">IniSink</a>
+}</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="IniSinks">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=3606:3629#L140">IniSinks</a>
+				<a class="permalink" href="index.html#IniSinks">&#xb6;</a>
+				
+				
+			</h2>
+			
+			<pre>type IniSinks []<a href="index.html#IniSink">IniSink</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="IniSinks.Done">func (IniSinks) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=4173:4205#L171">Done</a>
+					<a class="permalink" href="index.html#IniSinks.Done">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s <a href="index.html#IniSinks">IniSinks</a>) Done(<a href="index.html#IniRange">IniRange</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="IniSinks.IniSink">func (IniSinks) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=4303:4338#L179">IniSink</a>
+					<a class="permalink" href="index.html#IniSinks.IniSink">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s <a href="index.html#IniSinks">IniSinks</a>) IniSink() <a href="index.html#IniSink">IniSink</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="IniSinks.Init">func (IniSinks) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=3691:3715#L146">Init</a>
+					<a class="permalink" href="index.html#IniSinks.Init">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s <a href="index.html#IniSinks">IniSinks</a>) Init()</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="IniSinks.Item">func (IniSinks) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=3812:3852#L153">Item</a>
+					<a class="permalink" href="index.html#IniSinks.Item">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s <a href="index.html#IniSinks">IniSinks</a>) Item(ii <a href="index.html#IniItem">IniItem</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="IniSinks.Push">func (*IniSinks) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=3631:3665#L142">Push</a>
+					<a class="permalink" href="index.html#IniSinks.Push">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s *<a href="index.html#IniSinks">IniSinks</a>) Push(i <a href="index.html#IniSink">IniSink</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="IniSinks.Section">func (IniSinks) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=3950:3997#L161">Section</a>
+					<a class="permalink" href="index.html#IniSinks.Section">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s <a href="index.html#IniSinks">IniSinks</a>) Section(ss <a href="index.html#IniSecStart">IniSecStart</a>) <a href="http://localhost:6666/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="IniSinks.String">func (IniSinks) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/sinker.go?s=4354:4387#L183">String</a>
+					<a class="permalink" href="index.html#IniSinks.String">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (s <a href="index.html#IniSinks">IniSinks</a>) String() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ParseError">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=4829:4918#L177">ParseError</a>
+				<a class="permalink" href="index.html#ParseError">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+A single parse error in an IniFile.
+</p>
+
+			<pre>type ParseError struct {
+<span id="ParseError.File"></span>    File          <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+<span id="ParseError.Lineno"></span>    Lineno, Colno <a href="http://localhost:6666/pkg/builtin/#int">int</a>
+<span id="ParseError.Msg"></span>    Msg           <a href="http://localhost:6666/pkg/builtin/#string">string</a>
+}
+</pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="ParseError.Error">func (ParseError) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=4920:4956#L183">Error</a>
+					<a class="permalink" href="index.html#ParseError.Error">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (err <a href="index.html#ParseError">ParseError</a>) Error() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ParseErrors">type <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=5199:5228#L191">ParseErrors</a>
+				<a class="permalink" href="index.html#ParseErrors">&#xb6;</a>
+				
+				
+			</h2>
+			<p>
+The collection of parse errors that resulted from parsing a file.
+</p>
+
+			<pre>type ParseErrors []<a href="index.html#ParseError">ParseError</a></pre>
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="ParseErrors.Error">func (ParseErrors) <a href="http://localhost:6666/src/github.com/xdrpp/stc/ini/parser.go?s=5230:5267#L193">Error</a>
+					<a class="permalink" href="index.html#ParseErrors.Error">&#xb6;</a>
+					
+					
+				</h3>
+				<pre>func (err <a href="index.html#ParseErrors">ParseErrors</a>) Error() <a href="http://localhost:6666/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+	
+
+	
+
+
+
+
+
+
+
+<div id="footer">
+Build version go1.17.8.<br>
+Except as <a href="https://developers.google.com/site-policies#restrictions">noted</a>,
+the content of this page is licensed under the
+Creative Commons Attribution 3.0 License,
+and code is licensed under a <a href="http://localhost:6666/LICENSE">BSD license</a>.<br>
+<a href="https://golang.org/doc/tos.html">Terms of Service</a> |
+<a href="https://www.google.com/intl/en/policies/privacy/">Privacy Policy</a>
+</div>
+
+</div><!-- .container -->
+</div><!-- #page -->
+</body>
+</html>
