@@ -44,19 +44,8 @@ See the [stc(1)][stc.1] man page for the command-line tool.  There's
 also a [video][stc-presentation] of a presentation and demo of stc at
 the 2020 Stellar Meridian conference.
 
-See the [godoc documentation][gh-pages] for the library.  Because
-`stc` contains auto-generated source files that are not on the
-`master` branch in git, you may wish to view the documentation
-locally, rather than through on-line godoc viewers that may not show
-you the correct branch.  To view godoc, after installing `stc` with
-`go get` as described above, start a local godoc server and open it in
-your browser as follows:
-
-    godoc -index -http localhost:6060 &
-    xdg-open http://localhost:6060/pkg/github.com/xdrpp/stc
-
-On MacOS computers, run `open` instead of `xdg-open`, or just paste
-the URL into your browser.
+See [pkg.go.dev](https://pkg.go.dev/github.com/xdrpp/stc) for
+documentation of the go library.
 
 # Building `stc` for developers
 
@@ -79,6 +68,11 @@ Once you have `goxdr`, you can build `stc` by running:
 
 To install `stc`, you will also need [pandoc](https://pandoc.org/) to
 format the man page.
+
+## Documentation for unreleased versions
+
+When new features are added, the latest godoc documentation is
+available [here][gh-pages].
 
 ## Building `stc` for experimental protocol versions
 
