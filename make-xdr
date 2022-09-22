@@ -31,5 +31,9 @@ fi
 set -x
 git fetch --depth=1 "$REPO" "$COMMIT"
 rm -f xdr/Stellar-version
-git archive --prefix=xdr/ FETCH_HEAD:src/xdr | tar xf -
+XDRPATH=src/xdr
+if git cat-file -e FETCH_HEAD:src/protocol-curr/xdr 2> /dev/null; then
+    XDRPATH=src/protocol-curr/xdr
+fi
+git archive --prefix=xdr/ FETCH_HEAD:$XDRPATH | tar xf -
 git rev-parse FETCH_HEAD > xdr/Stellar-version
