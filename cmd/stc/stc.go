@@ -117,7 +117,7 @@ func doGenesisKey(outfile string, net *StellarNet) {
 	storeKey(outfile, sk)
 }
 
-func doKeyGen(outfile string, genesis bool) {
+func doKeyGen(outfile string) {
 	storeKey(outfile, NewPrivateKey(stx.PUBLIC_KEY_TYPE_ED25519))
 }
 
@@ -825,7 +825,7 @@ func main() {
 		if arg != "" {
 			arg = AdjustKeyName(arg)
 		}
-		doKeyGen(arg, *opt_genesis_key)
+		doKeyGen(arg)
 		return
 	case *opt_sec2pub:
 		if arg != "" {
