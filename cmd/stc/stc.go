@@ -5,8 +5,6 @@ package main
 
 import (
 	"bytes"
-	"crypto/ed25519"
-	"crypto/sha256"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -110,11 +108,7 @@ func GetKeyNames() []string {
 }
 
 func doGenesisKey(outfile string, net *StellarNet) {
-	hash := sha256.Sum256([]byte(net.NetworkId))
-	sk := PrivateKey{
-		stcdetail.Ed25519Priv(ed25519.NewKeyFromSeed(hash[:])),
-	}
-	storeKey(outfile, sk)
+	storeKey(outfile, net.GenesisKey())
 }
 
 func doKeyGen(outfile string) {

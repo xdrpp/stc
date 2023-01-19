@@ -1,6 +1,8 @@
 package stc
 
 import (
+	"crypto/ed25519"
+	"crypto/sha256"
 	"fmt"
 	"github.com/xdrpp/stc/ini"
 	"github.com/xdrpp/stc/stcdetail"
@@ -83,6 +85,17 @@ func (net *StellarNet) SignTx(sk stcdetail.PrivateKeyInterface,
 		Signature: sig,
 	})
 	return nil
+}
+
+// Get the private key for the first account that contains all the
+// native assets at the time a ledger is initialized for a new Stellar
+// network.  The only reason to call this function is in code that is
+// bootstrapping a new network for test purposes.
+func (net *StellarNet) GenesisKey() PrivateKey {
+	hash := sha256.Sum256([]byte(net.NetworkId))
+	return PrivateKey{
+		stcdetail.Ed25519Priv(ed25519.NewKeyFromSeed(hash[:])),
+	}
 }
 
 // An annotated SignerKey that can be used to authenticate

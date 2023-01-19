@@ -1,7 +1,11 @@
 
 * Changes in version v0.2.1
 
-Added the -genesis-key option.
+Added a Dockerfile.
+
+Added the GenesisKey() method to StelalrNet.
+
+Added the -genesis-key option to stc command.
 
 * Changes in version v0.2.0
 

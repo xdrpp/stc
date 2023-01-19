@@ -153,6 +153,22 @@ func TestMuxDemux(t *testing.T) {
 	}
 }
 
+func TestGenesisKey(t *testing.T) {
+	net := StellarNet {
+		Name: "custom",
+		NetworkId: "Custom Network ; January 2023",
+	}
+	sk := net.GenesisKey()
+	if sk.String() !=
+		"SDURDO44JV5I3WQNVOF62IRL3ULQYBW3NIHOO37ZWD5526T5QED7MYM6" {
+		t.Fatal("Invalid private genesis key")
+	}
+	if sk.Public().String() !=
+		"GB2SPWHAPSNUHJOSVTXI5WAH6MK6SUZYCEQF5VTSN6CSLMWRTJXJU227" {
+		t.Fatal("Invalid public genesis key")
+	}
+}
+
 func TestSetOverflowString(t *testing.T) {
 	var m stx.Memo
 	// This should work
