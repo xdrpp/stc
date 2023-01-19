@@ -38,6 +38,31 @@ limitation](https://github.com/golang/go/issues/27526) leaves your
 tree in a detached state, so that `go get -u` cannot pull from the
 remote `go1` branch.
 
+## Using Docker
+
+To use `stc` within a containerised environment it is possible to run
+`stc` using our Docker image. All transactions are generated inside
+the container and are made available to the host system through
+volume mounts.
+
+`docker run -it --rm -v /etc/ssl/certs/:/etc/ssl/certs/ -v /tmp:/tmp -v $HOME/.config/stc:/root/.config/stc xdrpp-stc`
+
+### Shell Alias
+
+To make containerised usage seamless you can also create a shell alias.
+
+```
+# Stellar Transaction Compiler
+alias stc='docker run -it --rm -v /etc/ssl/certs/:/etc/ssl/certs/ -v /tmp:/tmp -v $HOME/.config/stc:/root/.config/stc xdrpp-stc'
+```
+
+Once the alias is setup you will be able to interact with `stc` directly
+from the host system or within Kubernetes.
+
+```
+stc transaction.xdr
+```
+
 # Using `stc`
 
 See the [stc(1)][stc.1] man page for the command-line tool.  There's
