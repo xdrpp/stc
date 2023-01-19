@@ -20,6 +20,7 @@ stc -fee-stats \
 stc -ledger-header \
 stc -create [-net=ID] _accountID_ \
 stc -keygen [_name_] \
+stc -genesis-key [_name_] \
 stc -pub [_name_] \
 stc -import-key _name_ \
 stc -export-key _name_ \
@@ -160,8 +161,8 @@ the `-net` option is correct when using `-preauth`.
 ## Key management mode
 
 stc runs in key management mode when one of the following flags is
-selected:  `-keygen`, `-pub`, `-import-key`, `-export-key`, and
-`-list-keys`.
+selected:  `-keygen`, `-genesis-key`, `-pub`, `-import-key`,
+`-export-key`, and `-list-keys`.
 
 These options take a key name.  If the key name contains a slash, it
 refers to a file in the file system.  If the key name does not contain
@@ -169,15 +170,29 @@ a slash, it refers to a file name in the stc configuration directory
 (see FILES below).  This allows keys to be stored in the configuration
 directory and then accessed from any directory in which stc runs.
 
-The `-keygen` and `-pub` options can be run with no key name, in which
-case `-keygen` will output both the secret and public key to standard
-output, and `-pub` will read a key from standard input or prompt for
-one to be pasted into the terminal.
+The `-keygen`, `-genesis-key`, and `-pub` options can be run with no
+key name, in which case `-keygen` and `-genesis-key` will output both
+the secret and public key to standard output, and `-pub` will read a
+key from standard input or prompt for one to be pasted into the
+terminal.
 
 Keys are generally stored encrypted, but if you supply an empty
 passphrase, they will be stored in plaintext.  If you use the
 `-nopass` option, stc will never prompt for a passphrase and always
 assume you do not encrypt your private keys.
+
+Most of these options are self-explanatory from the name, except
+possibly for `-genesis-key`, which computes the private key for the
+first account on a network, based on a hash of the network ID.  Like
+`-keygen`, genesis key can output the secret key to standard output or
+to a file if specified.  Obviously the genesis "private" key is not
+secret, because anyone can compute it from the Network ID.  The only
+reason to use the `-genesis-key` option is when bootstrapping a custom
+network for testing purposes.  The first thing you generally want to
+do after bootstrapping a network, before anyone else can access it, is
+to move the native tokens from the genesis account to another account
+for which the private key is not known.  The -genesis-key option will
+provide the key you need to sign that first transaction.
 
 ## Network query mode
 

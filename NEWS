@@ -1,4 +1,8 @@
 
+* Changes in version v0.2.1
+
+Added the -genesis-key option.
+
 * Changes in version v0.2.0
 
 Add support for new CAP-0040 ed25519 signed payloads in protocol 19.

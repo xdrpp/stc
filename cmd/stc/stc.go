@@ -5,6 +5,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/ed25519"
+	"crypto/sha256"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -107,8 +109,19 @@ func GetKeyNames() []string {
 	return names
 }
 
-func doKeyGen(outfile string) {
-	sk := NewPrivateKey(stx.PUBLIC_KEY_TYPE_ED25519)
+func doGenesisKey(outfile string, net *StellarNet) {
+	hash := sha256.Sum256([]byte(net.NetworkId))
+	sk := PrivateKey{
+		stcdetail.Ed25519Priv(ed25519.NewKeyFromSeed(hash[:])),
+	}
+	storeKey(outfile, sk)
+}
+
+func doKeyGen(outfile string, genesis bool) {
+	storeKey(outfile, NewPrivateKey(stx.PUBLIC_KEY_TYPE_ED25519))
+}
+
+func storeKey(outfile string, sk PrivateKey) {
 	if outfile == "" {
 		fmt.Println(sk)
 		fmt.Println(sk.Public())
@@ -505,6 +518,8 @@ func main() {
 	opt_compile := flag.Bool("c", false, "Compile output to base64 XDR")
 	opt_json := flag.Bool("json", false, "Output transaction in JSON format")
 	opt_keygen := flag.Bool("keygen", false, "Create a new signing keypair")
+	opt_genesis_key := flag.Bool("genesis-key", false,
+		"Compute genesis key for network")
 	opt_sec2pub := flag.Bool("pub", false, "Get public key from private")
 	opt_output := flag.String("o", "", "Output to `FILE` instead of stdout")
 	opt_preauth := flag.Bool("preauth", false,
@@ -582,6 +597,7 @@ func main() {
        %[1]s -qta [-net=ID] ACCT
        %[1]s -create [-net=ID] ACCT
        %[1]s -keygen [NAME]
+       %[1]s -genesis-key [NAME]
        %[1]s -pub [NAME]
        %[1]s -import-key NAME
        %[1]s -export-key NAME
@@ -613,9 +629,9 @@ func main() {
 	}
 
 	nmode := b2i(*opt_preauth, *opt_txhash, *opt_post, *opt_edit,
-		*opt_keygen, *opt_date, *opt_sec2pub, *opt_import_key,
-		*opt_export_key, *opt_acctinfo, *opt_txinfo, *opt_txacct,
-		*opt_friendbot, *opt_list_keys, *opt_fee_stats,
+		*opt_keygen, *opt_genesis_key, *opt_date, *opt_sec2pub,
+		*opt_import_key, *opt_export_key, *opt_acctinfo, *opt_txinfo,
+		*opt_txacct, *opt_friendbot, *opt_list_keys, *opt_fee_stats,
 		*opt_ledger_header, *opt_print_default_config, *opt_mux,
 		*opt_demux, *opt_pack, *opt_unpack, *opt_opid, *opt_hint)
 
@@ -624,7 +640,7 @@ func main() {
 	case *opt_fee_stats || *opt_ledger_header ||
 		*opt_print_default_config || *opt_list_keys:
 		argsMin, argsMax = 0, 0
-	case *opt_keygen || *opt_sec2pub:
+	case *opt_keygen || *opt_sec2pub || *opt_genesis_key:
 		argsMin = 0
 	case *opt_mux, *opt_pack:
 		argsMin, argsMax = 2, 2
@@ -809,7 +825,7 @@ func main() {
 		if arg != "" {
 			arg = AdjustKeyName(arg)
 		}
-		doKeyGen(arg)
+		doKeyGen(arg, *opt_genesis_key)
 		return
 	case *opt_sec2pub:
 		if arg != "" {
@@ -848,6 +864,14 @@ func main() {
 	if net == nil {
 		fmt.Fprintf(os.Stderr, "unknown network %q\n", *opt_netname)
 		os.Exit(1)
+	}
+
+	if *opt_genesis_key {
+		if arg != "" {
+			arg = AdjustKeyName(arg)
+		}
+		doGenesisKey(arg, net)
+		return
 	}
 
 	if *opt_acctinfo {
