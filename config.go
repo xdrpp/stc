@@ -31,6 +31,10 @@ native-asset = XLM
 horizon = https://horizon-testnet.stellar.org/
 native-asset = TestXLM
 
+[net "future"]
+horizon = https://horizon-futurenet.stellar.org/
+native-asset = TestXLM
+
 [net "standalone"]
 network-id = "Standalone Network ; February 2017"
 horizon = http://localhost:8000/
