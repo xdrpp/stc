@@ -12,6 +12,8 @@ ENV TERM=xterm-256
 
 RUN apt-get update && apt-get -y install vim \
     curl \ 
-    jq
+    jq && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT ["stc"]
