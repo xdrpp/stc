@@ -2,8 +2,8 @@
 
 # usage: make-xdr [[REPO] {BRANCH | PR-NUMBER}]
 
-REPO=https://github.com/stellar/stellar-core.git
-COMMIT=master
+REPO=https://github.com/stellar/stellar-xdr
+COMMIT=curr
 
 case "$#" in
     2)
@@ -31,9 +31,6 @@ fi
 set -x
 git fetch --depth=1 "$REPO" "$COMMIT"
 rm -f xdr/Stellar-version
-XDRPATH=src/xdr
-if git cat-file -e FETCH_HEAD:src/protocol-curr/xdr 2> /dev/null; then
-    XDRPATH=src/protocol-curr/xdr
-fi
+XDRPATH=
 git archive --prefix=xdr/ FETCH_HEAD:$XDRPATH | tar xf -
 git rev-parse FETCH_HEAD > xdr/Stellar-version

@@ -1,9 +1,7 @@
 CMDS = stc
 CLEANFILES = .*~ *~ */*~ goxdr
 BUILT_SOURCES = stx/xdr_generated.go uhelper.go
-XDRS = xdr/Stellar-SCP.x xdr/Stellar-ledger-entries.x			\
-xdr/Stellar-ledger.x xdr/Stellar-overlay.x xdr/Stellar-transaction.x	\
-xdr/Stellar-types.x
+XDRS = xdr/Stellar-SCP.x xdr/Stellar-contract-config-setting.x xdr/Stellar-contract-env-meta.x xdr/Stellar-contract-meta.x xdr/Stellar-contract-spec.x xdr/Stellar-contract.x xdr/Stellar-exporter.x xdr/Stellar-internal.x xdr/Stellar-ledger-entries.x xdr/Stellar-ledger.x xdr/Stellar-overlay.x xdr/Stellar-transaction.x xdr/Stellar-types.x
 
 all: build man
 
